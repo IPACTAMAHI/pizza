@@ -509,6 +509,8 @@
       <button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Настроить</button>
     </div>
     <p class="admin-panel-hint">После настройки каждое изменение автоматически публикуется в репозиторий.</p>
+    <p class="admin-panel-hint" id="gh-sync-status" style="margin-top:10px;font-weight:600"></p>
+    <p class="admin-panel-hint" id="gh-sync-link"></p>
   </div>
 
   <div class="admin-panel-card admin-only">
@@ -774,7 +776,7 @@ function customConfirm(message, title) {
 
    ЧТОБЫ ПОМЕНЯТЬ КОД: измените строку ниже.
    ================================================================ */
-const ADMIN_PIN = 'vlad11031988';
+const ADMIN_PIN = 'route20';
 const ADMIN_KEY = 'r20_admin_mode';
 
 function isAdmin() {
@@ -897,6 +899,8 @@ function b64EncodeUnicode(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
 
+const GH_STATUS_KEY = 'r20_gh_last_sync';
+
 async function syncToGithub(manual) {
   var cfg = getGithubConfig();
   if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
@@ -935,12 +939,17 @@ async function syncToGithub(manual) {
       throw new Error(errData.message || ('HTTP ' + putRes.status));
     }
 
+    localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: true, time: Date.now() }));
     if (manual) showToast('✅ Сохранено на GitHub');
   } catch (e) {
     console.error('GitHub sync error:', e);
+    localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: false, time: Date.now(), error: e.message }));
     showToast('⚠️ Не удалось сохранить на GitHub: ' + e.message);
   }
+  if (currentTab === 'admin') renderAdminPanel();
 }
+
+var dataSource = 'local'; // 'github' | 'local' — откуда реально загружены показанные сейчас данные
 
 async function syncFromGithub() {
   try {
@@ -949,6 +958,7 @@ async function syncFromGithub() {
     var data = await res.json();
     if (Array.isArray(data)) {
       recipes = data;
+      dataSource = 'github';
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch(e) {}
       if (currentTab === 'list') renderList();
       else if (currentTab === 'categories') renderCategoriesList();
@@ -1139,7 +1149,7 @@ function calcWeightFromIngredients(silent) {
 
   document.querySelectorAll('#ingredients-list .ingredient-row input').forEach(function(inp) {
     var text = inp.value || '';
-    var m = text.match(/(\d+(?:[.,]\d+)?)\s*г(?:р)?\b/i);
+    var m = text.match(/(\d+(?:[.,]\d+)?)\s*г(?:р)?(?![а-яёa-z])/i);
     if (m) {
       var num = parseFloat(m[1].replace(',', '.'));
       if (!isNaN(num)) { total += num; found = true; }
@@ -1345,6 +1355,42 @@ function renderAdminPanel() {
   if (countEl) countEl.textContent = recipes.length + ' шт.';
   var panelBtn = $('admin-panel-toggle-btn');
   if (panelBtn) panelBtn.textContent = isAdmin() ? '🔓 Выйти' : '🔒 Войти';
+
+  var statusEl = $('gh-sync-status');
+  var linkEl = $('gh-sync-link');
+  if (!statusEl || !linkEl) return;
+
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    statusEl.textContent = '⚪ Синхронизация ещё не настроена';
+    statusEl.style.color = 'var(--text-muted)';
+    linkEl.innerHTML = '';
+    return;
+  }
+
+  var sourceNote = dataSource === 'github'
+    ? '📥 Сейчас показаны данные, реально полученные с GitHub только что.'
+    : '📥 Сейчас показаны локальные данные этого устройства (получить свежие с GitHub не удалось — см. статус ниже).';
+
+  var raw = null;
+  try { raw = JSON.parse(localStorage.getItem(GH_STATUS_KEY)); } catch(e) {}
+
+  if (!raw) {
+    statusEl.textContent = '⚪ Настроено, но синхронизации ещё не было';
+    statusEl.style.color = 'var(--text-muted)';
+  } else {
+    var when = new Date(raw.time).toLocaleString('ru-RU');
+    if (raw.ok) {
+      statusEl.textContent = '🟢 Последняя публикация успешна: ' + when;
+      statusEl.style.color = '#8fe3ac';
+    } else {
+      statusEl.textContent = '🔴 Ошибка публикации (' + when + '): ' + (raw.error || '');
+      statusEl.style.color = '#ff9aa8';
+    }
+  }
+
+  var fileUrl = 'https://github.com/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/blob/' + encodeURIComponent(cfg.branch) + '/' + GH_DATA_PATH;
+  linkEl.innerHTML = sourceNote + '<br><a href="' + fileUrl + '" target="_blank" rel="noopener" style="color:var(--accent)">Открыть ' + GH_DATA_PATH + ' на GitHub →</a>';
 }
 
 /* ================================================================
