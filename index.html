@@ -633,7 +633,7 @@
   <div class="modal-box">
     <h3 id="app-modal-title"></h3>
     <p id="app-modal-message"></p>
-    <input type="text" id="app-modal-input" style="display:none">
+    <input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>
       <button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>
@@ -774,7 +774,7 @@ function customConfirm(message, title) {
 
    ЧТОБЫ ПОМЕНЯТЬ КОД: измените строку ниже.
    ================================================================ */
-const ADMIN_PIN = 'Vlad11031988';
+const ADMIN_PIN = 'vlad11031988';
 const ADMIN_KEY = 'r20_admin_mode';
 
 function isAdmin() {
@@ -823,7 +823,7 @@ async function toggleAdmin() {
   }
   var code = await customPrompt('Введите код администратора:', '', '🔒 Вход в режим редактирования');
   if (code === null) return;
-  if (code === ADMIN_PIN) {
+  if (code.trim() === ADMIN_PIN) {
     localStorage.setItem(ADMIN_KEY, '1');
     applyAdminUI();
     showToast('🔓 Режим редактирования включён на этом устройстве');
