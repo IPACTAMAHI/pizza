@@ -340,6 +340,21 @@
     width: 100%; max-height: 320px; object-fit: cover;
     border-radius: 14px; margin-bottom: 16px;
   }
+  .video-embed-wrap {
+    position: relative; width: 100%; padding-top: 56.25%; /* 16:9 */
+    border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+    background: #000;
+  }
+  .video-embed-wrap iframe,
+  .video-embed-wrap video {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
+  }
+  .video-fallback-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 18px; margin-bottom: 20px;
+    background: var(--card); border-radius: 12px;
+    color: var(--accent); text-decoration: none; font-size: 14px;
+  }
   .detail-title { font-size: 28px; margin-bottom: 8px; }
   .detail-meta {
     display: flex; gap: 10px; flex-wrap: wrap;
@@ -606,6 +621,12 @@
   <div class="form-group">
     <label>Категория / стиль (необязательно)</label>
     <input type="text" id="f-style" placeholder="Например: Острая, Классика, Белая, Мясная">
+  </div>
+
+  <div class="form-group">
+    <label>Видео (ссылка на YouTube, необязательно)</label>
+    <input type="text" id="f-video" placeholder="Например: https://youtu.be/dQw4w9WgXcQ" oninput="previewVideoField()">
+    <p id="video-preview-hint" style="color:var(--text-muted);font-size:12px;margin-top:6px"></p>
   </div>
 
   <!-- Ingredients -->
@@ -1186,6 +1207,66 @@ function calcWeightFromIngredients(silent) {
   }
 }
 
+/* ================================================================
+   ВИДЕО В РЕЦЕПТЕ — универсальный разбор ссылки
+   Поддерживаются: YouTube, Google Диск, Vimeo, прямая ссылка на
+   видеофайл (.mp4/.webm/.mov/.ogg). Если источник не распознан —
+   вместо плеера показывается обычная ссылка "Открыть видео",
+   чтобы ничего не ломалось.
+   ================================================================ */
+function parseVideoUrl(url) {
+  if (!url) return null;
+  url = url.trim();
+
+  // YouTube (watch, youtu.be, embed, shorts)
+  var yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  if (yt) return { type: 'youtube', embedUrl: 'https://www.youtube.com/embed/' + yt[1] };
+
+  // Google Drive (/file/d/ID/... или open?id=ID)
+  var drive = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (drive) return { type: 'drive', embedUrl: 'https://drive.google.com/file/d/' + drive[1] + '/preview' };
+
+  // Vimeo
+  var vimeo = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeo) return { type: 'vimeo', embedUrl: 'https://player.vimeo.com/video/' + vimeo[1] };
+
+  // Прямая ссылка на видеофайл
+  if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) return { type: 'direct', embedUrl: url };
+
+  return { type: 'unknown', embedUrl: url };
+}
+
+function renderVideoBlock(url) {
+  var v = parseVideoUrl(url);
+  if (!v) return '';
+
+  if (v.type === 'direct') {
+    return '<div class="video-embed-wrap"><video src="' + escAttr(v.embedUrl) + '" controls playsinline></video></div>';
+  }
+  if (v.type === 'youtube' || v.type === 'drive' || v.type === 'vimeo') {
+    return '<div class="video-embed-wrap"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  // Источник не распознан — просто ссылка
+  return '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">🎬 Открыть видео →</a>';
+}
+
+function previewVideoField() {
+  var url = $('f-video').value.trim();
+  var hint = $('video-preview-hint');
+  if (!hint) return;
+  if (!url) { hint.textContent = ''; return; }
+
+  var v = parseVideoUrl(url);
+  var labels = {
+    youtube: '✅ Обнаружено: YouTube — на странице рецепта будет показан плеер.',
+    drive: '✅ Обнаружено: Google Диск — будет показан плеер. Проверьте, что доступ к файлу открыт "Всем, у кого есть ссылка".',
+    vimeo: '✅ Обнаружено: Vimeo — на странице рецепта будет показан плеер.',
+    direct: '✅ Похоже на прямую ссылку на видеофайл — будет показан обычный видеоплеер.',
+    unknown: '⚠️ Источник не распознан — вместо плеера будет показана обычная ссылка "Открыть видео".'
+  };
+  hint.textContent = labels[v.type] || '';
+}
+
 function addStepRow(value) {
   if (!value) value = '';
   var list = $('steps-list');
@@ -1227,6 +1308,8 @@ function resetForm() {
   $('f-calories').value = '';
   $('f-weight').value = '';
   $('f-style').value = '';
+  $('f-video').value = '';
+  $('video-preview-hint').textContent = '';
   $('ingredients-list').innerHTML = '';
   $('steps-list').innerHTML = '';
   currentPhotoData = null;
@@ -1266,6 +1349,7 @@ function saveRecipe() {
     calories: parseInt($('f-calories').value) || null,
     weight: parseInt($('f-weight').value) || null,
     style: $('f-style').value.trim() || null,
+    video: $('f-video').value.trim() || null,
     ingredients: ingredients,
     steps: steps
   };
@@ -1326,6 +1410,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
         (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + r.weight + ' г</span>' : '') +
+        (r.video ? '<span class="badge badge-cal">🎬 Видео</span>' : '') +
       '</div>\n'
     + '</div>'
     + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
@@ -1451,6 +1536,7 @@ function openDetail(id) {
   var body = $('detail-body');
   body.innerHTML =
     (r.photo ? '<img class="detail-photo" src="' + escAttr(r.photo) + '" alt="">' : '') +
+    (r.video ? renderVideoBlock(r.video) : '') +
     '<h2 class="detail-title">' + esc(r.name) + '</h2>' +
     '<div class="detail-meta">' +
       (r.style ? '<span class="detail-badge">🏷 ' + esc(r.style) + '</span>' : '') +
@@ -1569,6 +1655,8 @@ function editFromDetail(id) {
   $('f-calories').value = r.calories || '';
   $('f-weight').value = r.weight || '';
   $('f-style').value = r.style || '';
+  $('f-video').value = r.video || '';
+  previewVideoField();
 
   currentPhotoData = r.photo;
   $('f-photo-data').value = r.photo || '';
