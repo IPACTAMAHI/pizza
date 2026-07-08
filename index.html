@@ -236,6 +236,16 @@
     color: var(--text-muted);
   }
   .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
+  .badge-video-active {
+    background: rgba(233,69,96,.22) !important;
+    color: var(--accent) !important;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s;
+  }
+  .badge-video-active:hover, .badge-video-active:active { background: rgba(233,69,96,.4) !important; }
 
   /* Цветные бейджи произвольного тега/стиля — циклический набор цветов */
   .tag-0 { background: rgba(120,130,150,.30); color: #c7cede; }
@@ -1410,7 +1420,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
         (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + r.weight + ' г</span>' : '') +
-        (r.video ? '<span class="badge badge-cal">🎬 Видео</span>' : '') +
+        (r.video ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\')">🎬 Видео</span>' : '') +
       '</div>\n'
     + '</div>'
     + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
