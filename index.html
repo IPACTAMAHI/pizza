@@ -619,7 +619,7 @@
 
 <!-- TAB: DETAIL -->
 <div id="tab-detail" class="tab-content">
-  <button class="btn btn-ghost btn-sm detail-back" onclick="switchTab(&#39;list&#39;)">← Назад</button>
+  <button class="btn btn-ghost btn-sm detail-back" onclick="closeDetail(&#39;list&#39;)">← Назад</button>
   <div id="detail-body"></div>
 </div>
 
@@ -776,7 +776,7 @@ function customConfirm(message, title) {
 
    ЧТОБЫ ПОМЕНЯТЬ КОД: измените строку ниже.
    ================================================================ */
-const ADMIN_PIN = 'vlad11031988';
+const ADMIN_PIN = 'route20';
 const ADMIN_KEY = 'r20_admin_mode';
 
 function isAdmin() {
@@ -940,6 +940,7 @@ async function syncToGithub(manual) {
     }
 
     localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: true, time: Date.now() }));
+    dataSource = 'github'; // то, что сейчас в recipes[], только что успешно опубликовано — это и есть актуальные данные
     if (manual) showToast('✅ Сохранено на GitHub');
   } catch (e) {
     console.error('GitHub sync error:', e);
@@ -1021,6 +1022,9 @@ let currentTab = 'list';
 
 function switchTab(name) {
   if (name === currentTab) return;
+  if (location.hash.indexOf('#recipe=') === 0) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const tabEl = document.querySelector('.nav-tab[data-tab="' + name + '"]');
   if (tabEl) tabEl.classList.add('active');
@@ -1404,6 +1408,12 @@ function openDetail(id) {
   if (!r) { showToast('Рецепт не найден'); return; }
   currentTab = 'detail';
 
+  // Обновляем адресную строку — так на этот конкретный рецепт можно поделиться прямой ссылкой
+  var shareUrl = location.pathname + location.search + '#recipe=' + encodeURIComponent(id);
+  if (location.hash !== '#recipe=' + encodeURIComponent(id)) {
+    history.pushState({ recipeId: id }, '', shareUrl);
+  }
+
   // Возврат всегда на единый список "Рецепты"
   var originTab = 'list';
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -1414,7 +1424,7 @@ function openDetail(id) {
   $('tab-detail').classList.add('active');
 
   var backBtn = document.querySelector('.detail-back');
-  if (backBtn) backBtn.setAttribute('onclick', "switchTab('" + originTab + "')");
+  if (backBtn) backBtn.setAttribute('onclick', "closeDetail('" + originTab + "')");
 
   var body = $('detail-body');
   body.innerHTML =
@@ -1438,13 +1448,68 @@ function openDetail(id) {
       (r.steps.map ? r.steps.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') : '') +
     '</ol>' +
 
+    '<div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap">' +
+      '<button class="btn btn-ghost" onclick="shareRecipeLink(\'' + r.id + '\')">🔗 Поделиться ссылкой</button>' +
+    '</div>' +
+
     '<!-- Actions (только для администратора) -->\n'
     + (isAdmin() ?
-      '<div style="display:flex;gap:10px;margin-top:24px;flex-wrap:wrap">' +
+      '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">' +
         '<button class="btn btn-primary" onclick="editFromDetail(\'' + r.id + '\')">✏️ Редактировать</button>' +
         '<button class="btn btn-danger" onclick="deleteRecipe(\'' + r.id + '\')">🗑 Удалить</button>' +
       '</div>' : '');
 }
+
+/* ================================================================
+   ПРЯМЫЕ ССЫЛКИ НА РЕЦЕПТ (#recipe=ID в адресе страницы)
+   ================================================================ */
+function shareRecipeLink(id) {
+  var r = recipes.find(function(x) { return x.id === id; });
+  var url = location.origin + location.pathname + location.search + '#recipe=' + encodeURIComponent(id);
+
+  // На телефонах (iOS/Android) — родное окно "Поделиться" с выбором мессенджера
+  if (navigator.share) {
+    navigator.share({ title: r ? r.name : 'Рецепт', url: url }).catch(function() { /* пользователь просто закрыл окно */ });
+    return;
+  }
+
+  // На десктопе — копируем ссылку в буфер обмена
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() {
+      showToast('🔗 Ссылка скопирована');
+    }).catch(function() {
+      showToast(url);
+    });
+  } else {
+    showToast(url);
+  }
+}
+
+function closeDetail(originTab) {
+  // Убираем #recipe=... из адреса при выходе из детального просмотра
+  history.pushState(null, '', location.pathname + location.search);
+  switchTab(originTab);
+}
+
+function openRecipeFromHash(isFinalAttempt) {
+  var m = location.hash.match(/^#recipe=(.+)$/);
+  if (!m) return;
+  var id = decodeURIComponent(m[1]);
+  var exists = recipes.some(function(r) { return r.id === id; });
+  if (exists) {
+    openDetail(id);
+  } else if (isFinalAttempt) {
+    showToast('⚠️ Рецепт по этой ссылке не найден (возможно, удалён)');
+  }
+}
+
+window.addEventListener('popstate', function() {
+  if (location.hash.indexOf('#recipe=') === 0) {
+    openRecipeFromHash();
+  } else if (currentTab === 'detail') {
+    switchTab('list');
+  }
+});
 
 function editFromDetail(id) {
   if (!isAdmin()) { showToast('🔒 Редактирование доступно только в режиме редактирования'); return; }
@@ -1516,7 +1581,10 @@ document.addEventListener('DOMContentLoaded', function() {
   applyAdminUI();
   loadRecipes();
   renderList();
-  syncFromGithub(); // подтягиваем актуальные данные с GitHub поверх локального кэша
+  openRecipeFromHash(false); // если в ссылке есть #recipe=... и рецепт уже в локальном кэше — открыть сразу
+  syncFromGithub().then(function() {
+    openRecipeFromHash(true); // финальная попытка — если и сейчас не найден, покажем предупреждение
+  }); // подтягиваем актуальные данные с GitHub поверх локального кэша
 
   // Tab click handlers
   document.querySelectorAll('.nav-tab').forEach(function(tab) {
