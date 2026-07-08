@@ -212,6 +212,24 @@
   .card-info h3 { font-size: 18px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 20px; padding-left: 4px; }
+  .card-share-btn {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,.06);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card-share-btn svg {
+    width: 17px; height: 17px;
+    stroke: var(--text-muted); fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .card-share-btn:hover { background: rgba(233,69,96,.25); }
+  .card-share-btn:hover svg { stroke: var(--accent); }
   .badge {
     font-size: 12px; padding: 3px 10px;
     border-radius: 20px; background: rgba(255,255,255,.1);
@@ -1309,7 +1327,11 @@ function renderCards(containerEl, countEl, items, emptyText) {
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + r.weight + ' г</span>' : '') +
       '</div>\n'
-    + '</div><span class="card-chevron">›</span></div>';
+    + '</div>'
+    + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
+    +   '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>'
+    + '</button>'
+    + '<span class="card-chevron">›</span></div>';
   }
   containerEl.innerHTML = html;
 }
