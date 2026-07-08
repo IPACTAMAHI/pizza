@@ -1486,24 +1486,37 @@ function openDetail(id) {
    ПРЯМЫЕ ССЫЛКИ НА РЕЦЕПТ (#recipe=ID в адресе страницы)
    ================================================================ */
 function shareRecipeLink(id) {
-  var r = recipes.find(function(x) { return x.id === id; });
   var url = location.origin + location.pathname + location.search + '#recipe=' + encodeURIComponent(id);
+  copyTextToClipboard(url);
+}
 
-  // На телефонах (iOS/Android) — родное окно "Поделиться" с выбором мессенджера
-  if (navigator.share) {
-    navigator.share({ title: r ? r.name : 'Рецепт', url: url }).catch(function() { /* пользователь просто закрыл окно */ });
-    return;
-  }
-
-  // На десктопе — копируем ссылку в буфер обмена
+function copyTextToClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function() {
+    navigator.clipboard.writeText(text).then(function() {
       showToast('🔗 Ссылка скопирована');
     }).catch(function() {
-      showToast(url);
+      legacyCopy(text);
     });
   } else {
-    showToast(url);
+    legacyCopy(text);
+  }
+}
+
+function legacyCopy(text) {
+  // Фолбэк для старых браузеров без Clipboard API (например старый Safari/Android WebView)
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(ok ? '🔗 Ссылка скопирована' : text);
+  } catch (e) {
+    showToast(text);
   }
 }
 
@@ -1602,17 +1615,40 @@ function escAttr(str) {
 document.addEventListener('DOMContentLoaded', function() {
   applyAdminUI();
   loadRecipes();
-  renderList();
-  openRecipeFromHash(false); // если в ссылке есть #recipe=... и рецепт уже в локальном кэше — открыть сразу
+
+  var hasDeepLink = /^#recipe=/.test(location.hash);
+
+  if (hasDeepLink) {
+    showDetailLoading(); // сразу показываем "Загрузка рецепта...", без мелькания общего списка
+  } else {
+    renderList();
+  }
+
+  openRecipeFromHash(false); // если рецепт уже есть в локальном кэше — откроется сразу, минуя загрузку
+
   syncFromGithub().then(function() {
-    openRecipeFromHash(true); // финальная попытка — если и сейчас не найден, покажем предупреждение
-  }); // подтягиваем актуальные данные с GitHub поверх локального кэша
+    openRecipeFromHash(true); // финальная попытка на свежих данных с GitHub
+    if (hasDeepLink && currentTab !== 'detail') {
+      // Ссылка была, но рецепт так и не нашёлся — показываем обычный список вместо "вечной загрузки"
+      switchTab('list');
+    }
+  });
 
   // Tab click handlers
   document.querySelectorAll('.nav-tab').forEach(function(tab) {
     tab.addEventListener('click', function() { switchTab(tab.dataset.tab); });
   });
 });
+
+function showDetailLoading() {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var detailTab = $('tab-detail');
+  if (detailTab) detailTab.classList.add('active');
+  var body = $('detail-body');
+  if (body) body.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)">Загрузка рецепта…</div>';
+  currentTab = 'detail';
+}
 </script>
 
 
