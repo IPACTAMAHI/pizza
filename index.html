@@ -573,6 +573,14 @@
   </div>
 
   <div id="add-form-fields">
+  <div id="gh-not-configured-warning" style="display:none;background:rgba(233,69,96,.15);border:1px solid rgba(233,69,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+    <strong>⚠️ На этом устройстве не настроена синхронизация с GitHub.</strong>
+    <p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">
+      Рецепт сохранится только в этом браузере и может пропасть при следующем заходе
+      (страница подтянет актуальную версию с GitHub поверх локальной). Настройте синхронизацию
+      сейчас — кнопка ⚙️ внизу формы или в «Админ-панели».
+    </p>
+  </div>
   <h2 style="margin-bottom:18px" id="form-title">➕ Новый рецепт</h2>
 
   <div class="form-group">
@@ -839,6 +847,11 @@ function updateAddGate() {
   if (isAdmin()) {
     locked.style.display = 'none';
     fields.style.display = '';
+    var warn = $('gh-not-configured-warning');
+    if (warn) {
+      var cfg = getGithubConfig();
+      warn.style.display = (cfg && cfg.owner && cfg.repo && cfg.token) ? 'none' : '';
+    }
   } else {
     locked.style.display = '';
     fields.style.display = 'none';
@@ -1246,14 +1259,25 @@ function parseVideoUrl(url) {
   return { type: 'unknown', embedUrl: url };
 }
 
-function renderVideoBlock(url) {
+function renderVideoBlock(url, autoplay) {
   var v = parseVideoUrl(url);
   if (!v) return '';
 
   if (v.type === 'direct') {
-    return '<div class="video-embed-wrap"><video src="' + escAttr(v.embedUrl) + '" controls playsinline></video></div>';
+    var attrs = autoplay ? 'controls playsinline autoplay muted' : 'controls playsinline';
+    return '<div class="video-embed-wrap"><video src="' + escAttr(v.embedUrl) + '" ' + attrs + '></video></div>';
   }
-  if (v.type === 'youtube' || v.type === 'drive' || v.type === 'vimeo') {
+  if (v.type === 'youtube') {
+    var ytUrl = v.embedUrl + (autoplay ? '?autoplay=1&mute=1&playsinline=1' : '');
+    return '<div class="video-embed-wrap"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  if (v.type === 'vimeo') {
+    var vimeoUrl = v.embedUrl + (autoplay ? '?autoplay=1&muted=1' : '');
+    return '<div class="video-embed-wrap"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  if (v.type === 'drive') {
+    // У предпросмотра Google Диска нет надёжного параметра автовоспроизведения —
+    // видео откроется с одного нажатия "Play" внутри плеера.
     return '<div class="video-embed-wrap"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
   // Источник не распознан — просто ссылка
@@ -1330,7 +1354,7 @@ function resetForm() {
   onTypeChange();
 }
 
-function saveRecipe() {
+async function saveRecipe() {
   if (!isAdmin()) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
   var name = $('f-name').value.trim();
   if (!name) { showToast('⚠️ Укажите название рецепта'); return; }
@@ -1348,6 +1372,18 @@ function saveRecipe() {
     if (v) steps.push(v);
   });
   if (!steps.length) { showToast('⚠️ Добавьте хотя бы один шаг приготовления'); return; }
+
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    var proceed = await customConfirm(
+      'На этом устройстве не настроена синхронизация с GitHub.\n\n' +
+      'Рецепт сохранится только в этом браузере и может пропасть при следующем заходе на сайт. ' +
+      'Рекомендуется сначала настроить синхронизацию (⚙️).\n\n' +
+      'Сохранить всё равно, только локально?',
+      '⚠️ Синхронизация не настроена'
+    );
+    if (!proceed) return;
+  }
 
   var recipe = {
     id: editingRecipe ? editingRecipe.id : uid(),
@@ -1420,7 +1456,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
         (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + r.weight + ' г</span>' : '') +
-        (r.video ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\')">🎬 Видео</span>' : '') +
+        (r.video ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)">🎬 Видео</span>' : '') +
       '</div>\n'
     + '</div>'
     + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
@@ -1517,7 +1553,7 @@ function renderAdminPanel() {
 /* ================================================================
    DETAIL VIEW
    ================================================================ */
-function openDetail(id) {
+function openDetail(id, autoplayVideo) {
   var r = null;
   for (var i = 0; i < recipes.length; i++) {
     if (recipes[i].id === id) { r = recipes[i]; break; }
@@ -1546,7 +1582,7 @@ function openDetail(id) {
   var body = $('detail-body');
   body.innerHTML =
     (r.photo ? '<img class="detail-photo" src="' + escAttr(r.photo) + '" alt="">' : '') +
-    (r.video ? renderVideoBlock(r.video) : '') +
+    (r.video ? renderVideoBlock(r.video, !!autoplayVideo) : '') +
     '<h2 class="detail-title">' + esc(r.name) + '</h2>' +
     '<div class="detail-meta">' +
       (r.style ? '<span class="detail-badge">🏷 ' + esc(r.style) + '</span>' : '') +
