@@ -359,10 +359,17 @@
     border-radius: 14px; margin-bottom: 16px;
   }
   .video-embed-wrap {
-    position: relative; width: 100%; padding-top: 56.25%; /* 16:9 */
-    border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+    position: relative;
+    border-radius: 14px; overflow: hidden; margin: 0 auto 20px;
     background: #000;
   }
+  /* Горизонтальное видео (обычный YouTube, Vimeo, Facebook, Google Диск) */
+  .video-embed-wrap.ratio-16-9 { width: 100%; aspect-ratio: 16 / 9; }
+  /* Вертикальное видео (Shorts, TikTok, Reels) — ограничиваем по высоте,
+     чтобы видео целиком помещалось на экране без прокрутки вверх/вниз */
+  .video-embed-wrap.ratio-9-16 { aspect-ratio: 9 / 16; max-height: 68vh; width: auto; max-width: 100%; }
+  /* Обычный пост Instagram (часто квадратный/почти квадратный) */
+  .video-embed-wrap.ratio-4-5 { aspect-ratio: 4 / 5; max-height: 68vh; width: auto; max-width: 100%; }
   .video-embed-wrap iframe,
   .video-embed-wrap video {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
@@ -1315,71 +1322,95 @@ function parseVideoUrl(url) {
   url = url.trim();
 
   // YouTube (watch, youtu.be, embed, shorts)
-  var yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-  if (yt) return { type: 'youtube', embedUrl: 'https://www.youtube.com/embed/' + yt[1] };
+  var yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  var ytShorts = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (ytShorts) return { type: 'youtube', id: ytShorts[1], embedUrl: 'https://www.youtube.com/embed/' + ytShorts[1], aspect: '9-16' };
+  if (yt) return { type: 'youtube', id: yt[1], embedUrl: 'https://www.youtube.com/embed/' + yt[1], aspect: '16-9' };
 
   // Google Drive (/file/d/ID/... или open?id=ID)
   var drive = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-  if (drive) return { type: 'drive', embedUrl: 'https://drive.google.com/file/d/' + drive[1] + '/preview' };
+  if (drive) return { type: 'drive', embedUrl: 'https://drive.google.com/file/d/' + drive[1] + '/preview', aspect: '16-9' };
 
   // Vimeo
   var vimeo = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeo) return { type: 'vimeo', embedUrl: 'https://player.vimeo.com/video/' + vimeo[1] };
+  if (vimeo) return { type: 'vimeo', id: vimeo[1], embedUrl: 'https://player.vimeo.com/video/' + vimeo[1], aspect: '16-9' };
 
-  // TikTok (tiktok.com/@user/video/ID)
+  // TikTok (tiktok.com/@user/video/ID) — всегда вертикальное
   var tiktok = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
-  if (tiktok) return { type: 'tiktok', embedUrl: 'https://www.tiktok.com/embed/v2/' + tiktok[1] };
+  if (tiktok) return { type: 'tiktok', embedUrl: 'https://www.tiktok.com/embed/v2/' + tiktok[1], aspect: '9-16' };
 
-  // Instagram (посты и Reels)
-  var insta = url.match(/instagram\.com\/(?:reel|p)\/([a-zA-Z0-9_-]+)/);
-  if (insta) return { type: 'instagram', embedUrl: 'https://www.instagram.com/p/' + insta[1] + '/embed' };
+  // Instagram — Reels вертикальные, обычные посты чаще квадратные/4:5
+  var reel = url.match(/instagram\.com\/reel\/([a-zA-Z0-9_-]+)/);
+  if (reel) return { type: 'instagram', embedUrl: 'https://www.instagram.com/reel/' + reel[1] + '/embed', aspect: '9-16' };
+  var insta = url.match(/instagram\.com\/p\/([a-zA-Z0-9_-]+)/);
+  if (insta) return { type: 'instagram', embedUrl: 'https://www.instagram.com/p/' + insta[1] + '/embed', aspect: '4-5' };
 
   // VK (vk.com/video-OID_ID)
   var vk = url.match(/vk\.com\/video(-?\d+)_(\d+)/);
-  if (vk) return { type: 'vk', embedUrl: 'https://vk.com/video_ext.php?oid=' + vk[1] + '&id=' + vk[2] };
+  if (vk) return { type: 'vk', embedUrl: 'https://vk.com/video_ext.php?oid=' + vk[1] + '&id=' + vk[2], aspect: '16-9' };
 
   // Facebook (обычные ссылки на видео и fb.watch)
   if (/facebook\.com\/.+\/videos\/|fb\.watch\//.test(url)) {
-    return { type: 'facebook', embedUrl: 'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(url) + '&show_text=false' };
+    return { type: 'facebook', embedUrl: 'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(url) + '&show_text=false', aspect: '16-9' };
   }
 
-  // Прямая ссылка на видеофайл
-  if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) return { type: 'direct', embedUrl: url };
+  // Прямая ссылка на видеофайл — точную ориентацию узнаем динамически после загрузки метаданных
+  if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) return { type: 'direct', embedUrl: url, aspect: '16-9' };
 
   return { type: 'unknown', embedUrl: url };
 }
 
-function renderVideoBlock(url, autoplay) {
+function renderVideoBlock(url) {
   var v = parseVideoUrl(url);
   if (!v) return '';
+  var ratioClass = 'ratio-' + (v.aspect || '16-9');
 
   if (v.type === 'direct') {
-    var attrs = autoplay ? 'controls playsinline autoplay muted' : 'controls playsinline';
-    return '<div class="video-embed-wrap"><video src="' + escAttr(v.embedUrl) + '" ' + attrs + '></video></div>';
+    return '<div class="video-embed-wrap ' + ratioClass + '">' +
+      '<video src="' + escAttr(v.embedUrl) + '" controls playsinline autoplay muted loop onloadedmetadata="adjustVideoAspect(this)"></video></div>';
   }
 
   if (v.type === 'youtube') {
-    var ytUrl = v.embedUrl + (autoplay ? '?autoplay=1&mute=1&playsinline=1' : '');
-    return '<div class="video-embed-wrap"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    var ytUrl = v.embedUrl + '?autoplay=1&mute=1&playsinline=1&loop=1&playlist=' + v.id;
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
   if (v.type === 'vimeo') {
-    var vimeoUrl = v.embedUrl + (autoplay ? '?autoplay=1&muted=1' : '');
-    return '<div class="video-embed-wrap"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    var vimeoUrl = v.embedUrl + '?autoplay=1&muted=1&loop=1';
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
   if (v.type === 'drive') {
-    return '<div class="video-embed-wrap"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    // У предпросмотра Google Диска нет параметра автовоспроизведения/повтора —
+    // запускается вручную одним нажатием на Play внутри плеера.
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
 
-  // Соцсети (Instagram, VK, Facebook, TikTok) — встраивание работает не всегда:
-  // если автор закрыл аккаунт/пост от чужих сайтов, плеер может остаться пустым.
-  // На этот случай под плеером всегда есть запасная прямая ссылка на оригинал.
+  // Соцсети (Instagram, VK, Facebook, TikTok) — их плееры не поддерживают
+  // автовоспроизведение/повтор через ссылку, включаются нажатием Play вручную.
+  // Если автор закрыл пост от показа на чужих сайтах — есть запасная ссылка.
   if (v.type === 'tiktok' || v.type === 'instagram' || v.type === 'vk' || v.type === 'facebook') {
-    return '<div class="video-embed-wrap"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
       + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не отображается? Открыть оригинал →</a>';
   }
 
   // Источник не распознан — просто ссылка
   return '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">🎬 Открыть видео →</a>';
+}
+
+function adjustVideoAspect(videoEl) {
+  if (!videoEl.videoWidth || !videoEl.videoHeight) return;
+  var wrap = videoEl.parentElement;
+  if (!wrap) return;
+  wrap.classList.remove('ratio-16-9', 'ratio-9-16', 'ratio-4-5');
+  wrap.style.aspectRatio = videoEl.videoWidth + ' / ' + videoEl.videoHeight;
+  if (videoEl.videoWidth < videoEl.videoHeight) {
+    // Портретное видео — ограничиваем по высоте, чтобы целиком влезало на экран без прокрутки
+    wrap.style.maxHeight = '68vh';
+    wrap.style.width = 'auto';
+    wrap.style.maxWidth = '100%';
+  } else {
+    wrap.style.width = '100%';
+    wrap.style.maxHeight = '';
+  }
 }
 
 function previewVideoField() {
@@ -1390,14 +1421,14 @@ function previewVideoField() {
 
   var v = parseVideoUrl(url);
   var labels = {
-    youtube: '✅ Обнаружено: YouTube — на странице рецепта будет показан плеер.',
-    drive: '✅ Обнаружено: Google Диск — будет показан плеер. Проверьте, что доступ к файлу открыт "Всем, у кого есть ссылка".',
-    vimeo: '✅ Обнаружено: Vimeo — на странице рецепта будет показан плеер.',
-    tiktok: '✅ Обнаружено: TikTok — будет показан плеер. Если автор ограничил показ на других сайтах, появится запасная ссылка на оригинал.',
-    instagram: '✅ Обнаружено: Instagram — будет показан плеер (только для публичных постов/Reels). Если аккаунт закрытый — появится запасная ссылка.',
-    vk: '✅ Обнаружено: VK — будет показан плеер. Для некоторых видео VK может потребовать доступ по прямой ссылке.',
-    facebook: '✅ Обнаружено: Facebook — будет показан плеер (только для публичных видео).',
-    direct: '✅ Похоже на прямую ссылку на видеофайл — будет показан обычный видеоплеер.',
+    youtube: '✅ Обнаружено: YouTube — плеер запустится автоматически и будет повторяться по кругу.',
+    drive: '✅ Обнаружено: Google Диск — будет показан плеер. Автовоспроизведение здесь не поддерживается — запуск одним нажатием Play. Проверьте, что доступ к файлу открыт "Всем, у кого есть ссылка".',
+    vimeo: '✅ Обнаружено: Vimeo — плеер запустится автоматически и будет повторяться по кругу.',
+    tiktok: '✅ Обнаружено: TikTok — будет показан плеер (запуск вручную). Если автор ограничил показ на других сайтах, появится запасная ссылка на оригинал.',
+    instagram: '✅ Обнаружено: Instagram — будет показан плеер (запуск вручную, только для публичных постов/Reels). Если аккаунт закрытый — появится запасная ссылка.',
+    vk: '✅ Обнаружено: VK — будет показан плеер (запуск вручную). Для некоторых видео VK может потребовать доступ по прямой ссылке.',
+    facebook: '✅ Обнаружено: Facebook — будет показан плеер (запуск вручную, только для публичных видео).',
+    direct: '✅ Похоже на прямую ссылку на видеофайл — плеер запустится автоматически и будет повторяться по кругу, размер подстроится под само видео.',
     unknown: '⚠️ Источник не распознан — вместо плеера будет показана обычная ссылка "Открыть видео".'
   };
   hint.textContent = labels[v.type] || '';
@@ -1684,7 +1715,7 @@ function openDetail(id, autoplayVideo) {
   var body = $('detail-body');
   body.innerHTML =
     (r.photo ? '<img class="detail-photo" src="' + escAttr(r.photo) + '" alt="">' : '') +
-    (r.video ? renderVideoBlock(r.video, !!autoplayVideo) : '') +
+    (r.video ? renderVideoBlock(r.video) : '') +
     '<h2 class="detail-title">' + esc(r.name) + '</h2>' +
     '<div class="detail-meta">' +
       (r.style ? '<span class="detail-badge">🏷 ' + esc(r.style) + '</span>' : '') +
