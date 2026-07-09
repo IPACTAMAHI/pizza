@@ -237,15 +237,23 @@
   }
   .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
   .badge-video-active {
-    background: rgba(233,69,96,.22) !important;
-    color: var(--accent) !important;
-    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent) !important;
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 13px !important;
+    padding: 9px 16px !important;
+    min-height: 40px;
+    border-radius: 22px;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    transition: background .15s;
+    transition: transform .1s, background .15s;
+    box-shadow: 0 3px 10px rgba(233,69,96,.35);
   }
-  .badge-video-active:hover, .badge-video-active:active { background: rgba(233,69,96,.4) !important; }
+  .badge-video-active svg { width: 16px; height: 16px; fill: #fff; flex-shrink: 0; }
+  .badge-video-active:hover { background: #ff5573 !important; }
+  .badge-video-active:active { transform: scale(0.95); }
 
   /* Цветные бейджи произвольного тега/стиля — циклический набор цветов */
   .tag-0 { background: rgba(120,130,150,.30); color: #c7cede; }
@@ -554,6 +562,9 @@
     <p class="admin-panel-hint">После настройки каждое изменение автоматически публикуется в репозиторий.</p>
     <p class="admin-panel-hint" id="gh-sync-status" style="margin-top:10px;font-weight:600"></p>
     <p class="admin-panel-hint" id="gh-sync-link"></p>
+    <button class="btn btn-success btn-sm" onclick="forceSyncNow()" style="margin-top:12px;width:100%">🔄 Синхронизировать сейчас</button>
+    <button class="btn btn-ghost btn-sm" onclick="testGithubConnection()" style="margin-top:8px;width:100%">🧪 Проверить соединение</button>
+    <p class="admin-panel-hint" id="gh-test-result" style="margin-top:8px"></p>
   </div>
 
   <div class="admin-panel-card admin-only">
@@ -642,8 +653,8 @@
   </div>
 
   <div class="form-group">
-    <label>Видео (ссылка на YouTube, необязательно)</label>
-    <input type="text" id="f-video" placeholder="Например: https://youtu.be/dQw4w9WgXcQ" oninput="previewVideoField()">
+    <label>Видео — ссылка с YouTube, Instagram, VK, Facebook, TikTok, Google Диска и т.д. (необязательно)</label>
+    <input type="text" id="f-video" placeholder="Вставьте ссылку на видео" oninput="previewVideoField()">
     <p id="video-preview-hint" style="color:var(--text-muted);font-size:12px;margin-top:6px"></p>
   </div>
 
@@ -963,6 +974,68 @@ function b64EncodeUnicode(str) {
 
 const GH_STATUS_KEY = 'r20_gh_last_sync';
 
+/* ================================================================
+   ПРОВЕРКА СОЕДИНЕНИЯ С GITHUB
+   Делает настоящий тестовый запрос к API (не просто проверяет,
+   заполнены ли поля) — показывает точную причину, если что-то не так:
+   неверный токен, нет доступа к репозиторию, не хватает прав записи.
+   ================================================================ */
+async function testGithubConnection() {
+  var resultEl = $('gh-test-result');
+  var cfg = getGithubConfig();
+
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    if (resultEl) { resultEl.textContent = '⚪ Сначала заполните настройки (⚙️ Настроить)'; resultEl.style.color = 'var(--text-muted)'; }
+    return;
+  }
+
+  if (resultEl) { resultEl.textContent = '⏳ Проверяю...'; resultEl.style.color = 'var(--text-muted)'; }
+
+  try {
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo);
+    var res = await fetch(apiUrl, {
+      headers: { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' }
+    });
+
+    if (res.status === 401) {
+      throw new Error('Токен неверный или устарел (401). Создайте новый токен и введите заново.');
+    }
+    if (res.status === 404) {
+      throw new Error('Репозиторий "' + cfg.owner + '/' + cfg.repo + '" не найден (404). Проверьте имя пользователя и название репозитория.');
+    }
+    if (!res.ok) {
+      throw new Error('HTTP ' + res.status);
+    }
+
+    var data = await res.json();
+    var perms = data.permissions || {};
+    if (!perms.push) {
+      throw new Error('Токен подключён, но у него нет прав на запись (Contents: Read and write). Пересоздайте токен с нужными правами.');
+    }
+
+    if (resultEl) {
+      resultEl.textContent = '🟢 Всё в порядке: доступ к репозиторию "' + cfg.owner + '/' + cfg.repo + '" есть, права на запись есть.';
+      resultEl.style.color = '#8fe3ac';
+    }
+    showToast('✅ Соединение с GitHub работает');
+  } catch (e) {
+    console.error('testGithubConnection error:', e);
+    if (resultEl) { resultEl.textContent = '🔴 ' + e.message; resultEl.style.color = '#ff9aa8'; }
+    showToast('⚠️ Проверка не пройдена — подробности в админ-панели');
+  }
+}
+
+async function forceSyncNow() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    showToast('⚠️ Сначала настройте синхронизацию (⚙️ Настроить)');
+    return;
+  }
+  showToast('⏳ Синхронизирую...');
+  await syncToGithub(true); // manual=true — покажет "✅ Сохранено" или "⚠️ Ошибка" по итогу
+}
+
 async function syncToGithub(manual) {
   var cfg = getGithubConfig();
   if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
@@ -1253,6 +1326,23 @@ function parseVideoUrl(url) {
   var vimeo = url.match(/vimeo\.com\/(\d+)/);
   if (vimeo) return { type: 'vimeo', embedUrl: 'https://player.vimeo.com/video/' + vimeo[1] };
 
+  // TikTok (tiktok.com/@user/video/ID)
+  var tiktok = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+  if (tiktok) return { type: 'tiktok', embedUrl: 'https://www.tiktok.com/embed/v2/' + tiktok[1] };
+
+  // Instagram (посты и Reels)
+  var insta = url.match(/instagram\.com\/(?:reel|p)\/([a-zA-Z0-9_-]+)/);
+  if (insta) return { type: 'instagram', embedUrl: 'https://www.instagram.com/p/' + insta[1] + '/embed' };
+
+  // VK (vk.com/video-OID_ID)
+  var vk = url.match(/vk\.com\/video(-?\d+)_(\d+)/);
+  if (vk) return { type: 'vk', embedUrl: 'https://vk.com/video_ext.php?oid=' + vk[1] + '&id=' + vk[2] };
+
+  // Facebook (обычные ссылки на видео и fb.watch)
+  if (/facebook\.com\/.+\/videos\/|fb\.watch\//.test(url)) {
+    return { type: 'facebook', embedUrl: 'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(url) + '&show_text=false' };
+  }
+
   // Прямая ссылка на видеофайл
   if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) return { type: 'direct', embedUrl: url };
 
@@ -1267,6 +1357,7 @@ function renderVideoBlock(url, autoplay) {
     var attrs = autoplay ? 'controls playsinline autoplay muted' : 'controls playsinline';
     return '<div class="video-embed-wrap"><video src="' + escAttr(v.embedUrl) + '" ' + attrs + '></video></div>';
   }
+
   if (v.type === 'youtube') {
     var ytUrl = v.embedUrl + (autoplay ? '?autoplay=1&mute=1&playsinline=1' : '');
     return '<div class="video-embed-wrap"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
@@ -1276,10 +1367,17 @@ function renderVideoBlock(url, autoplay) {
     return '<div class="video-embed-wrap"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
   if (v.type === 'drive') {
-    // У предпросмотра Google Диска нет надёжного параметра автовоспроизведения —
-    // видео откроется с одного нажатия "Play" внутри плеера.
     return '<div class="video-embed-wrap"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
+
+  // Соцсети (Instagram, VK, Facebook, TikTok) — встраивание работает не всегда:
+  // если автор закрыл аккаунт/пост от чужих сайтов, плеер может остаться пустым.
+  // На этот случай под плеером всегда есть запасная прямая ссылка на оригинал.
+  if (v.type === 'tiktok' || v.type === 'instagram' || v.type === 'vk' || v.type === 'facebook') {
+    return '<div class="video-embed-wrap"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+      + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не отображается? Открыть оригинал →</a>';
+  }
+
   // Источник не распознан — просто ссылка
   return '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">🎬 Открыть видео →</a>';
 }
@@ -1295,6 +1393,10 @@ function previewVideoField() {
     youtube: '✅ Обнаружено: YouTube — на странице рецепта будет показан плеер.',
     drive: '✅ Обнаружено: Google Диск — будет показан плеер. Проверьте, что доступ к файлу открыт "Всем, у кого есть ссылка".',
     vimeo: '✅ Обнаружено: Vimeo — на странице рецепта будет показан плеер.',
+    tiktok: '✅ Обнаружено: TikTok — будет показан плеер. Если автор ограничил показ на других сайтах, появится запасная ссылка на оригинал.',
+    instagram: '✅ Обнаружено: Instagram — будет показан плеер (только для публичных постов/Reels). Если аккаунт закрытый — появится запасная ссылка.',
+    vk: '✅ Обнаружено: VK — будет показан плеер. Для некоторых видео VK может потребовать доступ по прямой ссылке.',
+    facebook: '✅ Обнаружено: Facebook — будет показан плеер (только для публичных видео).',
     direct: '✅ Похоже на прямую ссылку на видеофайл — будет показан обычный видеоплеер.',
     unknown: '⚠️ Источник не распознан — вместо плеера будет показана обычная ссылка "Открыть видео".'
   };
@@ -1456,7 +1558,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
         (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + r.weight + ' г</span>' : '') +
-        (r.video ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)">🎬 Видео</span>' : '') +
+        (r.video ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5"></circle><path d="M10 8l6 4-6 4V8z"></path></svg>Видео</span>' : '') +
       '</div>\n'
     + '</div>'
     + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
