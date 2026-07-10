@@ -394,7 +394,11 @@
   }
   .qr-share-card h3 { font-size: 16px; margin-bottom: 4px; }
   .qr-share-card p { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
-  .qr-share-card canvas { border-radius: 10px; background: #fff; padding: 10px; }
+  .qr-canvas-holder {
+    display: inline-block; border-radius: 10px; background: #fff; padding: 10px;
+    min-width: 180px; min-height: 180px;
+  }
+  .qr-canvas-holder img, .qr-canvas-holder canvas { display: block; }
   .qr-share-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
   .btn-telegram {
     background: #29a9eb; color: #fff;
@@ -742,7 +746,7 @@
 </div>
 
 <!-- Библиотека генерации QR-кодов (кэшируется браузером после первой загрузки) -->
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
 /* ================================================================
@@ -1791,7 +1795,7 @@ function openDetail(id, autoplayVideo) {
     '<div class="qr-share-card">' +
       '<h3>📤 Поделиться этим рецептом</h3>' +
       '<p>Отсканируйте QR-код или отправьте ссылку — рецепт откроется сразу, без поиска в списке</p>' +
-      '<canvas id="recipe-qr-canvas"></canvas>' +
+      '<div id="recipe-qr-canvas" class="qr-canvas-holder"></div>' +
       '<div class="qr-share-actions">' +
         '<a class="btn btn-telegram" id="telegram-share-btn" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.8 19.8c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.7 13.1l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3z"></path></svg>Telegram</a>' +
         '<button class="btn btn-ghost" onclick="shareRecipeLink(\'' + r.id + '\')">🔗 Скопировать ссылку</button>' +
@@ -1816,14 +1820,29 @@ function getRecipeShareUrl(id) {
 }
 
 function renderRecipeQR(id, name) {
-  var canvas = $('recipe-qr-canvas');
-  if (!canvas) return;
+  var holder = $('recipe-qr-canvas');
+  if (!holder) return;
   var url = getRecipeShareUrl(id);
+  holder.innerHTML = '';
 
   if (window.QRCode) {
-    QRCode.toCanvas(canvas, url, { width: 180, margin: 1, color: { dark: '#1a1a2e', light: '#ffffff' } }, function(err) {
-      if (err) console.error('QR error:', err);
-    });
+    try {
+      new QRCode(holder, {
+        text: url,
+        width: 180,
+        height: 180,
+        colorDark: '#1a1a2e',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (e) {
+      console.error('QR error:', e);
+      holder.innerHTML = '<a href="' + escAttr(url) + '" style="color:#1a1a2e;font-size:13px;word-break:break-all">' + escAttr(url) + '</a>';
+    }
+  } else {
+    // Библиотека не загрузилась (например нет интернета при первом открытии) —
+    // показываем саму ссылку текстом, чтобы поделиться всё равно было можно
+    holder.innerHTML = '<a href="' + escAttr(url) + '" style="color:#1a1a2e;font-size:13px;word-break:break-all">' + escAttr(url) + '</a>';
   }
 
   var tgBtn = $('telegram-share-btn');
