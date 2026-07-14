@@ -345,6 +345,18 @@
   .ingredient-row input { flex: 1; }
   .ingredient-row button { flex-shrink: 0; }
 
+  .row-move-btns { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .row-move-btns button {
+    width: 28px; height: 19px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.08); border: none; border-radius: 5px;
+    color: var(--text-muted); cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .row-move-btns button svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .row-move-btns button:active:not(:disabled) { background: rgba(233,69,96,.35); color: #fff; }
+  .row-move-btns button:disabled { opacity: .25; cursor: default; }
+
   /* Steps list in form */
   .step-row {
     display: flex; gap: 8px; align-items: flex-start;
@@ -1288,13 +1300,17 @@ function addIngredientRow(value) {
   var row = document.createElement('div');
   row.className = 'ingredient-row';
   row.innerHTML = '<input type="text" placeholder="Ингредиент, например: 200 г томатного соуса или 2 кг муки">' +
-    '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>';
+    '<div class="row-move-btns">' +
+      '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>' +
+      '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>' +
+    '</div>' +
+    '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateMoveButtonsState(); calcWeightFromIngredients(true)">✕</button>';
   list.appendChild(row);
   if (value) row.querySelector('input').value = value;
 
   var input = row.querySelector('input');
   input.addEventListener('input', function() { calcWeightFromIngredients(true); });
-  row.querySelector('button').addEventListener('click', function() { calcWeightFromIngredients(true); });
+  updateMoveButtonsState();
 }
 
 /* ================================================================
@@ -1482,6 +1498,10 @@ function addStepRow(value) {
   var num = list.children.length + 1;
   row.innerHTML = '<span class="step-num">' + num + '</span>' +
     '<input type="text" placeholder="Шаг ' + num + ': ...">\n'
+    + '<div class="row-move-btns">'
+    +   '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>'
+    +   '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>'
+    + '</div>'
     + '<button class="btn btn-danger btn-sm" onclick="removeStep(this)">✕</button>';
   list.appendChild(row);
   if (value) row.querySelector('input').value = value;
@@ -1495,6 +1515,7 @@ function removeStep(btn) {
 
 function renumberSteps() {
   var rows = document.querySelectorAll('#steps-list .step-row');
+  updateMoveButtonsState();
   for (var i = 0; i < rows.length; i++) {
     rows[i].querySelector('.step-num').textContent = i + 1;
   }
@@ -1503,6 +1524,40 @@ function renumberSteps() {
 /* ================================================================
    SAVE / EDIT RECIPE
    ================================================================ */
+/* ================================================================
+   ПЕРЕМЕЩЕНИЕ ИНГРЕДИЕНТОВ / ШАГОВ (вверх-вниз кнопками)
+   Работает одинаково надёжно мышкой и пальцем на телефоне —
+   в отличие от перетаскивания (drag-and-drop), которое на iPhone
+   часто ведёт себя нестабильно внутри прокручиваемых форм.
+   ================================================================ */
+function moveRow(btn, dir) {
+  var row = btn.closest('.ingredient-row, .step-row');
+  if (!row) return;
+  var sibling = dir === 'up' ? row.previousElementSibling : row.nextElementSibling;
+  if (!sibling) return;
+
+  if (dir === 'up') row.parentNode.insertBefore(row, sibling);
+  else row.parentNode.insertBefore(sibling, row);
+
+  if (row.classList.contains('step-row')) renumberSteps();
+  updateMoveButtonsState();
+
+  var inp = row.querySelector('input');
+  if (inp) inp.focus();
+}
+
+function updateMoveButtonsState() {
+  ['ingredients-list', 'steps-list'].forEach(function(listId) {
+    var rows = document.querySelectorAll('#' + listId + ' > div');
+    rows.forEach(function(row, i) {
+      var upBtn = row.querySelector('.row-move-btns button:first-child');
+      var downBtn = row.querySelector('.row-move-btns button:last-child');
+      if (upBtn) upBtn.disabled = (i === 0);
+      if (downBtn) downBtn.disabled = (i === rows.length - 1);
+    });
+  });
+}
+
 function resetForm() {
   editingRecipe = null;
   var type = pendingAddType || 'pizza';
