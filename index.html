@@ -346,6 +346,13 @@
   .ingredient-row input { flex: 1; }
   .ingredient-row button { flex-shrink: 0; }
 
+  /* Videos list in form */
+  .video-row { margin-bottom: 10px; }
+  .video-row-inputs { display: flex; gap: 8px; align-items: center; }
+  .video-row-inputs input { flex: 1; }
+  .video-row-inputs button { flex-shrink: 0; }
+  .video-row-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
   .row-move-btns { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
   .row-move-btns button {
     width: 28px; height: 19px; padding: 0;
@@ -733,9 +740,9 @@
   </div>
 
   <div class="form-group">
-    <label>Видео — ссылка с YouTube, Instagram, VK, Facebook, TikTok, Google Диска и т.д. (необязательно)</label>
-    <input type="text" id="f-video" placeholder="Вставьте ссылку на видео" oninput="previewVideoField()">
-    <p id="video-preview-hint" style="color:var(--text-muted);font-size:12px;margin-top:6px"></p>
+    <label>Видео — ссылки с YouTube, Instagram, VK, Facebook, TikTok, Google Диска и т.д. (необязательно, можно несколько)</label>
+    <div id="videos-list"></div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="addVideoRow()">+ Добавить видео</button>
   </div>
 
   <!-- Ingredients -->
@@ -1425,6 +1432,12 @@ function calcWeightFromIngredients(silent) {
    вместо плеера показывается обычная ссылка "Открыть видео",
    чтобы ничего не ломалось.
    ================================================================ */
+function getRecipeVideos(r) {
+  if (r.videos && r.videos.length) return r.videos;
+  if (r.video) return [r.video]; // старые рецепты, сохранённые до появления списка видео
+  return [];
+}
+
 function parseVideoUrl(url) {
   if (!url) return null;
   url = url.trim();
@@ -1524,27 +1537,6 @@ function adjustVideoAspect(videoEl) {
   }
 }
 
-function previewVideoField() {
-  var url = $('f-video').value.trim();
-  var hint = $('video-preview-hint');
-  if (!hint) return;
-  if (!url) { hint.textContent = ''; return; }
-
-  var v = parseVideoUrl(url);
-  var labels = {
-    youtube: '✅ Обнаружено: YouTube — плеер запустится автоматически и будет повторяться по кругу.',
-    drive: '✅ Обнаружено: Google Диск — будет показан плеер. Автовоспроизведение здесь не поддерживается — запуск одним нажатием Play. Проверьте, что доступ к файлу открыт "Всем, у кого есть ссылка".',
-    vimeo: '✅ Обнаружено: Vimeo — плеер запустится автоматически и будет повторяться по кругу.',
-    tiktok: '✅ Обнаружено: TikTok — будет показан плеер (запуск вручную). Если автор ограничил показ на других сайтах, появится запасная ссылка на оригинал.',
-    instagram: '✅ Обнаружено: Instagram — будет показан плеер (запуск вручную, только для публичных постов/Reels). Если аккаунт закрытый — появится запасная ссылка.',
-    vk: '✅ Обнаружено: VK — будет показан плеер (запуск вручную). Для некоторых видео VK может потребовать доступ по прямой ссылке.',
-    facebook: '✅ Обнаружено: Facebook — будет показан плеер (запуск вручную, только для публичных видео).',
-    direct: '✅ Похоже на прямую ссылку на видеофайл — плеер запустится автоматически и будет повторяться по кругу, размер подстроится под само видео.',
-    unknown: '⚠️ Источник не распознан — вместо плеера будет показана обычная ссылка "Открыть видео".'
-  };
-  hint.textContent = labels[v.type] || '';
-}
-
 function addStepRow(value) {
   if (!value) value = '';
   var list = $('steps-list');
@@ -1586,7 +1578,7 @@ function renumberSteps() {
    часто ведёт себя нестабильно внутри прокручиваемых форм.
    ================================================================ */
 function moveRow(btn, dir) {
-  var row = btn.closest('.ingredient-row, .step-row');
+  var row = btn.closest('.ingredient-row, .step-row, .video-row');
   if (!row) return;
   var sibling = dir === 'up' ? row.previousElementSibling : row.nextElementSibling;
   if (!sibling) return;
@@ -1602,7 +1594,7 @@ function moveRow(btn, dir) {
 }
 
 function updateMoveButtonsState() {
-  ['ingredients-list', 'steps-list'].forEach(function(listId) {
+  ['ingredients-list', 'steps-list', 'videos-list'].forEach(function(listId) {
     var rows = document.querySelectorAll('#' + listId + ' > div');
     rows.forEach(function(row, i) {
       var upBtn = row.querySelector('.row-move-btns button:first-child');
@@ -1611,6 +1603,48 @@ function updateMoveButtonsState() {
       if (downBtn) downBtn.disabled = (i === rows.length - 1);
     });
   });
+}
+
+function addVideoRow(value) {
+  if (!value) value = '';
+  var list = $('videos-list');
+  var row = document.createElement('div');
+  row.className = 'video-row';
+  row.innerHTML =
+    '<div class="video-row-inputs">' +
+      '<input type="text" placeholder="Вставьте ссылку на видео" oninput="previewVideoRow(this)">' +
+      '<div class="row-move-btns">' +
+        '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>' +
+        '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>' +
+      '</div>' +
+      '<button class="btn btn-danger btn-sm" onclick="this.closest(\'.video-row\').remove(); updateMoveButtonsState()">✕</button>' +
+    '</div>' +
+    '<p class="video-row-hint"></p>';
+  list.appendChild(row);
+  if (value) row.querySelector('input').value = value;
+  previewVideoRow(row.querySelector('input'));
+  updateMoveButtonsState();
+}
+
+function previewVideoRow(input) {
+  var url = input.value.trim();
+  var hint = input.closest('.video-row').querySelector('.video-row-hint');
+  if (!hint) return;
+  if (!url) { hint.textContent = ''; return; }
+
+  var v = parseVideoUrl(url);
+  var labels = {
+    youtube: '✅ YouTube — плеер запустится автоматически и будет повторяться по кругу.',
+    drive: '✅ Google Диск — запуск вручную (Play внутри плеера).',
+    vimeo: '✅ Vimeo — плеер запустится автоматически и будет повторяться по кругу.',
+    tiktok: '✅ TikTok — запуск вручную.',
+    instagram: '✅ Instagram — запуск вручную, только для публичных постов/Reels.',
+    vk: '✅ VK — запуск вручную.',
+    facebook: '✅ Facebook — запуск вручную, только для публичных видео.',
+    direct: '✅ Прямая ссылка на видеофайл — автовоспроизведение по кругу.',
+    unknown: '⚠️ Источник не распознан — будет показана обычная ссылка.'
+  };
+  hint.textContent = labels[v.type] || '';
 }
 
 function resetForm() {
@@ -1625,8 +1659,7 @@ function resetForm() {
   $('f-calories').value = '';
   $('f-weight').value = '';
   $('f-style').value = '';
-  $('f-video').value = '';
-  $('video-preview-hint').textContent = '';
+  $('videos-list').innerHTML = '';
   $('ingredients-list').innerHTML = '';
   $('steps-list').innerHTML = '';
   currentPhotoData = null;
@@ -1668,6 +1701,12 @@ async function saveRecipe() {
     if (!proceed) return;
   }
 
+  var videos = [];
+  document.querySelectorAll('#videos-list .video-row input').forEach(function(inp) {
+    var v = inp.value.trim();
+    if (v) videos.push(v);
+  });
+
   var recipe = {
     id: editingRecipe ? editingRecipe.id : uid(),
     type: $('f-type').value || 'pizza',
@@ -1678,7 +1717,7 @@ async function saveRecipe() {
     calories: parseInt($('f-calories').value) || null,
     weight: parseInt($('f-weight').value) || null,
     style: $('f-style').value.trim() || null,
-    video: $('f-video').value.trim() || null,
+    videos: videos,
     ingredients: ingredients,
     steps: steps
   };
@@ -1739,7 +1778,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
         (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + formatWeight(r.weight) + '</span>' : '') +
-        (r.video ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5"></circle><path d="M10 8l6 4-6 4V8z"></path></svg>Видео</span>' : '') +
+        (getRecipeVideos(r).length ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5"></circle><path d="M10 8l6 4-6 4V8z"></path></svg>Видео</span>' : '') +
       '</div>\n'
     + '</div>'
     + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
@@ -1859,7 +1898,7 @@ function openDetail(id, autoplayVideo) {
   var body = $('detail-body');
   body.innerHTML =
     (r.photo ? '<img class="detail-photo" src="' + escAttr(r.photo) + '" alt="">' : '') +
-    (r.video ? renderVideoBlock(r.video, !!autoplayVideo) : '') +
+    getRecipeVideos(r).map(function(v) { return renderVideoBlock(v, !!autoplayVideo); }).join('') +
     '<h2 class="detail-title">' + esc(r.name) + '</h2>' +
     '<div class="detail-meta">' +
       (r.style ? '<span class="detail-badge">🏷 ' + esc(r.style) + '</span>' : '') +
@@ -2023,8 +2062,8 @@ function editFromDetail(id) {
   $('f-calories').value = r.calories || '';
   $('f-weight').value = r.weight || '';
   $('f-style').value = r.style || '';
-  $('f-video').value = r.video || '';
-  previewVideoField();
+  $('videos-list').innerHTML = '';
+  getRecipeVideos(r).forEach(function(v) { addVideoRow(v); });
 
   currentPhotoData = r.photo;
   $('f-photo-data').value = r.photo || '';
