@@ -44,6 +44,7 @@
     "calories": null,
     "weight": 1030,
     "style": "Чеснок, огурец, майонез,сливки, зелень",
+    "videos": [],
     "ingredients": [
       "Майонез 550г",
       "Огурец маринованный 200г",
@@ -71,7 +72,7 @@
     "calories": null,
     "weight": 442,
     "style": "Моцарелла , Куриное филе МХП, Грибы , Зелень , Соус Тар-Тар",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Соус белый 50г",
       "Моцарелла 50г",
@@ -102,7 +103,7 @@
     "calories": null,
     "weight": 15702,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "---->ПЕРВЫЙ ЭТАП<----",
       "Закваска 8200г",
@@ -142,7 +143,7 @@
     "calories": null,
     "weight": 562,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Яйцо куриное 2шт",
       "Соус соевый 20г",
@@ -178,7 +179,7 @@
     "calories": null,
     "weight": 490,
     "style": "Моцарелла , Базилик",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Красный соус 120г",
       "Моцарелла 120г",
@@ -203,7 +204,7 @@
     "calories": null,
     "weight": 580,
     "style": "Моцарелла , Курица МХП, Маслины , Ананас",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Тесто 250г",
       "Есть два варианта пиццы , на красном и белом соусе",
@@ -235,7 +236,7 @@
     "calories": null,
     "weight": 410,
     "style": "Моцарелла , Курица МХП, Бекон ,Черри ,Айсберг ,Пармезан, Соус Цезарь",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Соус белый 80г",
       "Моцарелла 100г",
@@ -272,7 +273,7 @@
     "calories": null,
     "weight": 490,
     "style": "Моцарелла , Колбаса чоризо,",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Красный соус 80г",
       "Моцарелла 80г",
