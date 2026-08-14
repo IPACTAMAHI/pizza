@@ -300,7 +300,7 @@
     "calories": null,
     "weight": 510,
     "style": "Моцарелла , Микс сыров",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Белый соус 80г",
       "Моцарелла 60г",
@@ -327,7 +327,7 @@
     "calories": null,
     "weight": 535,
     "style": "Моцарелла ,  Ветчина , Салями , Грибы",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Красный соус 80г",
       "Моцарелла 100г",
@@ -365,7 +365,9 @@
     "calories": null,
     "weight": 630,
     "style": "Горчица , Моцарелла , Колбаса Чоризо, Бекон , Лук маринованный, Лук зеленый, Хамон, Черри",
-    "video": "https://www.instagram.com/reel/DaSJFj8gg1j/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ==",
+    "videos": [
+      "https://www.instagram.com/reel/DaSJFj8gg1j/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ=="
+    ],
     "ingredients": [
       "Красный соус 80г",
       "Горчица 5г",
@@ -404,7 +406,7 @@
     "calories": null,
     "weight": 635,
     "style": "Моцарелла , Салями , Курица мхп , Бекон , Лук маринованный, Сырный соус",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Красный соус 80г",
       "Моцарелла 80г",
@@ -439,7 +441,7 @@
     "calories": null,
     "weight": 590,
     "style": "Моцарелла, Ветчина, Балык , Грибы , Помидор",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Красный соус 80г",
       "Моцарелла 100г",
@@ -472,7 +474,7 @@
     "calories": null,
     "weight": 543,
     "style": "Соус айоли, Моцарелла , Креветка ,Черри , Перец болгарский (свежий), Маслины, Руккола , Хлопья миндаль",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Соус айоли 100г",
       "Моцарелла 100г",
@@ -509,7 +511,7 @@
     "calories": null,
     "weight": 540,
     "style": "Моцарелла, Помидор свежий, Руколла, Пармезан стружка , Масло чесночное",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Соус красный 80г",
       "Моцарелла 100г",
