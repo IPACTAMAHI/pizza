@@ -861,7 +861,7 @@
     "calories": null,
     "weight": 10010,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "---->ПЕРВЫЙ ЭТАП<----",
       "Закваска 4100г",
@@ -901,7 +901,7 @@
     "calories": null,
     "weight": 475,
     "style": "Моцарелла, Бекон, Рукола, Крем пармеджан",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Пинца заготовка 250г",
       "Соус белый 40г",
@@ -930,7 +930,7 @@
     "calories": null,
     "weight": 460,
     "style": "Моцарелла , Колбаса чоризо, Сыр горганзола, Рукола, Кешью, Спайси майонез",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Пинца заготовка 250г",
       "Соус белый 40г",
@@ -962,7 +962,7 @@
     "calories": null,
     "weight": 540,
     "style": "Моцарелла, Груша карамель, Микс сыра, Кешью,  Мед трюфель",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Пинца заготовка 250г",
       "Соус белый 40г",
@@ -993,7 +993,7 @@
     "calories": null,
     "weight": 450,
     "style": "Моцарелла , Прошуто , Рукола , Пармезан, Пармезан , Бальзамик , Соус Тар-тар",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Пинца заготовка 250г",
       "Соус красный 50г",
@@ -1027,7 +1027,7 @@
     "calories": null,
     "weight": 1000,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Пармезан 200г",
       "Бри 150г",
@@ -1052,7 +1052,7 @@
     "calories": null,
     "weight": 1000,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Сливки 33% 300г",
       "Сыр чеддер 400г",
@@ -1077,7 +1077,7 @@
     "calories": null,
     "weight": 1025,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Сливки 33% 500г",
       "Сыр янтарь 500г",
@@ -1103,7 +1103,7 @@
     "calories": null,
     "weight": 1270,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Сливки 1000г",
       "Пармезан крошка 240г",
@@ -1128,7 +1128,7 @@
     "calories": null,
     "weight": 8177,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "———ПЕРВЫЙ ЭТАП———",
       "Лед краш 1300г",
@@ -1184,7 +1184,7 @@
     "calories": null,
     "weight": 1089,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Хондами 20г",
       "Уксус винный 40г",
