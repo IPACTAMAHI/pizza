@@ -569,7 +569,7 @@
     "calories": null,
     "weight": 270,
     "style": "Пармезан крошка",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Тесто 250г",
       "Пармезан крошка 20г"
@@ -593,7 +593,7 @@
     "calories": null,
     "weight": null,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Груша"
     ],
@@ -622,7 +622,7 @@
     "calories": null,
     "weight": 15388,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Пульпа 15000г",
       "Соль 120г",
@@ -652,7 +652,7 @@
     "calories": null,
     "weight": 14416,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "---->ПЕРВЫЙ ЭТАП<----",
       "Закваска 6150г",
@@ -692,7 +692,7 @@
     "calories": null,
     "weight": 10022,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Мука 6900г",
       "Вода 3100г",
@@ -720,7 +720,7 @@
     "calories": null,
     "weight": 2124,
     "style": "Говядина, Сало, Цибуля жареная, Соль , Специи для мяса, Перец черный молотый, Вода очищенная",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Говядина 1600г",
       "Сало 200г",
@@ -750,7 +750,7 @@
     "calories": null,
     "weight": 3400,
     "style": "Уксус бальзамический, Сахар песок, Мед , Вино красное глинтвейн, Масло растительное, Лук синий",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Уксус бальзамический 400г",
       "Сахар песок 200г",
@@ -812,7 +812,7 @@
     "calories": null,
     "weight": 900,
     "style": null,
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Яйцо куриное 2шт",
       "Уксус бальзамический 70г",
@@ -839,7 +839,7 @@
     "calories": null,
     "weight": 1070,
     "style": "Мёд, Трюфельная паста, Уксус бальзамический",
-    "video": null,
+    "videos": [],
     "ingredients": [
       "Мёд 870г",
       "Трюфельная паста 130г",
