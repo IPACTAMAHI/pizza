@@ -9,7 +9,9 @@
     "calories": null,
     "weight": 520,
     "style": "Моцарелла, Салями , Ветчина",
-    "video": "https://www.youtube.com/watch?v=MI507KB-WGw",
+    "videos": [
+      "https://www.youtube.com/watch?v=MI507KB-WGw"
+    ],
     "ingredients": [
       "Тесто 250г",
       "Соус красный 80г",
