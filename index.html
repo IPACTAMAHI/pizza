@@ -1,271 +1,578 @@
 <!DOCTYPE html>
 <html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f5e6d3">
+<meta name="theme-color" content="#1a1a2e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
 <title>🍕 Route 20 — Римские пекарни</title>
 <style>
-:root {
-  --bg-primary: #faf7f2;
-  --surface: rgba(255, 255, 255, 0.85);
-  --card: rgba(255, 255, 255, 0.96);
-  --accent: #e6731d;
-  --accent-light: #ff8a3d;
-  --text: #2c2c2c;
-  --text-muted: #6b7280;
-  --success: #10b981;
-  --danger: #ef4444;
-  --border: rgba(0, 0, 0, 0.08);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.08);
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-}
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --card: #0f3460;
+    --accent: #e94560;
+    --text: #eee;
+    --text-muted: #aaa;
+    --success: #2ecc71;
+    --warning: #f39c12;
+  }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
-body {
-  font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #faf7f2 0%, #fff8f1 50%, #fef9f4 100%);
-  color: var(--text);
-  min-height: 100vh;
-  line-height: 1.6;
-  -webkit-tap-highlight-color: transparent;
-}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
-/* ===== HEADER ===== */
-.header {
-  background: linear-gradient(135deg, rgba(245,230,211,.6), rgba(255,248,241,.65)) url(images/site-header.jpg);
-  background-size: cover;
-  background-position: center 30%;
-  min-height: 380px;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  padding: 32px 20px 28px;
-  padding-top: calc(32px + env(safe-area-inset-top, 0px));
-  text-align: center;
-  position: relative; z-index: 100;
-}
-.header h1 { font-family:'Poppins',sans-serif; font-size: 36px; margin-bottom: 8px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
-.header p { opacity: .8; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background:
+      linear-gradient(rgba(15,12,18,.91), rgba(15,12,18,.95)),
+      url(images/site-background.jpg);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh; /* учитывает адресную строку/панели браузера на iOS и Android */
+    line-height: 1.6;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
 
-.header-corner-btn {
-  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px));
-  width: 48px; height: 48px; border-radius: 12px;
-  background: rgba(255,255,255,.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border); color: var(--text);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  cursor: pointer; transition: all .2s ease; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-}
-.header-corner-btn:hover { background: #fff; transform: scale(1.05); }
-.header-corner-btn span.label { font-size: 9px; line-height: 1; opacity: .8; }
-.header-corner-btn span.icon svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.admin-toggle { right: 14px; } .export-toggle { left: 14px; }
+  /* ===== HEADER ===== */
+  .header {
+    background:
+      linear-gradient(180deg, rgba(10,8,10,.35) 0%, rgba(10,8,10,.55) 55%, rgba(15,12,18,.88) 100%),
+      url(images/site-header.jpg);
+    background-size: cover;
+    background-position: center 30%;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 34px 20px 30px;
+    padding-top: calc(34px + env(safe-area-inset-top, 0px));
+    text-align: center;
+    position: relative;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  }
+  .header h1 {
+    font-size: 30px; margin-bottom: 4px; letter-spacing: .5px; font-weight: 800;
+    text-shadow: 0 2px 10px rgba(0,0,0,.7);
+  }
+  .header p {
+    opacity: .95; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+    text-shadow: 0 1px 6px rgba(0,0,0,.7);
+  }
+  /* Кнопки в углах шапки — стиль "тёмный квадрат, иконка + подпись" как в макете */
+  .header-corner-btn {
+    position: absolute;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    background: rgba(15,15,20,.55);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(255,255,255,.08);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .header-corner-btn span.label {
+    font-size: 10px; line-height: 1; opacity: .9; letter-spacing: .3px;
+  }
+  .header-corner-btn span.icon { line-height: 1; display: flex; }
+  .header-corner-btn span.icon svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .admin-toggle { right: 14px; }
+  .export-toggle { left: 14px; }
 
-.search-input {
-  width: 100%; padding: 14px 18px; background: var(--card);
-  border: 2px solid var(--border); border-radius: 999px; color: var(--text); font-size: 16px; outline: none; transition: all .3s ease; margin-bottom: 16px;
-}
-.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(230,115,29,.15); }
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-wrap .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px;
+    stroke: var(--text-muted); fill: none; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .search-wrap .search-input { margin-bottom: 0; padding-left: 42px; }
 
-/* Чипы */
-.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.chip {
-  padding: 10px 16px; border-radius: var(--radius-xl); background: var(--surface); color: var(--text-muted);
-  font-size: 13px; cursor: pointer; border: 2px solid transparent; touch-action: manipulation; user-select: none; transition: all .2s ease;
-}
-.chip:hover { background: rgba(255,138,61,.1); border-color: var(--accent-light); }
-.chip.active { background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(230,115,29,.3); }
+  /* Чипы категорий (вкладка "Категории") */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,.08);
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all .15s;
+  }
+  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-/* Админ-панель */
-.admin-panel-card { background: var(--card); border-radius: var(--radius-lg); padding: 18px; margin-bottom: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
-.admin-panel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 500; }
-.admin-panel-hint { color: var(--text-muted); font-size: 13px; margin-top: 8px; line-height: 1.5; }
+  /* Админ-панель */
+  .admin-panel-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .admin-panel-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .admin-panel-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
 
-/* Бейджи типов */
-.type-badge { padding: 4px 12px; border-radius: var(--radius-xl); color: #fff; font-size: 12px; font-weight: 600; display: inline-block; }
-.type-pizza { background: linear-gradient(135deg, #e74c3c, #c0392b); }
-.type-pinsa { background: linear-gradient(135deg, #d4a574, #b8864f); }
-.type-dough { background: linear-gradient(135deg, #6b7280, #4b5563); }
-.type-sauce { background: linear-gradient(135deg, #10b981, #059669); }
-.type-prep { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-.type-focaccia { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.type-burger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  /* Цветные бейджи типа/категории на карточках */
+  .type-badge { color: #fff; font-weight: 600; }
+  .type-pizza { background: #8c2f39; }
+  .type-pinsa { background: #6b4423; }
+  .type-dough { background: #4a5568; }
+  .type-sauce { background: #2f6b4f; }
+  .type-prep { background: #6b4a8c; }
+  .type-focaccia { background: #8c6d1f; }
+  .type-burger { background: #7a3b1d; }
 
-.app-footer { text-align: center; padding: 20px 12px calc(20px + env(safe-area-inset-bottom, 0px)); color: var(--text-muted); font-size: 13px; }
+  /* Подвал */
+  .app-footer {
+    text-align: center;
+    padding: 18px 12px calc(18px + env(safe-area-inset-bottom, 0px));
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: .5px;
+  }
 
-.admin-only { display: none !important; }
-body.is-admin-full .admin-only { display: block !important; }
-body.is-admin-full button.admin-only { display: inline-flex !important; }
-.nav-tab.admin-only { display: none !important; }
-body.is-admin-full .nav-tab.admin-only { display: flex !important; }
+  /* По умолчанию (обычный посетитель) все элементы редактирования скрыты */
+  .admin-only { display: none !important; }
+  body.is-admin .admin-only { display: revert !important; }
+  body.is-admin .nav-tab.admin-only { display: block !important; }
+  body.is-admin button.admin-only,
+  body.is-admin .btn.admin-only { display: inline-flex !important; }
 
-.gh-setup-screen { text-align:center;padding:40px 20px }
-.gh-setup-screen h3{font-family:'Poppins',sans-serif;margin-bottom:12px;font-size:20px}
-.gh-setup-screen p{color:var(--text-muted);font-size:14px;line-height:1.6;margin-bottom:20px}
+  /* ===== NAV TABS ===== */
+  .nav-tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    padding: 12px 6px 10px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color .2s;
+    border-bottom: 3px solid transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  .nav-tab .nav-icon { line-height: 1; display: flex; }
+  .nav-tab .nav-icon svg { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-tab .nav-label {
+    font-size: 11px; line-height: 1; letter-spacing: .2px;
+    border-bottom: 2px solid transparent; padding-bottom: 3px;
+  }
+  .nav-tab:hover { background: rgba(255,255,255,.04); }
+  .nav-tab[data-tab="admin"] { color: var(--accent); }
+  .nav-tab.active { color: var(--accent); }
+  .nav-tab.active .nav-label { border-bottom-color: var(--accent); }
 
-/* ===== NAV TABS ===== */
-.nav-tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 200; }
-.nav-tab {
-  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  padding: 14px 6px 10px; text-align: center; cursor: pointer; color: var(--text-muted); transition: all .2s ease;
-  border-bottom: 3px solid transparent; user-select: none; touch-action: manipulation;
-}
-.nav-tab:hover { background: rgba(0,0,0,.03); }
-.nav-tab.active { color: var(--accent); background: rgba(230,115,29,.06); border-bottom-color: var(--accent); }
-.nav-tab .nav-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
-.nav-tab .nav-label { font-size: 11px; line-height: 1; font-weight: 500; }
+  /* ===== CONTENT AREA ===== */
+  .tab-content { display: none; padding: 16px; max-width: 800px; margin: 0 auto; }
+  .tab-content.active { display: block; }
 
-/* ===== CONTENT ===== */
-.tab-content { display: none; padding: 20px 16px 32px; max-width: 800px; margin: 0 auto; animation: fadeInUp .4s ease-out; }
-.tab-content.active { display: block; }
+  /* ===== CARD LIST ===== */
+  .recipe-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .recipe-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,.3); }
 
-/* Карточки рецептов */
-.recipe-card {
-  background: var(--card); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; cursor: pointer;
-  transition: all .3s ease; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border); touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-}
-.recipe-card:hover { transform: translateY(-2px) scale(1.01); box-shadow: var(--shadow-md); border-color: rgba(230,115,29,.25); }
-.card-thumb { width: 80px; height: 80px; border-radius: 14px; object-fit: cover; flex-shrink: 0; }
-.card-photo-placeholder { width: 80px; height: 80px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 34px; background: linear-gradient(135deg, #fff7ed, #ffedd5); flex-shrink: 0; }
-.card-info { flex: 1; min-width: 0; }
-.card-info h3 { font-size: 16px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-.card-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.badge { font-size: 12px; padding: 4px 10px; border-radius: var(--radius-xl); background: rgba(0,0,0,.05); color: var(--text-muted); }
-.card-chevron { flex-shrink: 0; color: #d1d5db; font-size: 24px; line-height: 1; }
+  .card-thumb {
+    width: 90px; height: 90px; border-radius: 10px;
+    object-fit: cover; flex-shrink: 0;
+    background: var(--surface);
+  }
+  .card-info { flex: 1; min-width: 0; }
+  .card-info h3 { font-size: 18px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 20px; padding-left: 4px; }
+  .card-share-btn {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,.06);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card-share-btn svg {
+    width: 17px; height: 17px;
+    stroke: var(--text-muted); fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .card-share-btn:hover { background: rgba(233,69,96,.25); }
+  .card-share-btn:hover svg { stroke: var(--accent); }
+  .badge {
+    font-size: 12px; padding: 3px 10px;
+    border-radius: 20px; background: rgba(255,255,255,.1);
+    color: var(--text-muted);
+  }
+  .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
+  .badge-video-active {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent) !important;
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 13px !important;
+    padding: 9px 16px !important;
+    min-height: 40px;
+    border-radius: 22px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .1s, background .15s;
+    box-shadow: 0 3px 10px rgba(233,69,96,.35);
+  }
+  .badge-video-active svg { width: 16px; height: 16px; fill: #fff; flex-shrink: 0; }
+  .badge-video-active:hover { background: #ff5573 !important; }
+  .badge-video-active:active { transform: scale(0.95); }
 
-/* ===== FORMS ===== */
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 14px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
-input[type="text"], input[type="number"], textarea, select {
-  width: 100%; padding: 13px 15px; background: #fff; border: 2px solid var(--border); border-radius: 14px;
-  color: var(--text); font-size: 16px; outline: none; transition: all .3s ease; font-family: inherit;
-}
-input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(230,115,29,.12); }
+  /* Цветные бейджи произвольного тега/стиля — циклический набор цветов */
+  .tag-0 { background: rgba(120,130,150,.30); color: #c7cede; }
+  .tag-1 { background: rgba(200,140,40,.30);  color: #ffcf8a; }
+  .tag-2 { background: rgba(60,150,110,.28);  color: #8fe3c0; }
+  .tag-3 { background: rgba(130,90,200,.30);  color: #cbb0ff; }
+  .tag-4 { background: rgba(60,140,190,.28);  color: #9ad6ff; }
 
-.photo-upload {
-  width: 100%; min-height: 160px; background: #fff; border: 2px dashed rgba(0,0,0,.15); border-radius: var(--radius-lg);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all .3s ease; padding: 16px; text-align: center;
-}
-.photo-upload:hover { border-color: var(--accent); background: #fff7ed; }
+  /* ===== FORMS ===== */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 16px; /* >=16px обязательно: иначе Safari iOS зумит страницу при фокусе */
+    outline: none;
+    transition: border-color .2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
 
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px; border-radius: 14px;
-  font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: all .3s ease; color: #fff;
-  -webkit-tap-highlight-color: transparent; touch-action: manipulation; text-decoration: none; font-family: inherit;
-}
-.btn:active { transform: scale(.97); }
-.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-light)); box-shadow: 0 4px 14px rgba(230,115,29,.35); }
-.btn-primary:hover { transform: translateY(-2px); filter: brightness(1.08); }
-.btn-success { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 14px rgba(16,185,129,.3); }
-.btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.btn-ghost { background: #fff; border: 2px solid var(--border); color: var(--text-muted); }
-.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-.btn-sm { padding: 10px 18px; font-size: 13px; }
+  /* Photo upload */
+  .photo-upload {
+    width: 100%; height: 160px;
+    background: var(--surface);
+    border: 2px dashed rgba(255,255,255,.15);
+    border-radius: 14px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer; transition: all .2s;
+    position: relative;
+  }
+  .photo-upload:hover { border-color: var(--accent); background: rgba(233,69,96,.06); }
+  .photo-upload img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .photo-upload .placeholder-icon { font-size: 40px; margin-bottom: 6px; opacity: .5; }
+  .photo-upload .placeholder-text { font-size: 13px; color: var(--text-muted); }
 
-.row-action-btn { width: 40px; height: 42px; border-radius: 12px; border: none; background: rgba(239,68,68,.08); color: var(--danger); font-size: 15px; cursor: pointer; flex-shrink: 0; transition: all .2s; }
-.row-action-btn:hover { background: rgba(239,68,68,.15); }
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .2s;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--accent); }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-danger { background: #e74c3c; }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,.2);
+    color: var(--text-muted);
+  }
+  .btn-sm { padding: 8px 16px; font-size: 13px; }
 
-.ingredient-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.step-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
-.step-num { min-width: 30px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent-light)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0; }
-.video-row { margin-bottom: 8px; }
+  /* Ingredients list in form */
+  .ingredient-row {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .ingredient-row input { flex: 1; }
+  .ingredient-row button { flex-shrink: 0; }
 
-/* ===== DETAIL ===== */
-.detail-back { margin-bottom: 16px; }
-.detail-photo { width: 100%; max-height: 340px; object-fit: cover; border-radius: var(--radius-xl); margin-bottom: 20px; cursor: zoom-in; }
-.detail-emoji-hero { width: 100%; height: 180px; border-radius: var(--radius-xl); background: linear-gradient(135deg, #fff7ed, #ffedd5); display: flex; align-items: center; justify-content: center; font-size: 72px; margin-bottom: 20px; }
-.detail-title { font-family: 'Poppins', sans-serif; font-size: 26px; margin-bottom: 12px; font-weight: 700; }
-.detail-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
-.detail-badge { padding: 6px 14px; border-radius: var(--radius-xl); background: rgba(230,115,29,.1); color: #b45309; font-size: 13px; font-weight: 500; }
+  /* Videos list in form */
+  .video-row { margin-bottom: 10px; }
+  .video-row-inputs { display: flex; gap: 8px; align-items: center; }
+  .video-row-inputs input { flex: 1; }
+  .video-row-inputs button { flex-shrink: 0; }
+  .video-row-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
 
-.section-title { font-family:'Poppins',sans-serif; font-size: 18px; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid rgba(230,115,29,.3); font-weight: 600; }
-.ingredients-list { list-style: none; }
-.ingredients-list li { background: var(--surface); border-radius: 12px; padding: 11px 14px; margin-bottom: 8px; font-size: 14px; display: flex; gap: 10px; align-items: center; }
-.ingredients-list li::before { content: '•'; color: var(--accent); font-weight: bold; font-size: 16px; }
+  .row-move-btns { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .row-move-btns button {
+    width: 28px; height: 19px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.08); border: none; border-radius: 5px;
+    color: var(--text-muted); cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .row-move-btns button svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .row-move-btns button:active:not(:disabled) { background: rgba(233,69,96,.35); color: #fff; }
+  .row-move-btns button:disabled { opacity: .25; cursor: default; }
 
-.steps-list { list-style: none; counter-reset: step; }
-.steps-list li { counter-increment: step; position: relative; padding: 12px 14px 12px 50px; margin-bottom: 8px; background: var(--surface); border-radius: 12px; font-size: 14px; line-height: 1.5; }
-.steps-list li::before { content: counter(step); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 27px; height: 27px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-light)); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; }
+  /* Steps list in form */
+  .step-row {
+    display: flex; gap: 8px; align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .step-num {
+    min-width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    margin-top: 4px;
+  }
 
-.video-embed-wrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: var(--radius-lg); overflow: hidden; background: #000; margin-bottom: 20px; box-shadow: var(--shadow-md); }
-.video-embed-wrap.ratio-9-16 { max-height: 70vh; width: auto; margin-left: auto; margin-right: auto; aspect-ratio: 9/16; }
-.video-embed-wrap iframe, .video-embed-wrap video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-.video-fallback-link { display: flex; align-items: center; gap: 10px; padding: 14px 20px; margin-bottom: 16px; background: var(--surface); border-radius: 14px; color: #b45309; text-decoration: none; font-size: 14px; font-weight: 600; border: 1px solid rgba(230,115,29,.25); }
+  /* ===== DETAIL VIEW ===== */
+  .detail-back { margin-bottom: 16px; }
+  .detail-photo {
+    width: 100%; max-height: 320px; object-fit: cover;
+    border-radius: 14px; margin-bottom: 16px;
+  }
+  .video-embed-wrap {
+    position: relative;
+    border-radius: 14px; overflow: hidden; margin: 0 auto 20px;
+    background: #000;
+  }
+  /* Горизонтальное видео (обычный YouTube, Vimeo, Facebook, Google Диск) */
+  .video-embed-wrap.ratio-16-9 { width: 100%; aspect-ratio: 16 / 9; }
+  /* Вертикальное видео (Shorts, TikTok, Reels) — ограничиваем по высоте,
+     чтобы видео целиком помещалось на экране без прокрутки вверх/вниз */
+  .video-embed-wrap.ratio-9-16 { aspect-ratio: 9 / 16; max-height: 68vh; width: auto; max-width: 100%; }
+  /* Обычный пост Instagram (часто квадратный/почти квадратный) */
+  .video-embed-wrap.ratio-4-5 { aspect-ratio: 4 / 5; max-height: 68vh; width: auto; max-width: 100%; }
+  .video-embed-wrap iframe,
+  .video-embed-wrap video {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
+  }
+  .video-fallback-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 18px; margin-bottom: 20px;
+    background: var(--card); border-radius: 12px;
+    color: var(--accent); text-decoration: none; font-size: 14px;
+  }
+  .qr-share-card {
+    background: var(--card); border-radius: 14px;
+    padding: 20px; margin-top: 24px;
+    text-align: center;
+  }
+  .qr-share-card h3 { font-size: 16px; margin-bottom: 4px; }
+  .qr-share-card p { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
+  .qr-canvas-holder {
+    display: inline-block; border-radius: 10px; background: #fff; padding: 10px;
+    min-width: 180px; min-height: 180px;
+  }
+  .qr-canvas-holder img, .qr-canvas-holder canvas { display: block; }
+  .qr-share-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .btn-telegram {
+    background: #29a9eb; color: #fff;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-telegram svg { width: 16px; height: 16px; fill: #fff; }
+  .detail-title { font-size: 28px; margin-bottom: 8px; }
+  .detail-meta {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .detail-badge {
+    padding: 6px 14px; border-radius: 20px;
+    background: var(--card); font-size: 13px;
+    color: var(--text);
+  }
 
-.qr-share-card { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; margin-top: 28px; text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
-.qr-share-card h3 { font-size: 16px; margin-bottom: 4px; font-weight: 700; }
-.qr-share-card > p { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
-.qr-canvas-holder { display: inline-block; border-radius: 12px; background: #fff; padding: 10px; box-shadow: var(--shadow-sm); }
-.btn-telegram { background: linear-gradient(135deg, #29a9eb, #1f8fd4); }
+  .section-title {
+    font-size: 18px; margin: 18px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid rgba(233,69,96,.4);
+  }
 
-.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
-.empty-icon { font-size: 56px; margin-bottom: 12px; opacity: .5; display: block; }
+  .ingredients-list li,
+  .steps-list li {
+    margin-bottom: 8px; font-size: 15px;
+  }
+  .steps-list ol { padding-left: 0; counter-reset: step; }
+  .steps-list li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 36px;
+    margin-bottom: 12px; font-size: 15px;
+  }
+  .steps-list li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
 
-/* ===== TOAST / MODAL / LIGHTBOX ===== */
-.toast {
-  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); padding: 14px 28px;
-  background: var(--success); color: #fff; border-radius: var(--radius-xl); font-size: 15px; font-weight: 600;
-  box-shadow: 0 8px 30px rgba(0,0,0,.2); opacity: 0; transition: all .4s ease; z-index: 999; pointer-events: none; max-width: 90vw; text-align: center;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 64px; margin-bottom: 12px; opacity: .5; }
 
-.photo-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.88); display: none; align-items: center; justify-content: center; z-index: 3000; padding: 20px; cursor: zoom-out; }
-.photo-lightbox.show { display: flex; }
-.photo-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain; }
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 28px;
+    background: var(--success);
+    color: #fff;
+    border-radius: 12px;
+    font-size: 15px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    opacity: 0; transition: opacity .3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
 
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-.modal-overlay.show { display: flex; animation: fadeInUp .25s ease-out; }
-.modal-box { background: #fff; border-radius: var(--radius-xl); padding: 26px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
-.modal-box h3 { margin-bottom: 8px; font-size: 18px; font-weight: 700; }
-.modal-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 6px; white-space: pre-line; line-height: 1.5; }
-.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  /* ===== MODAL (замена prompt()/confirm() — на iOS в режиме "На экран Домой" они не работают) ===== */
+  .photo-lightbox {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.92);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 2100;
+    padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .photo-lightbox.show { display: flex; }
+  .photo-lightbox img {
+    max-width: 100%; max-height: 100%;
+    border-radius: 8px;
+    object-fit: contain;
+  }
 
-@media (max-width: 500px) { .header h1 { font-size: 28px; } .card-thumb, .card-photo-placeholder { width: 64px; height: 64px; font-size: 28px; } }
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.65);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 22px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  }
+  .modal-box h3 { margin-bottom: 8px; font-size: 18px; }
+  .modal-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 14px; white-space: pre-line; line-height: 1.5; }
+  .modal-box input {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    background: var(--surface); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; color: var(--text); margin-bottom: 4px;
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 500px) {
+    .header h1 { font-size: 22px; }
+    .card-thumb { width: 70px; height: 70px; }
+    .nav-tab { padding: 10px 4px; font-size: 13px; }
+  }
 </style>
 </head>
-<body>
+<body class="is-admin">
 
 <!-- HEADER -->
-<div class="header" id="site-header">
-  <button class="header-corner-btn export-toggle admin-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Скачать копию сайта с текущими рецептами">
+<div class="header">
+  <button class="header-corner-btn export-toggle admin-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Опубликовать текущий список">
     <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
     <span class="label">Экспорт</span>
   </button>
   <button class="header-corner-btn admin-toggle" id="admin-toggle-btn" onclick="toggleAdmin()" title="Режим редактирования">
-    <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-2"></path></svg></span>
-    <span class="label" id="admin-toggle-label">Выход</span>
+    <span class="icon" id="admin-toggle-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-2"></path></svg></span>
+    <span class="label">Выход</span>
   </button>
   <h1>Книга рецептов</h1>
-  <p>Pizza Door · Route 20</p>
+  <p>Pizza Door</p>
 </div>
 
 <!-- NAV TABS -->
 <div class="nav-tabs">
-  <div class="nav-tab admin-only" data-tab="add">
-    <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 21h12"></path><path d="M8 21v-5"></path><path d="M16 21v-5"></path><path d="M9 3v6l-3 9a2 2 0 0 0 2 2.5h8a2 2 0 0 0 2-2.5L15 9V3"></path><path d="M7 8h10"></path></svg></span>
-    <span class="nav-label">Добавить</span>
+  <div class="nav-tab" data-tab="add">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 21h12"></path><path d="M8 21v-5"></path><path d="M16 21v-5"></path><path d="M6.5 11.5c-1.6-.9-2.3-2.8-1.3-4.4C6 5.8 7.6 5.4 9 6.1 9.1 4.4 10.4 3 12 3s2.9 1.4 3 3.1c1.4-.7 3-.3 3.8 1 1 1.6.3 3.5-1.3 4.4 1 1 1.4 2.3.9 3.4-.8 1.5-2.7 2-4.1 1.5-.9.7-2 1-2.3 1s-1.4-.3-2.3-1c-1.4.5-3.3 0-4.1-1.5-.5-1.1-.1-2.4.9-3.4z"></path></svg></span>
+    <span class="nav-label">Добавить рецепт</span>
   </div>
   <div class="nav-tab active" data-tab="categories">
-    <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
-    <span class="nav-label">Рецепты</span>
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="16" y2="15"></line></svg></span>
+    <span class="nav-label">Категории</span>
   </div>
-  <div class="nav-tab admin-only" data-tab="admin">
+  <div class="nav-tab" data-tab="admin">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
-    <span class="nav-label">Настройки</span>
+    <span class="nav-label">Админ-панель</span>
   </div>
 </div>
 
-<!-- TAB: CATEGORIES -->
+<!-- TAB: CATEGORIES (фильтр по типу) -->
 <div id="tab-categories" class="tab-content active">
   <input type="text" class="search-input" id="search-categories" placeholder="🔍 Поиск по названию рецепта..." oninput="renderCategoriesList()">
   <div class="chip-row" id="category-chips">
@@ -278,15 +585,15 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); box-sha
     <span class="chip" data-type="focaccia" onclick="selectCategoryChip('focaccia')">🫓 Фокачча</span>
     <span class="chip" data-type="burger" onclick="selectCategoryChip('burger')">🍔 Бургер</span>
   </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 16px">
-    <span id="categories-count" style="font-size:13px;color:var(--text-muted);font-weight:500"></span>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">
+    <span id="categories-count" style="font-size:14px;color:var(--text-muted)">Всего: 15</span>
   </div>
   <div id="categories-list"></div>
 </div>
 
-<!-- TAB: ADMIN -->
+<!-- TAB: ADMIN PANEL -->
 <div id="tab-admin" class="tab-content">
-  <h2 style="margin-bottom:18px;font-family:'Poppins',sans-serif">⚙️ Настройки</h2>
+  <h2 style="margin-bottom:18px">⚙️ Админ-панель</h2>
 
   <div class="admin-panel-card">
     <div class="admin-panel-row">
@@ -296,120 +603,188 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); box-sha
   </div>
 
   <div class="admin-panel-card admin-only">
-    <div class="admin-panel-row"><span>Экспорт сайта</span><button class="btn btn-ghost btn-sm" onclick="exportSnapshot()">⬇️ Скачать копию</button></div>
-    <p class="admin-panel-hint">Скачает index.html со встроенной текущей базой рецептов — для перезалива на сервер.</p>
+    <div class="admin-panel-row">
+      <span>Экспорт файла</span>
+      <button class="btn btn-ghost btn-sm" onclick="exportSnapshot()">⬇️ Экспорт</button>
+    </div>
+    <p class="admin-panel-hint">Скачивает копию сайта с текущими рецептами внутри — на случай, если нужно перезалить вручную.</p>
   </div>
 
   <div class="admin-panel-card admin-only">
-    <div class="admin-panel-row"><span>Синхронизация с GitHub</span><button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Настроить</button></div>
-    <p class="admin-panel-hint">После настройки рецепты автоматически публикуются в репозиторий и подтягиваются с него.</p>
-    <p class="admin-panel-hint" id="gh-sync-status" style="font-weight:600;color:#6b7280">⚪ Синхронизация не настроена</p>
-    <button class="btn btn-success btn-sm admin-only" onclick="forceSyncNow()" style="width:100%;margin-top:10px">🔄 Синхронизировать сейчас</button>
-    <button class="btn btn-ghost btn-sm" onclick="testGithubConnection()" style="width:100%;margin-top:8px">🧪 Проверить соединение</button>
-    <p class="admin-panel-hint" id="gh-test-result"></p>
+    <div class="admin-panel-row">
+      <span>Синхронизация с GitHub</span>
+      <button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Настроить</button>
+    </div>
+    <p class="admin-panel-hint">После настройки каждое изменение автоматически публикуется в репозиторий.</p>
+    <p class="admin-panel-hint" id="gh-sync-status" style="margin-top: 10px; font-weight: 600; color: rgb(143, 227, 172);">🟢 Последняя публикация успешна: 05.08.2026, 12:34:57</p>
+    <p class="admin-panel-hint" id="gh-sync-link">📥 Сейчас показаны данные, реально полученные с GitHub только что.<br><a href="https://github.com/IPACTAMAHI/pizza/blob/main/recipes.json" target="_blank" rel="noopener" style="color:var(--accent)">Открыть recipes.json на GitHub →</a></p>
+    <button class="btn btn-success btn-sm" onclick="forceSyncNow()" style="margin-top:12px;width:100%">🔄 Синхронизировать сейчас</button>
+    <button class="btn btn-ghost btn-sm" onclick="testGithubConnection()" style="margin-top:8px;width:100%">🧪 Проверить соединение</button>
+    <p class="admin-panel-hint" id="gh-test-result" style="margin-top: 8px; color: rgb(143, 227, 172);">🟢 Всё в порядке: доступ к репозиторию "IPACTAMAHI/pizza" есть, права на запись есть.</p>
   </div>
 
   <div class="admin-panel-card admin-only">
-    <div class="admin-panel-row"><span>Фото шапки сайта</span><button class="btn btn-ghost btn-sm" onclick="document.getElementById('header-photo-input').click()">📷 Изменить</button></div>
-    <input type="file" accept="image/*" id="header-photo-input" style="display:none" onchange="changeSitePhoto(this,'header')">
+    <div class="admin-panel-row">
+      <span>Фото шапки</span>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('header-photo-input').click()">📷 Изменить</button>
+      <input type="file" accept="image/*" id="header-photo-input" style="display:none" onchange="changeSitePhoto(this,'header')">
+    </div>
+    <p class="admin-panel-hint">Фото на самом верху сайта, за заголовком «Книга рецептов».</p>
   </div>
 
   <div class="admin-panel-card admin-only">
-    <div class="admin-panel-row"><span>Фоновое фото</span><button class="btn btn-ghost btn-sm" onclick="document.getElementById('bg-photo-input').click()">🖼️ Изменить</button></div>
-    <input type="file" accept="image/*" id="bg-photo-input" style="display:none" onchange="changeSitePhoto(this,'background')">
+    <div class="admin-panel-row">
+      <span>Фото заднего фона</span>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bg-photo-input').click()">🖼️ Изменить</button>
+      <input type="file" accept="image/*" id="bg-photo-input" style="display:none" onchange="changeSitePhoto(this,'background')">
+    </div>
+    <p class="admin-panel-hint">Фон под категориями и рецептами. Требует настроенной синхронизации с GitHub — иначе новое фото увидите только вы.</p>
   </div>
 
   <div class="admin-panel-card admin-only">
-    <div class="admin-panel-row"><span>Всего рецептов</span><span id="admin-total-count" style="color:var(--text-muted);font-weight:600">0 шт.</span></div>
+    <div class="admin-panel-row">
+      <span>Всего рецептов</span>
+      <span id="admin-total-count" style="color:var(--text-muted)">40 шт.</span>
+    </div>
   </div>
 </div>
-
 <!-- TAB: ADD / EDIT -->
 <div id="tab-add" class="tab-content">
   <div id="add-locked" style="display:none;text-align:center;padding:60px 20px">
     <div style="font-size:56px;margin-bottom:16px">🔒</div>
-    <h2 style="margin-bottom:10px;font-family:'Poppins',sans-serif">Требуется вход</h2>
+    <h2 style="margin-bottom:10px">Требуется вход</h2>
     <p style="color:var(--text-muted);margin-bottom:20px">Добавлять и редактировать рецепты может только администратор</p>
     <button class="btn btn-primary" onclick="toggleAdmin()">🔒 Войти в режим редактирования</button>
   </div>
 
   <div id="add-form-fields">
-    <h2 style="margin-bottom:18px;font-family:'Poppins',sans-serif" id="form-title">➕ Новый рецепт</h2>
+  <div id="gh-not-configured-warning" style="display:none;background:rgba(233,69,96,.15);border:1px solid rgba(233,69,96,.4);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+    <strong>⚠️ На этом устройстве не настроена синхронизация с GitHub.</strong>
+    <p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">
+      Рецепт сохранится только в этом браузере и может пропасть при следующем заходе
+      (страница подтянет актуальную версию с GitHub поверх локальной). Настройте синхронизацию
+      сейчас — кнопка ⚙️ внизу формы или в «Админ-панели».
+    </p>
+  </div>
+  <h2 style="margin-bottom:18px" id="form-title">➕ Новый рецепт</h2>
 
-    <div class="form-group"><label>Тип</label><select id="f-type" onchange="onTypeChange()">
-      <option value="pizza">🍕 Пицца</option><option value="pinsa">🫓 Пинца</option><option value="dough">🌾 Тесто</option>
-      <option value="sauce">🥫 Соус</option><option value="prep">🧂 Заготовка</option><option value="focaccia">🫓 Фокачча</option><option value="burger">🍔 Бургер</option>
-    </select></div>
+  <div class="form-group">
+    <label>Тип</label>
+    <select id="f-type" onchange="onTypeChange()">
+      <option value="pizza">🍕 Пицца</option>
+      <option value="pinsa">🫓 Пинца</option>
+      <option value="dough">🌾 Тесто</option>
+      <option value="sauce">🥫 Соус</option>
+      <option value="prep">🧂 Заготовка</option>
+      <option value="focaccia">🫓 Фокачча</option>
+      <option value="burger">🍔 Бургер</option>
+    </select>
+  </div>
 
-    <div class="form-group"><label>Название *</label><input type="text" id="f-name" placeholder="Например: Маргарита"></div>
+  <div class="form-group">
+    <label>Название *</label>
+    <input type="text" id="f-name" placeholder="Например: Маргарита">
+  </div>
 
-    <div class="form-group"><label>Фото</label>
-      <div class="photo-upload" onclick="document.getElementById('f-photo-input').click()" id="photo-area">
-        <span style="font-size:38px;margin-bottom:6px;opacity:.5">📷</span>
-        <span style="font-size:13px;color:var(--text-muted)">Нажмите, чтобы добавить фото</span>
-        <input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">
-      </div>
+  <div class="form-group">
+    <label>Фото</label>
+    <div class="photo-upload" onclick="document.getElementById('f-photo-input').click()" id="photo-area">
+      <span class="placeholder-icon">📷</span>
+      <span class="placeholder-text">Нажмите чтобы добавить фото</span>
+      <input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">
     </div>
+  </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>Время готовки (мин)</label><input type="number" id="f-time" min="0" placeholder="30"></div>
-      <div class="form-group" id="f-size-group"><label>Размер</label><select id="f-size">
-        <option value="">—</option><option value="Маленькая (25 см)">Маленькая (25 см)</option><option value="Средняя (30 см)">Средняя (30 см)</option>
-        <option value="Большая (35 см)">Большая (35 см)</option><option value="Очень большая (40+ см)">Очень большая (40+ см)</option>
-      </select></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group">
+      <label>Время готовки (мин)</label>
+      <input type="number" id="f-time" min="0" placeholder="30">
     </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>Калорийность (ккал)</label><input type="number" id="f-calories" min="0" placeholder="280"></div>
-      <div class="form-group"><label>Вес на выходе (г)</label><input type="number" id="f-weight" min="0" placeholder="850">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="calcWeightFromIngredients()" style="margin-top:8px;width:100%">🧮 Посчитать из ингредиентов</button></div>
+    <div class="form-group" id="f-size-group">
+      <label>Размер</label>
+      <select id="f-size">
+        <option value="">Выберите...</option>
+        <option value="Маленькая (25 см)">Маленькая (25 см)</option>
+        <option value="Средняя (30 см)">Средняя (30 см)</option>
+        <option value="Большая (35 см)">Большая (35 см)</option>
+        <option value="Очень большая (40+ см)">Очень большая (40+ см)</option>
+      </select>
     </div>
+  </div>
 
-    <div class="form-group"><label>Стиль / заметка (необязательно)</label><input type="text" id="f-style" placeholder="Например: Острая, Классика"></div>
-
-    <div class="form-group"><label>Видео-ссылки (YouTube, Instagram, TikTok... можно несколько)</label>
-      <div id="videos-list"></div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="addVideoRow()" style="margin-top:8px">+ Добавить видео</button></div>
-
-    <div class="section-title">🧺 Ингредиенты</div>
-    <div id="ingredients-list"></div>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="addIngredientRow()" style="margin-bottom:20px">+ Добавить ингредиент</button>
-
-    <div class="section-title">👨‍🍳 Шаги приготовления</div>
-    <div id="steps-list"></div>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="addStepRow()" style="margin-bottom:24px">+ Добавить шаг</button>
-
-    <input type="hidden" id="f-edit-id">
-
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-      <button class="btn btn-success" onclick="saveRecipe()">💾 Сохранить рецепт</button>
-      <button class="btn btn-ghost" onclick="switchTab('categories')">Отмена</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group">
+      <label>Калорийность (ккал на порцию)</label>
+      <input type="number" id="f-calories" min="0" placeholder="280">
     </div>
+    <div class="form-group">
+      <label>Общий вес на выходе (г)</label>
+      <input type="number" id="f-weight" min="0" placeholder="Например: 850">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="calcWeightFromIngredients()" style="margin-top:6px;width:100%">🧮 Посчитать из ингредиентов</button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Категория / стиль (необязательно)</label>
+    <input type="text" id="f-style" placeholder="Например: Острая, Классика, Белая, Мясная">
+  </div>
+
+  <div class="form-group">
+    <label>Видео — ссылки с YouTube, Instagram, VK, Facebook, TikTok, Google Диска и т.д. (необязательно, можно несколько)</label>
+    <div id="videos-list"></div>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="addVideoRow()">+ Добавить видео</button>
+  </div>
+
+  <!-- Ingredients -->
+  <div class="section-title">Ингредиенты</div>
+  <div id="ingredients-list"></div>
+  <button class="btn btn-ghost btn-sm" onclick="addIngredientRow()" style="margin-bottom:16px">+ Добавить ингредиент</button>
+
+  <!-- Steps -->
+  <div class="section-title">Шаги приготовления</div>
+  <div id="steps-list"></div>
+  <button class="btn btn-ghost btn-sm" onclick="addStepRow()" style="margin-bottom:24px">+ Добавить шаг</button>
+
+  <input type="hidden" id="f-edit-id">
+  <input type="hidden" id="f-photo-data">
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-success" onclick="saveRecipe()">💾 Сохранить</button>
+    <button class="btn btn-ghost" onclick="switchTab('categories')">Отмена</button>
+  </div>
+
+  <div style="margin-top:28px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);text-align:center">
+    <button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Синхронизация с GitHub</button>
+    <p style="color:var(--text-muted);font-size:12px;margin-top:8px">
+      После настройки каждое сохранение будет автоматически публиковаться на GitHub.
+    </p>
+  </div>
   </div>
 </div>
 
 <!-- TAB: DETAIL -->
 <div id="tab-detail" class="tab-content">
-  <button class="btn btn-ghost btn-sm detail-back" onclick="closeDetail()">← Назад к рецептам</button>
+  <button class="btn btn-ghost btn-sm detail-back" onclick="closeDetail('categories')">← Назад</button>
   <div id="detail-body"></div>
 </div>
 
-<div class="app-footer">Route 20 — Римские пекарни · Pizza Door</div>
+<!-- TOAST -->
+<!-- FOOTER -->
+<div class="app-footer">Route 20 — Римские пекарни</div>
 
 <!-- TOAST -->
-<div class="toast" id="toast">✅ Сохранено</div>
+<div class="toast" id="toast">✅ Сохранено на GitHub</div>
 
-<!-- LIGHTBOX -->
+<!-- MODAL (замена prompt/confirm) -->
 <div class="photo-lightbox" id="photo-lightbox" onclick="closePhotoLightbox()">
   <img id="photo-lightbox-img" src="" alt="">
 </div>
 
-<!-- MODAL -->
 <div class="modal-overlay" id="app-modal-overlay">
   <div class="modal-box">
     <h3 id="app-modal-title"></h3>
     <p id="app-modal-message"></p>
-    <input type="text" id="app-modal-input" style="display:none;margin-top:12px" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+    <input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>
       <button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>
@@ -417,644 +792,1499 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent); box-sha
   </div>
 </div>
 
+<!-- Библиотека генерации QR-кодов (кэшируется браузером после первой загрузки) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 
 <script>
 /* ================================================================
-   SEED_RECIPES — зашитая база рецептов (перезаписывается при экспорте)
-   ================================================================ */
-const SEED_RECIPES = [{"id":"pmrb7mcv49gqq6","type":"pizza","name":"Ронда","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":520,"style":null,"video":"https://www.youtube.com/watch?v=MI507KB-WGw","ingredients":["Тесто 250г","Соус красный 80г","Моцарелла 100г","Салями 50г","Ветчина 40г"],"steps":["Раскатываем тесто","Помещаем на сет","Наносим соус","Добавляем сыр","Добавляем салями и ветчину, последовательность не принципиально","Растягиваем по форме сета (если изначальный диаметр меньше)","Запекаем до готовности","ПОДАЧА: выкладываем на тарелку","Режем на 6 частей","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrb8ccgpw6zp9","type":"sauce","name":"Тар-Тар","photo":null,"time":null,"size":null,"calories":null,"weight":1030,"style":"Чеснок, огурец, майонез, сливки, зелень","video":null,"ingredients":["Майонез 550г","Огурец маринованный 200г","Сливки кулинарные 200г","Лимон, сок 30г","Чеснок чищеный 25г","Зелень (укроп) 25г"],"steps":["Готовим чашу термомикса","Погружаем все выше перечисленные ингредиенты","Включаем термомикс на макс скорость","Ждем 30сек-1 минуту","Переливаем в соусник","Готово!"]},{"id":"pmrb8sit1fdxjj","type":"pinsa","name":"Курица-Грибы","photo":null,"time":null,"size":null,"calories":null,"weight":442,"style":null,"video":null,"ingredients":["Соус белый 50г","Моцарелла 50г","Куриное филе МХП 40г","Грибы 20г","Зелень 2г","Соус Тар-Тар 30г","Заготовка пинца 250г"],"steps":["На заготовку пинцы наносим соус","Добавляем сыр","Добавляем курицу","Добавляем грибы","Доводим до готовности","Выкладываем на доску накрытую пергаментом","Посыпаем зеленью","Наливаем соус, в железный если в зал, в пластиковый если с собой"]},{"id":"pmrb9dfnm8q191","type":"dough","name":"Замес на 80шт","photo":null,"time":null,"size":null,"calories":null,"weight":15702,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 8200г","Мука 6100г","Лед краш 2700г","Вода 0,800л","---->ВТОРОЙ ЭТАП<----","Лед краш 1400г","Вода 0,400л","Соль 0,280кг","Оливковое масло 0,140л"],"steps":["Подготавливаем лед краш 2700г в большую тару","Добавляем воду 0,800л","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmrdgqlbhw99ri","type":"sauce","name":"Цезарь","photo":null,"time":null,"size":null,"calories":null,"weight":562,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Соус соевый 20г","Горчица Американская 15г","Горчица острая 15г","Соус ворчестер 15г","Сок лимона (фреш) 5г","Анчоус 15г","Пармезан крошка 25г","Соус шрирача 2г","Соль 10г","Сахар 10г","Масло растительное 350г","Анчоусное масло 30г","Вода очищенная 50г"],"steps":["Погружаем все ингредиенты в термомикс (кроме растительного масла и воды)","Перебиваем на скорости 4,5 примерно 30-60 секунд, что бы всё перебилось и получилась однородная масса","Далее тонкой струёй добавляем растительное масло","Далее добавляем воду","Переливаем в соусник","Готово!"]},{"id":"pmrdxto6n9esk7","type":"pizza","name":"Маргарита","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 120г","Моцарелла 120г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, украшаем базиликом, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdxz8we1l453","type":"pizza","name":"Гавайская","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":580,"style":null,"video":null,"ingredients":["Тесто 250г","Красный-белый соус 80г","Моцарелла 100г","Курица МХП 80г","Маслины 20г","Ананас 50г"],"steps":["Раскатка теста","Добавляем соус (красный, белый — по требованию)","Добавляем сыр","Добавляем курицу МХП","Добавляем ананас","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy2kkmn71bt","type":"pizza","name":"Цезарь","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":410,"style":null,"video":null,"ingredients":["Соус белый 80г","Моцарелла 100г","Курица МХП 60г","Бекон 40г","Черри 40г","Айсберг 40г","Пармезан 20г","Соус Цезарь 30г"],"steps":["Раскатка теста","Добавляем соус белый","Добавляем сыр","Добавляем курицу мхп","Добавляем бекон","Запекаем до готовности, далее украшаем","Нарезаем пиццу на порции (на шесть частей)","Добавляем айсберг (заранее рвем на мелкие части) наносим равномерно на всю пиццу","Добавляем черри, так же равномерно по всей пицце","Наносим соус ровными красивыми линиями","Посыпаем пармезаном","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy7a94dv9qy","type":"pizza","name":"Пеперони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Колбаса чоризо 80г","Тесто 250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем сыр","Добавляем чоризо","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdydwdd1b7nr","type":"pizza","name":"4 сыра","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":510,"style":null,"video":null,"ingredients":["Белый соус 80г","Моцарелла 60г","Микс сыров 120г","Тесто 250г"],"steps":["Раскатка теста","Добавляем соус","Добавляем сыр","Добавляем микс сыров","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdyj66zke8yc","type":"pizza","name":"Кальцоне","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":535,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Салями 40г","Грибы 25г","Тесто 250г"],"steps":["Раскатка теста: при помощи скалки раскатываем небольшой круг (лепешку)","Наносим красный соус","Добавляем сыр","Добавляем салями","Добавляем ветчину","Добавляем грибы","Сворачиваем так, что бы форма напоминала чебурек","Тщательно продавливаем весь край","Обрезаем край где продавливали, для создания красивой ровной формы","Аккуратно кладем на сетку (сет)","По середине делаем маленький надрыв","Добавляем туда каплю красного соуса и маленькую щепотку сыра","Запекаем до готовности","Выкладываем на украшенную красным соусом тарелку, поливаем оливковым маслом","Готово!"]},{"id":"pmrdyoouyt80ea","type":"pizza","name":"Бабушка берлускони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":630,"style":null,"video":"https://www.instagram.com/reel/DaSJFj8gg1j/","ingredients":["Красный соус 80г","Горчица 5г","Моцарелла 100г","Колбаса Чоризо 30г","Бекон 30г","Лук маринованный 40г","Лук зеленый 15г","Хамон 30г","Черри 50г","Тесто 250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем горчицу","Добавляем сыр","Добавляем чоризо","Добавляем бекон","Добавляем черри","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","После готовности выкладываем хамон, равномерно по всей пицце","Посыпаем зеленым луком","Готово!"]},{"id":"pmrdyuk49q1e4j","type":"pizza","name":"Мясная с сырным соусом","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":635,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Салями 50г","Курица мхп 50г","Бекон 50г","Лук маринованный 25г","Сырный соус 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем курицу мхп","Добавляем салями","Добавляем бекон","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Сырный соус наносим после того как приготовили и разрезали пиццу на порции","Готово!"]},{"id":"pmrdywx27k0sda","type":"pizza","name":"Американо","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":590,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Балык 40г","Грибы (шампиньоны) 30г","Помидор 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем ветчину","Добавляем балык","Добавляем грибы","Добавляем помидор","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdz0gryij2i9","type":"pizza","name":"Пицца с креветкой","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":543,"style":null,"video":null,"ingredients":["Соус айоли 100г","Моцарелла 100г","Креветка 6шт","Черри 30г","Перец болгарский (свежий) 30г","Маслины 20г","Руккола 10г","Хлопья миндаль 3г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус айоли","Добавляем сыр","Выкладываем креветку (нарезав их по полам, должно получится 12 половинок)","Добавляем черри","Добавляем перец болгарский","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Добавляем равномерно рукколу","Посыпаем хлопьями миндаля","Готово!"]},{"id":"pmrdz5zxne27uz","type":"pizza","name":"Пицца с руколой и томатами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":540,"style":null,"video":null,"ingredients":["Соус красный 80г","Моцарелла 100г","Помидор свежий 80г","Руколла 15г","Пармезан стружка 10г","Масло чесночное 5г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Добавляем помидоры","Запекаем до готовности","Выкладываем на тарелку, режем на шесть частей, поливаем бортики оливковым маслом","Добавляем руколу","Поливаем чесночным маслом","Посыпаем пармезаном","Готово!"]},{"id":"pmrdzp3e3ts21m","type":"focaccia","name":"Фокача с прованскими травами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":257,"style":null,"video":null,"ingredients":["Тесто 250г","Оливковое масло 2г","Прованские травы 5г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до готовности","Режем на шесть частей","Поливаем оливковым маслом, и посыпаем травами","Готово!"]},{"id":"pmrdzs5objg0ak","type":"focaccia","name":"Фокача с пармезаном","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":270,"style":null,"video":null,"ingredients":["Тесто 250г","Пармезан крошка 20г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до полуготовности","Посыпаем пармезаном, доводим до готовности","Режем на шесть частей","Готово!"]},{"id":"pmre2vah2ulin7","type":"prep","name":"Груша карамель","photo":null,"time":null,"size":null,"calories":null,"weight":null,"style":null,"video":null,"ingredients":["Груша"],"steps":["Помыть грушу","Отрезать хвосты","Разрезать по полам вдоль","Вырезать сердцевину","Нарезать на слайсы вдоль, первый и последний срез не берём","Взвешиваем: на 1 кг груши 600мл воды 300гр сахара","Кипятим воду отталкиваясь от предыдущего пункта","Заливаем сироп в грушу (заранее погрузив её в подходящую тару)","Ставим на печку на девятку","Помешиваем, как закипит 3 минуты и снимаем","Переливаем в контейнер","Готово!"]},{"id":"pmre37xk2bab99","type":"sauce","name":"Помадоро","photo":null,"time":null,"size":null,"calories":null,"weight":15388,"style":null,"video":null,"ingredients":["Пульпа 15000г","Соль 120г","Сахар 100г","Базилик 150г","Орегано 18г"],"steps":["Выливаем пульпу в заранее подготовленную тару (ведро пищевое)","Набираем пульпу в чашу термомикса (не полную, что бы можно было перемешать все ингредиенты)","Добавляем соль, сахар, базилик","Перебиваем все до однородной массы","Далее перебитое в терромиксе переливаем в общую массу","Высыпаем Орегано","Тщательно перемешиваем","Разливаем по контейнерам","Готово!"]},{"id":"pmre3hjktvgbud","type":"dough","name":"Замес на 60шт","photo":null,"time":null,"size":null,"calories":null,"weight":14416,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 6150г","Мука 4575г","Лед краш 2025г","Вода 0,600л","---->ВТОРОЙ ЭТАП<----","Лед краш 1050г","Вода 300мл","Соль 210г","Оливковое масло 105г"],"steps":["Подготавливаем лед краш 2025г в большую тару","Добавляем воду 600мл","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmre3tzdka0ady","type":"dough","name":"Закваска","photo":null,"time":null,"size":null,"calories":null,"weight":10022,"style":null,"video":null,"ingredients":["Мука 6900г","Вода 3100мл","Дрожжи сухие 22г"],"steps":["Подготавливаем тару с водой","Добавляем дрожжи","Перемешиваем","Помещаем муку в тестомес","Выливаем подготовленную воду с дрожжами","Включаем вторую скорость","Доводим до состояния хлопьев, закваска не должна быть как тесто","Вынимаем в ведро (пищевое, заранее вымытое)","Готово!"]},{"id":"pmre4a4o9s96t8","type":"prep","name":"Котлета бургер","photo":null,"time":null,"size":null,"calories":null,"weight":2124,"style":null,"video":null,"ingredients":["Говядина 1600г","Сало 200г","Лук жареный 200г","Соль 18г","Специи для мяса 4г","Перец черный молотый 2г","Вода очищенная 100мл"],"steps":["Чистим лук, обжариваем до золотистого цвета","Делаем фарш: перекручиваем лук, мясо, сало (обрезав шкуру с сала) в мясорубке","В фарш добавляем соль, специи, перец, воду","Перемешиваем","Хорошо отбиваем","Делим на порции по 120г (делаем шарики)","Формируем котлеты"]},{"id":"pmre4pira2dizf","type":"prep","name":"Лук мармелад","photo":null,"time":null,"size":null,"calories":null,"weight":1800,"style":null,"video":null,"ingredients":["Уксус бальзамический 600г","Сахар песок 200г","Мед 200г","Вино красное глинтвейн (для кухни) 600мл","Масло растительное 200г","Лук синий (уже чищеный) 2кг"],"steps":["Смешать все ингредиенты","Тушить на слабом огне до карамелизации","Перелить в банку"]},{"id":"pmre5at74ehwn7","type":"burger","name":"Бургер","photo":null,"time":null,"size":null,"calories":null,"weight":376,"style":null,"video":null,"ingredients":["Булка бургер 1шт","Котлета бургер п/ф 1шт","Салат айсберг 20г","Помидор п/ф 30г","Соус винегрет 20г","Лук мармелад 10г","Картофельные дипы 100г","Огурец маринованный 20г","Соус барбекю с копченой сливой (Реберня) 40г","Соус сырный 75г","Масло растительное 60г (для жарки)","Соль 1г"],"steps":["Обжариваем булку до румяности","На нижнюю часть булки наносим соус барбекю, кладем огурец, салат айсберг","На верхнюю часть булки наносим соус винегрет, кладем помидор","Готовим дипы, жарим котлету","Готовим сковороду для подачи, поливаем сырным соусом","Помещаем котлету на салат айсберг, наносим на котлету лук мармелад","Накрываем верхней частью булки","Разрезаем бургер пополам","Помещаем в сковороду","Выкладываем вокруг бургера дипы","Греем в печи, подаём!"]},{"id":"pmre5walkc5bvn","type":"sauce","name":"Соус винегрет","photo":null,"time":null,"size":null,"calories":null,"weight":900,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Уксус бальзамический 70г","Сахар песок 70г","Горчица 160г","Соус соевый 100г","Масло растительное 500г"],"steps":["Смешиваем все ингредиенты в термомиксе (кроме растительного масла)","Перебиваем до однородной массы на скорости 4,5 примерно 30-60с","Далее тонкой струёй добавляем растительное масло (прямо во время работы термомикса)","Переливаем в соусник","Готово!"]},{"id":"pmre61buq2jpnl","type":"prep","name":"Трюфельный мёд","photo":null,"time":null,"size":null,"calories":null,"weight":800,"style":null,"video":null,"ingredients":["Мед 500г","Сливки кулинарные 200г","Трюфели нарезанные 100г"],"steps":["Погружаем мед и сливки в термомикс","Включаем скорость 4, примерно 30 секунд","Добавляем трюфели","Перебиваем еще 20 секунд","Переливаем в контейнер","Готово!"]}];
-
 /* ================================================================
-   CORE LOGIC
+   DATA LAYER — localStorage + "зашитые" данные для публикации
+   ================================================================
+   SEED_RECIPES — сюда при экспорте (кнопка "Скачать файл для
+   публикации", доступна только в режиме администратора) записывается
+   полный слепок текущей базы рецептов. Благодаря этому у любого
+   человека, который впервые открывает файл (в его браузере ещё
+   нет localStorage с вашими данными), сразу отображается вся база —
+   без необходимости вводить рецепты заново на каждом устройстве.
+   НЕ РЕДАКТИРУЙТЕ эту строку руками — она перезаписывается автоматически.
    ================================================================ */
-const STORAGE_KEY = 'route20_recipes_v1';
-let recipes = loadRecipes();
-let activeChip = '';
-let lastTab = 'categories';
-let pendingPhoto = null;
-let toastTimer = null;
+const SEED_RECIPES = [{"id":"pmrb7mcv49gqq6","type":"pizza","name":"Ронда","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":520,"style":null,"video":"https://www.youtube.com/watch?v=MI507KB-WGw","ingredients":["Тесто 250г","Соус красный 80г","Моцарелла 100г","Салями 50г","Ветчина 40г"],"steps":["Раскатываем тесто","Помещаем на сет","Наносим соус","Добавляем сыр","Добавляем салями и ветчину, последовательность не принцепиально","Растягиваем по форме сета (если изначальный диаметр меньше)","Запекаем до готовности","ПОДАЧА","Выкладываем на тарелку","Режим на 6 частей","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrb8ccgpw6zp9","type":"sauce","name":"Тар-Тар","photo":null,"time":null,"size":null,"calories":null,"weight":1030,"style":"Чеснок, огурец, майонез,сливки, зелень","ingredients":["Майонез 550г","Огурец маринованный 200г","Сливки кулинарные 200г","Лимон, сок 30г","Чеснок чищеный 25г","Зелень (укроп) 25г"],"steps":["Готовим чашу термомикса","Погружаем все выше перечисленные ингредиенты","Включаем термомикс на макс скорость","ждем 30сек-1 минуту","Переливаем в соусник","Готово!"]},{"id":"pmrb8sit1fdxjj","type":"pinsa","name":"Курица-Грибы","photo":null,"time":null,"size":null,"calories":null,"weight":442,"style":null,"ingredients":["Соус белый 50г","Моцарелла 50г","Куриное филе МХП 40г","Грибы 20г","Зелень 2г","Соус Тар-Тар 30г","Заготовка пинца 250г"],"steps":["На заговотвку пинцы наносим соус","Добавляем сыр","Добавляем курицу","Добавляем грибы","Доводим до готовности","Выкладываем на доску накрытую пергавментом","Посыпаем зеленью","Наливаем соус, в железный если в зал, в пластиковый если с собой"]},{"id":"pmrb9dfnm8q191","type":"dough","name":"Замес на 80шт","photo":null,"time":null,"size":null,"calories":null,"weight":15702,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 8200г","Мука 6100г","Лед краш 2700","Вода 0,800г","---->ВТОРОЙ ЭТАП<----","Лед краш 1400г","Вода 0,400г","Соль 0,280г","Оливковое масло 0,140г"],"steps":["Подготавливаем лед краш 2700г в большую тару","Добавляем воду 0,800г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmrdgqlbhw99ri","type":"sauce","name":"Цезарь","photo":null,"time":null,"size":null,"calories":null,"weight":562,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Соус соевый 20г","Горчица Американская 15г","Горчица острая 15г","Соус ворчестер 15г","Сок лимона (фреш) 5г","Анчоус 15г","Пармезан крошка 25г","Соус шрирача 2г","Соль 10г","Сахар 10г","Масло растительное 350г","Анчоусное масло 30г","Вода очищенная 50г"],"steps":["Погружаем все ингредиенты в термомикс (кроме растительного масла и воды)","Перебиваем на скорости 4,5 примероно 30-60 секунд, что бы всё перебилось и получилаь однородная масса","Далее тонкой струёй добавляем растительное масло","Далее добавляем воду","Переливаем в соусник","Готово!"]},{"id":"pmrdxto6n9esk7","type":"pizza","name":"Маргарита","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 120г","Моцарелла 120г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, украшаем базиликом, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdxz8we1l453","type":"pizza","name":"Гавайская","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":580,"style":null,"video":null,"ingredients":["Тесто 250г","Есть два варианта пиццы , на красном и белом соусе","Красный-белый соус 80г","Моцарелла 100г","Курица МХП 80г","Маслины 20г","Ананас 50г"],"steps":["Раскатка теста","Добавляем соус (делается на обоих соусах) красный, белый, по требованию","Добавляем сыр","Добавляем курицу МХП","Добавляем ананас","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy2kkmn71bt","type":"pizza","name":"Цезарь","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":410,"style":null,"video":null,"ingredients":["Соус белый 80г","Моцарелла 100г","Курица МХП 60г","Бекон 40г","Черри 40г","Айсберг 40г","Пармезан 20г","Соус Цезарь 30г"],"steps":["Раскатка теста","Добавляем соус белый","Добавляем сыр","Добавляем курицу мхп","Добавляем бекон","Запекаем до готовности, далее украшаем","Нарезаем пиццу на порции (на шесть частей)","Добавляем айсберг (заранее рвем на мелкие части) наносим равномерно на всю пиццу","Добавляем черри , так же равномерно по всей пицце","Наносим соус (так же ровными красивыми линиями)","Посыпаем пармезаном","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy7a94dv9qy","type":"pizza","name":"Пеперони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Колбаса чоризо 80г","250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем сыр","Добавляем чоризо","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdydwdd1b7nr","type":"pizza","name":"4 сыра","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":510,"style":null,"video":null,"ingredients":["Белый соус 80г","Моцарелла 60г","Микс сыров 120г","Тесто 250г"],"steps":["Раскатка теста","Добавляем соус","Добавляем сыр","Добавляем микс сыров","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdyj66zke8yc","type":"pizza","name":"Кальцоне","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":535,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Салями 40г","Грибы 25г","Тесто 250г"],"steps":["Раскатка теста, на этот раз при помощи скалки раскатываем небольшой круг (лепешку)","Наносим красный соус","Добавляем сыр","Добавляем салями","Добавляем ветчину","Добавляем грибы","Далее сворачиваем так, что бы форма напоминала чебурек","Тщательно продавливаем весь край","Обрезаем край где продавливали , для создания красивой ровной формы","Далее аккуратно кладем на сетку (сет)","По середине делаем маленький надрыв","Добавляем туда  каплю красного соуса","Добавляем маленькую щепотку сыра","Запекаем до готовности","Выкладываем на украшенную красным соусом тарелку, поливаем оливковым маслом","Готово!"]},{"id":"pmrdyoouyt80ea","type":"pizza","name":"Бабушка берлускони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":630,"style":null,"video":"https://www.instagram.com/reel/DaSJFj8gg1j/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ==","ingredients":["Красный соус 80г","Горчица 5г","Моцарелла 100г","Колбаса Чоризо 30г","Бекон 30г","Лук маринованный 40г","Лук зеленый 15г","Хамон 30г","Черри 50г","Тесто 250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем горчицу","Добавляем сыр","Добавляем чоризо","Добавляем бекон","Добавляем черри","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","После готовности выкладываем хамон, равномерно по всей пицце","Посыпаем зеленым луком","Готово!"]},{"id":"pmrdyuk49q1e4j","type":"pizza","name":"Мясная с сырным соусом","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":635,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Салями 50г","Курица мхп 50г","Бекон 50г","Лук маринованный 25г","Сырный соус 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем курицу мхп","Добавляем салями","Добавляем бекон","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Сырный соус наносим после того как приготовили и разрезали пиццу на порции","Готово!"]},{"id":"pmrdywx27k0sda","type":"pizza","name":"Американо","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":590,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Балык 40г","Грибы (шампиньоны) 30г","Помидор 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем ветчину","Добавляем балык","Добавляем грибы","Добавляем помидор","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdz0gryij2i9","type":"pizza","name":"Пицца с креветкой","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":543,"style":null,"video":null,"ingredients":["Соус айоло 100г","Моцарелла 100г","Креветка 6шт","Черри 30г","Перец болгарский (свежий) 30г","Маслины 20г","Руккола 10г","Хлопья миндаль 3г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус айоли","Добавляем сыр","Выкладываем креветку (изначально нарезав их по полам, должно получится 12 половинок)","Добавляем черри","Добавляем перец болгарский","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Добавляем равномерно рукколу","Посыпаем хлопьями миндаля","Готово!"]},{"id":"pmrdz5zxne27uz","type":"pizza","name":"Пицца с руколой и томатами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":540,"style":null,"video":null,"ingredients":["Соус красный 80г","Моцарелла 100г","Помидор свежий 80г","Руколла 15г","Пармезан стружка 10г","Масло чесночное 5г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Добавляем помидоры","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Добавляем руколу","Поливаем чесночным маслом","Посыпаем пармезаном","Готово!"]},{"id":"pmrdzp3e3ts21m","type":"pizza","name":"Фокача с прованскими травами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":257,"style":null,"video":null,"ingredients":["Тесто 250г","Оливковое масло 2г","Прованские травы 5г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до готовности","Режем на шесть частей","Поливаем оливковым маслом, и посыпаем травами","Готово!"]},{"id":"pmrdzs5objg0ak","type":"pizza","name":"Фокача с пармезаном","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":270,"style":null,"video":null,"ingredients":["Тесто 250г","Пармезан крошка 20г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до полуготовности","Посыпаем пармезаном, доводим до готовности","Режем на шесть частей","Готово!"]},{"id":"pmre2vah2ulin7","type":"prep","name":"Груша карамель","photo":null,"time":null,"size":null,"calories":null,"weight":null,"style":null,"video":null,"ingredients":["Груша"],"steps":["Помыть грушу","Отрезать хвосты","Разрезать по полам вдоль","Вырезать сердцевину","Нарезать на слайсе вдоль , первый и последний срез не берём","Взвешиваем , на 1 кг груши 600мл воды 300гр сахара","Кипятим воду  отталкиваясь от предыдущего пункта","Заливаем сироп в грушу (заранее погрузив её в подходящую тару)","Ставим на печку на девятку","Помешиваем ,как закипит 3 минуты и снимаем","Переливаем в контейнер","Готово!"]},{"id":"pmre37xk2bab99","type":"sauce","name":"Помадоро","photo":null,"time":null,"size":null,"calories":null,"weight":15388,"style":null,"video":null,"ingredients":["Пульпа 15000г","Соль 120г","Сахар 100г","Базилик 150г","Орегано 18г"],"steps":["Выливаем пульпу в заранее подготовленную тару (ведро пищевое)","Набираем пульпу в чашу темромикса (не полную,что бы можно было перемешать все ингредиенты)","Добавляем соль,сахар, базалик","Перебиваем все до однородной массы","Далее перебитое в термомикесе,переливаем в общую массу","Высыпаем Орегано","Тщательно перемешиваем","Разливаем по контейнерам","Готово!"]},{"id":"pmre3hjktvgbud","type":"dough","name":"Замес на 60шт","photo":null,"time":null,"size":null,"calories":null,"weight":14416,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 6150г","Мука 4575г","Лед краш 2025г","Вода 0,600г","---->ВТОРОЙ ЭТАП<----","Лед краш 1050г","Вода 300г","Соль 210г","Оливковое масло 105г"],"steps":["Подготавливаем лед краш 2025г в большую тару","Добавляем воду 600г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmre3tzdka0ady","type":"dough","name":"Закваска","photo":null,"time":null,"size":null,"calories":null,"weight":10022,"style":null,"video":null,"ingredients":["Мука 6900г","Вода 3100г","Дрожжи сухие 22г"],"steps":["Подготавливаем тару с водой","Добавляем дрожжи","Перемешиваем","Помещаем муку в тестомес","Выливаем подготовленную воду с дрожжами","Включаем вторую скорость","Доводим до состояния хлопья, закваска не должна быть как тесто","Вынимаем в ведро (пищевое, заранее вымытое)","Готово"]},{"id":"pmre4a4o9s96t8","type":"prep","name":"Котлета бургер","photo":null,"time":null,"size":null,"calories":null,"weight":2124,"style":null,"video":null,"ingredients":["Говядина 1600г","Сало 200г","Цибуля жареная 200г","Соль 18г","Специи для мяса 4г","Перец черный молотый 2г","Вода очищенная 100г"],"steps":["Чистим лук , обжариваем до золотистого цвета","Делаем фарш, перекручиваем лук,мясо,сало (обрезать шкуру с сала) в мясорубке","В фарш добавляем соль,специи, перец, воду","Перемешиваем","Хорошо отбиваем","Делим на порции по 120г (делаем шарики)","Формируем котлеты"]},{"id":"pmre4pira2dizf","type":"prep","name":"Лук мармелад","photo":null,"time":null,"size":null,"calories":null,"weight":1800,"style":null,"video":null,"ingredients":["Уксус бальзамический 600г","Сахар песок 200г","Мед 200г","Вино красное глинтвейн (для кухни) 600г","Масло растительное 200г","Лук синий (уже чищеный) 2кг"],"steps":["-"]},{"id":"pmre5at74ehwn7","type":"pizza","name":"Бургер","photo":null,"time":null,"size":null,"calories":null,"weight":376,"style":null,"video":null,"ingredients":["Булка бургер 1шт","Котлета бургер п/ф 1шт","Салат айсебрг 20г","Помидор п/ф 30г","Соус винегрет 20г","Лук мармелад 10г","Картофельные дипы 100г","Огурец маринованный 20г","Соус барбекю с копченой сливой (Реберня) 40г","Соус сырный 75г","Масло растительное 60г (для жарки)","Соль 1г"],"steps":["Обжариваем булку до румяности","На нижнюю часть булки наносим соус барбекю, кладем огурец, салат айберг","На верхнюю часть булки наносим соус винегрет , кладем помидор","Готовим дипы,жарим котлету","Готовим сковороду для подачи, поливаем сырным соусом","Помещаем котлету на салат айсберг, наносим на котлету лук мармелад","Накрываем верхней частью булки","Разрезаем бургер пополам","Помещаем в сковороду","Выкладываем вокруг бургера дипы","Греем в печи, подаём!"]},{"id":"pmre5walkc5bvn","type":"sauce","name":"Соус винегрет","photo":null,"time":null,"size":null,"calories":null,"weight":900,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Уксус бальзамический 70г","Сахар песок 70г","Горчица 160г","Соус соевый 100г","Масло растительное 500г"],"steps":["Смешиваем все ингредиенты в термомиксе (кроме растительного масла)","Перебиваем до однородной массы на скорости 4,5 примерно 30-60с","Далее тонкой струёй добавляем растительное масло (прямо во время работы термомикса)","Переливаем в соусник","Готово!"]},{"id":"pmre61buq2jpnl","type":"prep","name":"Трюфельный мёд","photo":null,"time":null,"size":null,"calories":null,"weight":1070,"style":null,"video":null,"ingredients":["Мёд 870г","Трюфельная паста 130г","Уксус бальзамический 70г"],"steps":["Перебить всё до однеородной массы в термомиксе","Перелить в соусник","Готово!"]},{"id":"pmre6a2zfmz71z","type":"dough","name":"Замес на 40шт","photo":null,"time":null,"size":null,"calories":null,"weight":10010,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 4100г","Мука 3050г","Лед краш 1350г","Вода 400г","---->ВТОРОЙ ЭТАП<----","Лед краш 700г","Вода 200г","Соль 140г","Оливковое масло 70г"],"steps":["Подготавливаем лед краш 1350г в большую тару","Добавляем воду 400г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmri78p4dcupy9","type":"pinsa","name":"Пинца карбонара","photo":null,"time":null,"size":null,"calories":null,"weight":475,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 80г","Бекон 80г","Рукола 10г","Крем пармеджан 15г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем бекон","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частай","Перед подачей добавляем руколу , и поливаем соусом пармеджан","Готово!"]},{"id":"pmri7ls2tzvl4u","type":"pinsa","name":"Пинца салями блю чиз","photo":null,"time":null,"size":null,"calories":null,"weight":460,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 50г","Колбаса чоризо 60г","Сыр горганзола 25г","Рукола 10г","Кешью 10г","Спайси майонез 15г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем чоризо","Добавляем горганзолу","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Перед подачей добавляем руколу , и поливаем спайси майнонезом","Готово!"]},{"id":"pmri7v7ur8h81n","type":"pinsa","name":"Пинца груша-сыр дорблю, трюфельный мед","photo":null,"time":null,"size":null,"calories":null,"weight":540,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 50г","Груша карамель 80г","Микс сыра 70г","Кешью 20г","Мед трюфель 30г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем  Грушу","Добавляем  Микс сыров","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Поливаем медом, и посыпаем орешками","Готово!"]},{"id":"pmri8coqtnhg2i","type":"pinsa","name":"Пинца с прошуто","photo":null,"time":null,"size":null,"calories":null,"weight":450,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус красный 50г","Моцарелла 50г","Прошуто 40г","Рукола 15г","Пармезан 10г","Бальзамик 5г","Соус Тар-тар 30г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Выкладываем хамон","Выкладываем руколу","Поливаем бальзамиком","Посыпаем пармезаном","Наливаем в соусник Тар-тар","Готово!"]},{"id":"pmri8ixevxlm8i","type":"prep","name":"Микс сыра","photo":null,"time":null,"size":null,"calories":null,"weight":1000,"style":null,"video":null,"ingredients":["Пармезан 200г","Бри 150г","Дорблю 150г","Твердый 500г"],"steps":["Режем на куски (такие что бы помещалось в мясорубку)","Перемалываем в мясорубке равномерно добавляя все сыры","Фасуем по пакетам","Вакуумируем всё что расфасовали","Готово!"]},{"id":"pmri8n2uqv0zec","type":"sauce","name":"Сырный","photo":null,"time":null,"size":null,"calories":null,"weight":1000,"style":null,"video":null,"ingredients":["Сливки 33% 300г","Сыр чеддер 400г","Молоко 300г"],"steps":["Смешиваем молоко и сливки","Доводим до кипения","Помещаем чеддер","Не перестаем мешать до тех пор пока на венчике не будет остатков сыра","Далее разливаем по соусникам","Готово!"]},{"id":"pmri8r4y7zqffd","type":"sauce","name":"Соус белый","photo":null,"time":null,"size":null,"calories":null,"weight":1025,"style":null,"video":null,"ingredients":["Сливки 33% 500г","Сыр янтарь 500г","Соль 10г","Орегано 15г"],"steps":["Помещаем сливки ,янтарь, соль в термомикс","Перебиваем до однородной массы","Добавляем орегано","Ждем буквально 10с и выключаем","Переливаем в гастроемкость","Готово!"]},{"id":"pmri9gg5u1ksco","type":"sauce","name":"Крем пармеджан","photo":null,"time":null,"size":null,"calories":null,"weight":1270,"style":null,"video":null,"ingredients":["Сливки 1000г","Пармезан крошка 240г","Перец черный молотый 2г","Соль 16г","Сахар 12г"],"steps":["Поместить все в чашу для погружного блендера","Тщательно перемешать","Перелить в соусник","Готово!"]},{"id":"pmsf7vmq83y0uo","type":"dough","name":"Пинца маленький замес","photo":null,"time":null,"size":null,"calories":null,"weight":8177,"style":null,"video":null,"ingredients":["———ПЕРВЫЙ ЭТАП———","Лед краш 1300г","Вода 200г","Мука 2080г","Закваска 3300г","Дрожжи живые 32г","——ВТОРОЙ ЭТАП——","Лед краш 780г","Вода 240г","Соль 145г","Масло оливковое 100г"],"steps":["-"]},{"id":"pmsf8ajjm4ew9g","type":"dough","name":"Пинца большой замес","photo":null,"time":null,"size":null,"calories":null,"weight":12256,"style":null,"video":null,"ingredients":["——ПЕРВЫЙ ЭТАП——","Лед краш  1950г","Вода 300г","Мука 3120г","Закваска 4950г","Дрожжи живые 48г","——ВТРОЙ ЭТАП——","Лед краш 1170г","Вода 350г","Соль 218г","Масло оливковое 150г"],"steps":["-"]},{"id":"pmsf92nt2yoqyu","type":"sauce","name":"Домашний майонез 1кг","photo":null,"time":null,"size":null,"calories":null,"weight":1089,"style":null,"video":null,"ingredients":["Хондами 20г","Уксус винный 40г","Яйцо куриное 60г","Горчица американская 30г","Горчица крепкая 20г","Соус шрирача 3г","Соус ворчестер 20г","Соль каменная 6г","Сахар песок 15г","Масло растительное 800г","Фреш лимона 15г","Вода очищенная 60г"],"steps":["-"]},{"id":"pmsf98ear6jt35","type":"sauce","name":"Спайси майонез","photo":null,"time":null,"size":null,"calories":null,"weight":1260,"style":null,"video":null,"ingredients":["Майонез домашний 1кг","Сосус шрирача 130г","Сосус свит Чили 130г"],"steps":["-"]}];
+
+const STORAGE_KEY = 'pizza_recipes_v3';
+let recipes = [];
 
 function loadRecipes() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const d = JSON.parse(raw);
-      if (Array.isArray(d)) return d.length ? d : JSON.parse(JSON.stringify(SEED_RECIPES));
-    }
-  } catch (e) {}
-  return JSON.parse(JSON.stringify(SEED_RECIPES));
-}
-
-function persist() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch (e) {}
-  updateCounts();
-}
-
-const TYPE_INFO = {
-  pizza: { emoji: '🍕', label: 'Пицца' },
-  pinsa: { emoji: '🫓', label: 'Пинца' },
-  dough: { emoji: '🌾', label: 'Тесто' },
-  sauce: { emoji: '🥫', label: 'Соусы' },
-  prep: { emoji: '🧂', label: 'Заготовки' },
-  focaccia: { emoji: '🥖', label: 'Фокачча' },
-  burger: { emoji: '🍔', label: 'Бургер' }
-};
-
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}
-
-/* ---------- TABS ---------- */
-function switchTab(name) {
-  if (name !== 'detail') lastTab = name;
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  const target = document.getElementById('tab-' + name);
-  if (target) target.classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  if (name === 'add') {
-    const isAdm = document.body.classList.contains('is-admin-full');
-    document.getElementById('add-locked').style.display = isAdm ? 'none' : 'block';
-    document.getElementById('add-form-fields').style.display = isAdm ? 'block' : 'none';
+    var stored = localStorage.getItem(STORAGE_KEY);
+    recipes = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(SEED_RECIPES));
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  catch(e) { recipes = JSON.parse(JSON.stringify(SEED_RECIPES)); console.error('Load error:', e); }
 }
 
-document.querySelectorAll('.nav-tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
-
-/* ---------- LIST RENDERING ---------- */
-function currentFiltered() {
-  const q = (document.getElementById('search-categories').value || '').trim().toLowerCase();
-  return recipes.filter(r => (!activeChip || r.type === activeChip) && (!q || (r.name || '').toLowerCase().includes(q)));
-}
-
-function selectCategoryChip(type) {
-  activeChip = type;
-  document.querySelectorAll('#category-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.type === type));
-  renderCategoriesList();
-}
-
-function renderCategoriesList() {
-  const listEl = document.getElementById('categories-list');
-  if (!listEl) return;
-  const items = currentFiltered();
-  const countEl = document.getElementById('categories-count');
-  if (countEl) countEl.textContent = 'Показано: ' + items.length + ' из ' + recipes.length;
-
-  if (!items.length) {
-    listEl.innerHTML = '<div class="empty-state"><span class="empty-icon">🍕</span>Ничего не найдено.<br>Попробуйте другой фильтр или добавьте рецепт.</div>';
-    return;
-  }
-  listEl.innerHTML = items.map(r => {
-    const t = TYPE_INFO[r.type] || { emoji: '📄', label: r.type };
-    const photoHtml = r.photo
-      ? '<img class="card-thumb" src="' + esc(r.photo) + '" alt="" loading="lazy">'
-      : '<div class="card-photo-placeholder">' + t.emoji + '</div>';
-    let badges = '<span class="type-badge type-' + esc(r.type) + '">' + t.label + '</span>';
-    if (r.size) badges += '<span class="badge">📏 ' + esc(r.size) + '</span>';
-    if (r.weight) badges += '<span class="badge">⚖️ ' + r.weight + ' г</span>';
-    if (r.time) badges += '<span class="badge">⏱ ' + r.time + ' мин</span>';
-    return '<div class="recipe-card" onclick="openDetail(\'' + esc(r.id) + '\')">' + photoHtml +
-      '<div class="card-info"><h3>' + esc(r.name) + '</h3><div class="card-meta">' + badges + '</div></div>' +
-      '<span class="card-chevron">›</span></div>';
-  }).join('');
-}
-
-function updateCounts() {
-  const el = document.getElementById('admin-total-count');
-  if (el) el.textContent = recipes.length + ' шт.';
-}
-
-/* ---------- DETAIL ---------- */
-function openDetail(id) {
-  const r = recipes.find(x => x.id === id);
-  if (!r) return;
-  renderDetail(r);
-  switchTab('detail');
-}
-
-function closeDetail() { switchTab(lastTab || 'categories'); }
-
-function videoEmbed(url) {
-  url = (url || '').trim();
-  if (!url) return '';
-  let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/);
-  if (m) return '<div class="video-embed-wrap ratio-16-9"><iframe src="https://www.youtube.com/embed/' + m[1] + '" allowfullscreen loading="lazy"></iframe></div>';
-  m = url.match(/vimeo\.com\/(\d+)/);
-  if (m) return '<div class="video-embed-wrap ratio-16-9"><iframe src="https://player.vimeo.com/video/' + m[1] + '" allowfullscreen loading="lazy"></iframe></div>';
-  if (/instagram|tiktok|vk\.com|facebook|drive\.google/i.test(url)) {
-    return '<a class="video-fallback-link" href="' + esc(url) + '" target="_blank" rel="noopener">▶️ Открыть видео во внешнем приложении</a>';
-  }
-  if (/^https?:\/\//i.test(url)) {
-    try { const u = new URL(url); if (/\.(mp4|webm)(\?|$)/i.test(u.pathname)) return '<div class="video-embed-wrap ratio-16-9"><video src="' + esc(url) + '" controls></video></div>'; } catch (e) {}
-  }
-  return '';
-}
-
-function renderDetail(r) {
-  const t = TYPE_INFO[r.type] || { emoji: '📄', label: r.type };
-  let html = '';
-  if (r.photo) {
-    html += '<img class="detail-photo" src="' + esc(r.photo) + '" onclick="openPhotoLightbox(this.src)">';
-  } else {
-    html += '<div class="detail-emoji-hero">' + t.emoji + '</div>';
-  }
-  html += '<h2 class="detail-title">' + esc(r.name) + '</h2><div class="detail-meta">';
-  html += '<span class="type-badge type-' + esc(r.type) + '" style="padding:6px 14px;font-size:13px">' + t.emoji + ' ' + t.label + '</span>';
-  if (r.size) html += '<span class="detail-badge">📏 ' + esc(r.size) + '</span>';
-  if (r.weight) html += '<span class="detail-badge">⚖️ ' + r.weight + ' г</span>';
-  if (r.calories) html += '<span class="detail-badge">🔥 ' + r.calories + ' ккал</span>';
-  if (r.time) html += '<span class="detail-badge">⏱ ' + r.time + ' мин</span>';
-  html += '</div>';
-
-  const vids = (r.videos && r.videos.length ? r.videos : (r.video ? [r.video] : []));
-  vids.forEach(u => { const v = videoEmbed(u); if (v) html += v; });
-
-  if (r.ingredients && r.ingredients.length) {
-    const ing = r.ingredients.filter(i => i && !/^----/.test(String(i).trim()));
-    html += '<div class="section-title">🧺 Ингредиенты</div><ul class="ingredients-list">' + ing.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul>';
-  }
-  if (r.steps && r.steps.length) {
-    html += '<div class="section-title">👨‍🍳 Приготовление</div><ol class="steps-list">' + r.steps.map(s => '<li>' + esc(s) + '</li>').join('') + '</ol>';
-  }
-
-  if (document.body.classList.contains('is-admin')) {
-    html += '<div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap">' +
-      '<button class="btn btn-primary" onclick="editRecipe(\'' + esc(r.id) + '\')">✏️ Редактировать</button>' +
-      '<button class="btn btn-danger" onclick="deleteRecipe(\'' + esc(r.id) + '\')">🗑 Удалить</button></div>';
-  }
-
-  const shareUrl = location.origin + location.pathname;
-  html += '<div class="qr-share-card"><h3>Поделиться рецептом</h3><p>Отсканируйте QR-код или отправьте ссылку в Telegram</p>' +
-    '<span class="qr-canvas-holder" id="qr-holder"></span>' +
-    '<div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap">' +
-    '<a class="btn btn-telegram btn-sm" href="https://t.me/share/url?url=' + encodeURIComponent(shareUrl) + '&text=' + encodeURIComponent('🍕 Рецепт: ' + r.name) + '" target="_blank">✈️ Отправить в Telegram</a>' +
-    '<button class="btn btn-ghost btn-sm" onclick="copyLink()">📋 Копировать ссылку</button></div></div>';
-
-  document.getElementById('detail-body').innerHTML = html;
-
-  setTimeout(() => {
-    try {
-      const holder = document.getElementById('qr-holder');
-      if (holder && typeof QRCode !== 'undefined') {
-        holder.innerHTML = '';
-        new QRCode(holder, { text: shareUrl, width: 160, height: 160, colorDark: '#2c2c2c', correctLevel: QRCode.CorrectLevel.M });
-      }
-    } catch (e) {}
-  }, 80);
-}
-
-function copyLink() {
-  const url = location.href;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => showToast('📋 Ссылка скопирована')).catch(() => fallbackCopy(url));
-  } else fallbackCopy(url);
-}
-function fallbackCopy(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text; document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); showToast('📋 Ссылка скопирована'); } catch (e) { showToast('Не удалось скопировать', false); }
-  ta.remove();
-}
-
-/* ---------- PHOTO LIGHTBOX ---------- */
-function openPhotoLightbox(src) {
-  const lb = document.getElementById('photo-lightbox');
-  document.getElementById('photo-lightbox-img').src = src;
-  lb.classList.add('show');
-}
-function closePhotoLightbox() { document.getElementById('photo-lightbox').classList.remove('show'); }
-
-/* ---------- TOAST ---------- */
-function showToast(msg, ok) {
-  if (ok === undefined) ok = true;
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = ok ? 'var(--success)' : 'var(--danger)';
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-/* ---------- MODAL (замена prompt/confirm — работают и в PWA-режиме iOS) ---------- */
-function openModal(opts) {
-  opts = opts || {};
-  return new Promise(resolve => {
-    const ov = document.getElementById('app-modal-overlay');
-    document.getElementById('app-modal-title').textContent = opts.title || '';
-    document.getElementById('app-modal-message').textContent = opts.message || '';
-    const inp = document.getElementById('app-modal-input');
-    inp.style.display = opts.input ? 'block' : 'none';
-    inp.value = opts.value || '';
-    const okB = document.getElementById('app-modal-ok'), cB = document.getElementById('app-modal-cancel');
-    let done = false;
-    function finish(v) { if (done) return; done = true; ov.classList.remove('show'); resolve(v); }
-    okB.onclick = () => finish(opts.input ? inp.value : true);
-    cB.onclick = () => finish(false);
-    ov.classList.add('show');
-    if (opts.input) setTimeout(() => inp.focus(), 60);
-  });
-}
-
-/* ---------- ADMIN TOGGLE ---------- */
-function toggleAdmin() {
-  if (document.body.classList.contains('is-admin-full')) {
-    document.body.classList.remove('is-admin-full');
-    document.getElementById('admin-toggle-label').textContent = 'Вход';
-    const btn = document.getElementById('admin-panel-toggle-btn');
-    if (btn) btn.textContent = '🔒 Войти';
-    applyAdminVisibility();
-    showToast('Режим редактирования выключен');
-    return;
-  }
-
-  /* Вход с паролем через модальное окно */
-  openModal({ title: '🔐 Режим редактирования', message: 'Введите пароль:', input: true, value: '' }).then(function(val) {
-    if (val === false) return; /* отмена */
-    if (val !== 'route20') {
-      showToast('❌ Неверный пароль', false);
-      return;
-    }
-
-    /* Пароль верный — проверяем GitHub-настройки */
-    const gh = getGh();
-    if (!gh || !gh.owner || !gh.token) {
-      /* GitHub не настроен — сначала настройка, затем проверка и вход */
-      openGithubSettings().then(function(saved) {
-        if (saved) testGhAndEnter();
-        else showToast('Настройка GitHub отменена', false);
-      });
-    } else {
-      /* GitHub уже настроен — проверяем соединение, потом входим */
-      testGhAndEnter();
-    }
-  });
-
-function testGhAndEnter() {
-  return testGithubConnection().then(function(ok) {
-    if (ok) enterAdminMode();
-    else showToast('❌ Не удалось проверить API-ключ GitHub. Проверьте токен.', false);
-  });
-}
-
-function enterAdminMode() {
-  document.body.classList.add('is-admin-full');
-  document.getElementById('admin-toggle-label').textContent = 'Выход';
-  const btn = document.getElementById('admin-panel-toggle-btn');
-  if (btn) btn.textContent = '🔓 Выйти';
-  applyAdminVisibility();
-}
-
-function applyAdminVisibility() {
-  const isAdmin = document.body.classList.contains('is-admin-full');
-  /* Скрываем/показываем вкладки "Добавить" и "Настройки" */
-  document.querySelectorAll('.nav-tab.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
-
-  /* Если мы были на скрытой вкладке — переключаем */
-  const activeTab = document.querySelector('.tab-content.active');
-  if (activeTab) {
-    const tabName = activeTab.id.replace('tab-', '');
-    if (!isAdmin && ['add', 'admin'].includes(tabName)) {
-      switchTab('categories');
-    }
-  }
-
-  /* Обновляем вид формы добавления */
-  const addLocked = document.getElementById('add-locked');
-  const addFields = document.getElementById('add-form-fields');
-  if (addLocked) addLocked.style.display = isAdmin ? 'none' : 'block';
-  if (addFields) addFields.style.display = isAdmin ? 'block' : 'none';
-}
-} /* end toggleAdmin() */
-
-/* ---------- FORM: ADD / EDIT ---------- */
-function onTypeChange() {
-  const v = document.getElementById('f-type').value;
-  document.getElementById('f-size-group').style.display = ['pizza', 'pinsa', 'focaccia', 'burger'].includes(v) ? '' : 'none';
-}
-
-function handlePhoto(input) {
-  const f = input.files && input.files[0];
-  if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => { pendingPhoto = rd.result; setPhotoPreview(pendingPhoto); };
-  rd.readAsDataURL(f);
-}
-function setPhotoPreview(dataUrl) {
-  const area = document.getElementById('photo-area');
-  let img = area.querySelector('img.preview');
-  if (!img) {
-    img = document.createElement('img');
-    img.className = 'preview';
-    img.style.cssText = 'max-width:100%;max-height:220px;border-radius:14px;object-fit:contain;margin-top:8px';
-    area.appendChild(img);
-  }
-  img.src = dataUrl;
-}
-function clearPhotoPreview() {
-  const area = document.getElementById('photo-area');
-  const img = area.querySelector('img.preview');
-  if (img) img.remove();
-}
-
-function addIngredientRow(value) {
-  const div = document.createElement('div');
-  div.className = 'ingredient-row';
-  div.innerHTML = '<input type="text" placeholder="Ингредиент, например: Моцарелла 100г"><button class="row-action-btn" onclick="this.parentElement.remove()">✕</button>';
-  if (value) div.querySelector('input').value = value;
-  document.getElementById('ingredients-list').appendChild(div);
-}
-
-function addStepRow(value) {
-  const div = document.createElement('div');
-  div.className = 'step-row';
-  div.innerHTML = '<span class="step-num">1</span><textarea rows="2" placeholder="Шаг приготовления"></textarea><button class="row-action-btn" onclick="this.parentElement.remove()">✕</button>';
-  if (value) div.querySelector('textarea').value = value;
-  document.getElementById('steps-list').appendChild(div);
-  renumberSteps();
-}
-
-function addVideoRow(value) {
-  const div = document.createElement('div');
-  div.className = 'video-row';
-  div.innerHTML = '<input type="text" placeholder="https://youtube.com/... или ссылка из Instagram/TikTok"><button class="row-action-btn" onclick="this.parentElement.remove()">✕</button>';
-  if (value) div.querySelector('input').value = value;
-  document.getElementById('videos-list').appendChild(div);
-}
-
-function renumberSteps() {
-  document.querySelectorAll('#steps-list .step-row').forEach((row, i) => {
-    const n = row.querySelector('.step-num');
-    if (n) n.textContent = i + 1;
-  });
-}
-
-function calcWeightFromIngredients() {
-  let total = 0;
-  document.querySelectorAll('#ingredients-list input').forEach(inp => {
-    const m = String(inp.value).match(/(\d+(?:[.,]\d+)?)/);
-    if (m) {
-      let v = parseFloat(m[1].replace(',', '.'));
-      if (/кг|kg/i.test(inp.value)) v *= 1000;
-      if (/мл|л/i.test(inp.value)) v = /мл|ml/i.test(inp.value) ? v : v * 1000;
-      total += Math.round(v);
-    }
-  });
-  if (total > 0) { document.getElementById('f-weight').value = total; showToast('🧮 Посчитано: ' + total + ' г'); }
-  else showToast('Не удалось посчитать — проверьте ингредиенты', false);
-}
-
-function resetForm() {
-  ['f-name', 'f-time', 'f-size', 'f-calories', 'f-weight', 'f-style'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('f-type').value = 'pizza';
-  document.getElementById('f-edit-id').value = '';
-  pendingPhoto = null;
-  clearPhotoPreview();
-  const pi = document.getElementById('f-photo-input'); if (pi) pi.value = '';
-  document.getElementById('ingredients-list').innerHTML = '';
-  document.getElementById('steps-list').innerHTML = '';
-  document.getElementById('videos-list').innerHTML = '';
-  addIngredientRow(''); addStepRow('');
-  onTypeChange();
-}
-
-function editRecipe(id) {
-  const r = recipes.find(x => x.id === id);
-  if (!r) return;
-  resetForm();
-  document.getElementById('form-title').textContent = '✏️ Редактирование: ' + r.name;
-  document.getElementById('f-edit-id').value = r.id;
-  document.getElementById('f-type').value = r.type || 'pizza';
-  onTypeChange();
-  document.getElementById('f-name').value = r.name || '';
-  if (r.time) document.getElementById('f-time').value = r.time;
-  if (r.size) { const sel = document.getElementById('f-size'); for (let i = 0; i < sel.options.length; i++) if (sel.options[i].value === r.size) { sel.selectedIndex = i; break; } }
-  if (r.calories) document.getElementById('f-calories').value = r.calories;
-  if (r.weight) document.getElementById('f-weight').value = r.weight;
-  if (r.style) document.getElementById('f-style').value = r.style;
-  pendingPhoto = r.photo || null;
-  if (pendingPhoto) setPhotoPreview(pendingPhoto);
-  (r.ingredients || []).filter(i => i).forEach(i => addIngredientRow(i));
-  (r.steps || []).filter(s => s).forEach(s => addStepRow(s));
-  const vids = (r.videos && r.videos.length ? r.videos : (r.video ? [r.video] : []));
-  vids.forEach(v => v && addVideoRow(v));
-  switchTab('add');
-}
-
-function saveRecipe() {
-  const name = document.getElementById('f-name').value.trim();
-  if (!name) { showToast('Введите название рецепта', false); return; }
-  const num = id => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) || v <= 0 ? null : Math.round(v); };
-  const obj = {
-    id: document.getElementById('f-edit-id').value || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)),
-    type: document.getElementById('f-type').value,
-    name: name,
-    photo: pendingPhoto,
-    time: num('f-time'),
-    size: document.getElementById('f-size').value || null,
-    calories: num('f-calories'),
-    weight: num('f-weight'),
-    style: document.getElementById('f-style').value.trim() || null,
-    video: null,
-    videos: Array.from(document.querySelectorAll('#videos-list input')).map(i => i.value.trim()).filter(Boolean),
-    ingredients: Array.from(document.querySelectorAll('#ingredients-list input')).map(i => i.value.trim()).filter(Boolean),
-    steps: Array.from(document.querySelectorAll('#steps-list textarea')).map(t => t.value.trim()).filter(Boolean)
-  };
-  const editId = document.getElementById('f-edit-id').value;
-  if (editId) {
-    const i = recipes.findIndex(x => x.id === editId);
-    if (i >= 0) recipes[i] = obj; else recipes.push(obj);
-  } else {
-    recipes.unshift(obj);
-  }
-  persist();
-  renderCategoriesList();
-  showToast('💾 Рецепт сохранён');
-  resetForm();
-  switchTab('categories');
-}
-
-async function deleteRecipe(id) {
-  const r = recipes.find(x => x.id === id);
-  if (!r) return;
-  const ok = await openModal({ title: 'Удалить рецепт?', message: '«' + r.name + '» будет удалён без возможности восстановления.' });
-  if (!ok) return;
-  recipes = recipes.filter(x => x.id !== id);
-  persist();
-  renderCategoriesList();
-  showToast('🗑 Рецепт удалён');
-  switchTab(lastTab || 'categories');
-}
-
-/* ---------- EXPORT SNAPSHOT ---------- */
-function findArrayEnd(str, start) {
-  let depth = 0, inStr = false, escCh = false;
-  for (let k = start; k < str.length; k++) {
-    const c = str[k];
-    if (inStr) {
-      if (escCh) escCh = false;
-      else if (c === '\\') escCh = true;
-      else if (c === '"') inStr = false;
-    } else {
-      if (c === '"') inStr = true;
-      else if (c === '[' || c === '{') depth++;
-      else if (c === ']' || c === '}') { depth--; if (depth === 0 && c === ']') return k; }
-    }
-  }
-  return -1;
-}
-
-function exportSnapshot() {
+function saveAll() {
   try {
-    let html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-    const marker = 'const SEED_RECIPES = ';
-    const i = html.indexOf(marker);
-    if (i < 0) { showToast('Экспорт не удался', false); return; }
-    const s = html.indexOf('[', i + marker.length - 1);
-    const e = findArrayEnd(html, s);
-    if (e < 0) { showToast('Экспорт не удался', false); return; }
-    html = html.slice(0, s) + JSON.stringify(recipes) + html.slice(e + 1);
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'index.html';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    showToast('⬇️ Копия сайта скачана');
-  } catch (err) {
-    showToast('Ошибка экспорта: ' + err.message, false);
-  }
-}
-
-/* ---------- GITHUB SYNC ---------- */
-function getGh() { try { return JSON.parse(localStorage.getItem('route20_gh') || 'null'); } catch (e) { return null; } }
-function ghHeaders(cfg) { return { Authorization: 'Bearer ' + (cfg ? cfg.token : ''), Accept: 'application/vnd.github+json' }; }
-function ghBase() { const c = getGh(); return 'https://api.github.com/repos/' + encodeURIComponent(c.owner) + '/' + encodeURIComponent(c.repo); }
-
-async function openGithubSettings() {
-  const cur = getGh() || {};
-  const owner = await openModal({ title: 'GitHub — владелец', message: 'Имя пользователя или организации (например, IPACTAMAHI)', input: true, value: cur.owner || '' });
-  if (!owner) return false;
-  const repo = await openModal({ title: 'GitHub — репозиторий', message: 'Название публичного репозитория (например, pizza)', input: true, value: cur.repo || 'pizza' });
-  if (!repo) return false;
-  const token = await openModal({ title: 'GitHub — токен', message: 'Personal Access Token с правом contents:write.\nТокен хранится только в этом браузере.', input: true, value: cur.token || '' });
-  if (!token) return false;
-  localStorage.setItem('route20_gh', JSON.stringify({ owner: String(owner).trim(), repo: String(repo).trim(), token: String(token || '').trim() }));
-  updateGhStatus();
-  showToast('⚙️ Настройки GitHub сохранены');
-  testGithubConnection();
-  return true;
-}
-
-function updateGhStatus() {
-  const el = document.getElementById('gh-sync-status');
-  if (!el) return;
-  const c = getGh();
-  if (c && c.owner && c.repo) {
-    el.textContent = '🟢 Репозиторий: ' + c.owner + '/' + c.repo + (c.token ? ' · токен сохранён' : ' · ТОКЕН НЕ УКАЗАН');
-    el.style.color = '#10b981';
-  } else {
-    el.textContent = '⚪ Синхронизация не настроена';
-    el.style.color = '#6b7280';
-  }
-}
-
-async function testGithubConnection() {
-  const cfg = getGh();
-  const el = document.getElementById('gh-test-result');
-  if (!cfg || !cfg.owner) { if (el) el.textContent = '🔴 Сначала нажмите «Настроить» и введите данные.'; return false; }
-  if (el) el.textContent = '⏳ Проверяем соединение...';
-  try {
-    const r = await fetch(ghBase() + '/', { headers: ghHeaders(cfg) });
-    if (r.ok) {
-      let extra = '';
-      try {
-        const f = await fetch(ghBase() + '/contents/recipes.json', { headers: ghHeaders(cfg) });
-        extra = f.ok ? ' · recipes.json найден' : ' · recipes.json пока отсутствует';
-      } catch (e2) {}
-      if (el) el.textContent = '🟢 Репозиторий доступен, соединение работает.' + extra;
-      return true;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
+    if (isAdmin()) syncToGithub(false); // фоновая синхронизация, тихо (без тоста при успехе)
+    return true;
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      showToast('⚠️ Хранилище переполнено! Удалите старые рецепты или уменьшите фото.');
     } else {
-      if (el) el.textContent = '🔴 GitHub ответил HTTP ' + r.status + ' — проверьте имя репозитория и права токена.';
-      return false;
+      showToast('⚠️ Ошибка сохранения: ' + e.message);
     }
-  } catch (e) {
-    if (el) el.textContent = '🔴 Нет соединения с GitHub (проверьте интернет или CORS).';
+    console.error('Save error:', e);
     return false;
   }
 }
 
-async function forceSyncNow() {
-  const cfg = getGh();
-  if (!cfg || !cfg.owner) { openGithubSettings(); return; }
-  showToast('⏳ Синхронизация...');
-  try {
-    // PULL: забираем актуальные данные с GitHub (если они есть)
-    try {
-      const r = await fetch(ghBase() + '/contents/recipes.json', { headers: ghHeaders(cfg) });
-      if (r.ok) {
-        const j = await r.json();
-        let txt = '';
-        try { txt = decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))); } catch (e2) {}
-        if (txt) {
-          const arr = JSON.parse(txt);
-          if (Array.isArray(arr) && arr.length) { recipes = arr; persist(); renderCategoriesList(); showToast('📥 Загружено с GitHub: ' + recipes.length + ' рецептов'); }
-        }
-      }
-    } catch (e2) {}
-    // PUSH: публикуем текущие данные
-    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(recipes, null, 1))));
-    let sha = null;
-    try {
-      const rc = await fetch(ghBase() + '/contents/recipes.json', { headers: ghHeaders(cfg) });
-      if (rc.ok) { const j2 = await rc.json(); sha = j2.sha; }
-    } catch (e3) {}
-    const up = await fetch(ghBase() + '/contents/recipes.json', {
-      method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, ghHeaders(cfg)),
-      body: JSON.stringify(Object.assign({ message: 'Update recipes from web app', content: b64 }, sha ? { sha: sha } : {}))
-    });
-    if (up.ok) showToast('✅ Опубликован на GitHub');
-    else showToast('❌ Публикация не удалась: HTTP ' + up.status + '. Нужен токен с правом contents:write', false);
-  } catch (e) {
-    showToast('Ошибка синхронизации: ' + e.message, false);
+function uid() {
+  return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ================================================================
+   MODAL — замена window.prompt()/window.confirm()
+   ================================================================
+   На iOS, когда сайт открыт как значок "На экран Домой" (standalone
+   режим, без адресной строки Safari), браузер МОЛЧА блокирует
+   prompt() и confirm() — код выполняется, но диалог просто не
+   появляется. Поэтому здесь свой HTML-диалог, который работает
+   одинаково в обычной вкладке и в standalone-режиме.
+   ================================================================ */
+function showModal(opts) {
+  return new Promise(function(resolve) {
+    var overlay = $('app-modal-overlay');
+    var titleEl = $('app-modal-title');
+    var msgEl = $('app-modal-message');
+    var inputEl = $('app-modal-input');
+    var okBtn = $('app-modal-ok');
+    var cancelBtn = $('app-modal-cancel');
+
+    titleEl.textContent = opts.title || '';
+    msgEl.textContent = opts.message || '';
+
+    if (opts.withInput) {
+      inputEl.style.display = '';
+      inputEl.value = opts.inputValue || '';
+      inputEl.placeholder = opts.placeholder || '';
+    } else {
+      inputEl.style.display = 'none';
+    }
+
+    overlay.classList.add('show');
+    if (opts.withInput) setTimeout(function() { inputEl.focus(); }, 60);
+
+    function cleanup(result) {
+      overlay.classList.remove('show');
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      inputEl.onkeydown = null;
+      resolve(result);
+    }
+
+    okBtn.onclick = function() {
+      cleanup(opts.withInput ? inputEl.value : true);
+    };
+    cancelBtn.onclick = function() {
+      cleanup(opts.withInput ? null : false);
+    };
+    inputEl.onkeydown = function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); okBtn.onclick(); }
+    };
+  });
+}
+
+function customPrompt(message, defaultValue, title) {
+  return showModal({ title: title || 'Введите значение', message: message, withInput: true, inputValue: defaultValue || '' });
+}
+
+function customConfirm(message, title) {
+  return showModal({ title: title || 'Подтверждение', message: message, withInput: false });
+}
+
+/* ================================================================
+   РЕЖИМ АДМИНИСТРАТОРА
+   ================================================================
+   Статический сайт (GitHub Pages) не может иметь настоящую защиту
+   паролем — весь код виден любому в браузере через "Просмотр кода
+   страницы". Это простой практичный барьер: обычный сотрудник по
+   ссылке не видит НИ ОДНОЙ кнопки редактирования, а вы включаете
+   режим редактирования кодом только на своём телефоне/компьютере.
+   Если нужна настоящая защита (чтобы код нельзя было увидеть даже
+   при желании) — потребуется сервер с авторизацией, это уже другой,
+   более сложный уровень.
+
+   ЧТОБЫ ПОМЕНЯТЬ КОД: измените строку ниже.
+   ================================================================ */
+const ADMIN_PIN = 'route20';
+const ADMIN_KEY = 'r20_admin_mode';
+
+function isAdmin() {
+  return localStorage.getItem(ADMIN_KEY) === '1';
+}
+
+function updateAddGate() {
+  var locked = $('add-locked');
+  var fields = $('add-form-fields');
+  if (!locked || !fields) return;
+  if (isAdmin()) {
+    locked.style.display = 'none';
+    fields.style.display = '';
+    var warn = $('gh-not-configured-warning');
+    if (warn) {
+      var cfg = getGithubConfig();
+      warn.style.display = (cfg && cfg.owner && cfg.repo && cfg.token) ? 'none' : '';
+    }
+  } else {
+    locked.style.display = '';
+    fields.style.display = 'none';
   }
 }
 
-/* ---------- SITE PHOTOS ---------- */
-function changeSitePhoto(input, which) {
-  const f = input.files && input.files[0];
-  if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => {
-    try {
-      localStorage.setItem('route20_photo_' + which, rd.result);
-      applySitePhotos();
-      showToast(which === 'header' ? '📷 Фото шапки обновлено' : '🖼 Фоновое фото обновлено');
-    } catch (e) { showToast('Не удалось сохранить фото', false); }
-  };
-  rd.readAsDataURL(f);
+const LOCK_ICON_SVG = '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+const UNLOCK_ICON_SVG = '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-2"></path></svg>';
+
+function applyAdminUI() {
+  document.body.classList.toggle('is-admin', isAdmin());
+  var btn = $('admin-toggle-btn');
+  if (btn) {
+    var iconEl = btn.querySelector('.icon');
+    var labelEl = btn.querySelector('.label');
+    if (iconEl) iconEl.innerHTML = isAdmin() ? UNLOCK_ICON_SVG : LOCK_ICON_SVG;
+    if (labelEl) labelEl.textContent = isAdmin() ? 'Выход' : 'Вход';
+  }
+  updateAddGate();
+  if (currentTab === 'admin') renderAdminPanel();
 }
 
-function applySitePhotos() {
+async function toggleAdmin() {
+  if (isAdmin()) {
+    var ok = await customConfirm('Выключить режим редактирования на этом устройстве?');
+    if (ok) {
+      localStorage.removeItem(ADMIN_KEY);
+      applyAdminUI();
+      showToast('🔒 Режим редактирования выключен');
+      if (currentTab === 'add') switchTab('categories');
+    }
+    return;
+  }
+  var code = await customPrompt('Введите код администратора:', '', '🔒 Вход в режим редактирования');
+  if (code === null) return;
+  if (code.trim() === ADMIN_PIN) {
+    localStorage.setItem(ADMIN_KEY, '1');
+    applyAdminUI();
+    showToast('🔓 Режим редактирования включён на этом устройстве');
+  } else {
+    showToast('⚠️ Неверный код');
+  }
+}
+
+/* ================================================================
+   АВТОСОХРАНЕНИЕ НА GITHUB
+   ================================================================
+   ЧТЕНИЕ (для ВСЕХ посетителей, без токена): при загрузке страницы
+   мы просто запрашиваем recipes.json рядом с самим index.html —
+   это обычный публичный файл в репозитории, GitHub Pages отдаёт
+   его как статику. Никакого секрета для чтения не нужно.
+
+   ЗАПИСЬ (только для администратора, нужен токен): чтобы сохранить
+   изменения обратно в репозиторий, используется GitHub API. Токен
+   хранится ТОЛЬКО в localStorage вашего браузера — он никогда не
+   попадает в сам файл сайта и не виден обычным посетителям.
+
+   Как получить токен:
+   GitHub → Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → New token → Repository access: только этот
+   репозиторий → Permissions → Contents: Read and write.
+   ================================================================ */
+const GH_CONFIG_KEY = 'r20_gh_config';
+const GH_DATA_PATH = 'recipes.json'; // фиксированный путь — не меняйте, иначе чтение сломается у обычных посетителей
+
+function getGithubConfig() {
   try {
-    const h = localStorage.getItem('route20_photo_header');
-    if (h) {
-      document.getElementById('site-header').style.backgroundImage = 'linear-gradient(180deg, rgba(255,248,241,.75), rgba(255,248,241,.9)), url("' + h + '")';
-    }
-    const b = localStorage.getItem('route20_photo_background');
-    if (b) {
-      document.body.style.backgroundImage = 'linear-gradient(rgba(250,247,242,.88), rgba(250,247,242,.93)), url("' + b + '")';
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundAttachment = 'fixed';
-    }
-  } catch (e) {}
+    var raw = localStorage.getItem(GH_CONFIG_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
 }
 
-/* ---------- INIT ---------- */
-resetForm();
-renderCategoriesList();
-updateGhStatus();
-applySitePhotos();
-onTypeChange();
+async function openGithubSettings() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var cfg = getGithubConfig() || {};
+
+  var owner = await customPrompt('GitHub — имя пользователя или организации:', cfg.owner || '', '⚙️ Настройка GitHub (1/4)');
+  if (owner === null) return;
+  var repo = await customPrompt('Название репозитория (например pizza):', cfg.repo || '', '⚙️ Настройка GitHub (2/4)');
+  if (repo === null) return;
+  var branch = await customPrompt('Ветка (обычно main):', cfg.branch || 'main', '⚙️ Настройка GitHub (3/4)');
+  if (branch === null) return;
+  var tokenInput = await customPrompt(
+    'Personal Access Token (fine-grained, права "Contents: Read and write", только для этого репозитория).\n' +
+    'Оставьте поле пустым, чтобы сохранить прежний токен.', '', '⚙️ Настройка GitHub (4/4)'
+  );
+  if (tokenInput === null) return;
+
+  var newCfg = {
+    owner: owner.trim(),
+    repo: repo.trim(),
+    branch: (branch || 'main').trim(),
+    token: tokenInput.trim() || cfg.token || ''
+  };
+
+  if (!newCfg.owner || !newCfg.repo || !newCfg.token) {
+    showToast('⚠️ Нужно указать владельца, репозиторий и токен');
+    return;
+  }
+
+  localStorage.setItem(GH_CONFIG_KEY, JSON.stringify(newCfg));
+  showToast('✅ Настройки сохранены. Синхронизирую...');
+  syncToGithub(true);
+}
+
+function b64EncodeUnicode(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+const GH_STATUS_KEY = 'r20_gh_last_sync';
+
+/* ================================================================
+   ПРОВЕРКА СОЕДИНЕНИЯ С GITHUB
+   Делает настоящий тестовый запрос к API (не просто проверяет,
+   заполнены ли поля) — показывает точную причину, если что-то не так:
+   неверный токен, нет доступа к репозиторию, не хватает прав записи.
+   ================================================================ */
+async function testGithubConnection() {
+  var resultEl = $('gh-test-result');
+  var cfg = getGithubConfig();
+
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    if (resultEl) { resultEl.textContent = '⚪ Сначала заполните настройки (⚙️ Настроить)'; resultEl.style.color = 'var(--text-muted)'; }
+    return;
+  }
+
+  if (resultEl) { resultEl.textContent = '⏳ Проверяю...'; resultEl.style.color = 'var(--text-muted)'; }
+
+  try {
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo);
+    var res = await fetch(apiUrl, {
+      headers: { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' }
+    });
+
+    if (res.status === 401) {
+      throw new Error('Токен неверный или устарел (401). Создайте новый токен и введите заново.');
+    }
+    if (res.status === 404) {
+      throw new Error('Репозиторий "' + cfg.owner + '/' + cfg.repo + '" не найден (404). Проверьте имя пользователя и название репозитория.');
+    }
+    if (!res.ok) {
+      throw new Error('HTTP ' + res.status);
+    }
+
+    var data = await res.json();
+    var perms = data.permissions || {};
+    if (!perms.push) {
+      throw new Error('Токен подключён, но у него нет прав на запись (Contents: Read and write). Пересоздайте токен с нужными правами.');
+    }
+
+    if (resultEl) {
+      resultEl.textContent = '🟢 Всё в порядке: доступ к репозиторию "' + cfg.owner + '/' + cfg.repo + '" есть, права на запись есть.';
+      resultEl.style.color = '#8fe3ac';
+    }
+    showToast('✅ Соединение с GitHub работает');
+  } catch (e) {
+    console.error('testGithubConnection error:', e);
+    if (resultEl) { resultEl.textContent = '🔴 ' + e.message; resultEl.style.color = '#ff9aa8'; }
+    showToast('⚠️ Проверка не пройдена — подробности в админ-панели');
+  }
+}
+
+async function forceSyncNow() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    showToast('⚠️ Сначала настройте синхронизацию (⚙️ Настроить)');
+    return;
+  }
+  showToast('⏳ Синхронизирую...');
+  await syncToGithub(true); // manual=true — покажет "✅ Сохранено" или "⚠️ Ошибка" по итогу
+}
+
+/* ================================================================
+   ЗАГРУЗКА ФОТО РЕЦЕПТА ОТДЕЛЬНЫМ ФАЙЛОМ НА GITHUB
+   Вместо хранения фото как base64-текста внутри recipes.json,
+   загружаем сжатое фото отдельным файлом в папку images/ репозитория
+   и сохраняем в рецепте только короткий путь к нему. Это не даёт
+   recipes.json и index.html раздуваться с каждым новым фото.
+   ================================================================ */
+async function uploadImageAtPath(dataUrl, path, commitMessage) {
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) return null;
+
+  var match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+  if (!match) return null;
+  var base64Payload = match[2];
+
+  try {
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + path;
+    var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
+
+    var sha = null;
+    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    if (getRes.status === 200) {
+      var getData = await getRes.json();
+      sha = getData.sha;
+    } else if (getRes.status !== 404) {
+      throw new Error('Проверка файла: HTTP ' + getRes.status);
+    }
+
+    var body = {
+      message: commitMessage || ('Обновление фото (' + new Date().toLocaleString('ru-RU') + ')'),
+      content: base64Payload,
+      branch: cfg.branch
+    };
+    if (sha) body.sha = sha;
+
+    var putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+      body: JSON.stringify(body)
+    });
+
+    if (!putRes.ok) {
+      var errData = await putRes.json().catch(function() { return {}; });
+      throw new Error(errData.message || ('HTTP ' + putRes.status));
+    }
+
+    return path;
+  } catch (e) {
+    console.error('uploadImageAtPath error:', e);
+    return null;
+  }
+}
+
+async function uploadPhotoToGithub(dataUrl, recipeId) {
+  var match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+  if (!match) return null;
+  var ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+  var path = 'images/' + recipeId + '.' + ext;
+  return await uploadImageAtPath(dataUrl, path, 'Фото рецепта (' + new Date().toLocaleString('ru-RU') + ')');
+}
+
+function resolvePhotoSrc(photo) {
+  if (!photo) return '';
+  if (photo.indexOf('data:') === 0) return photo; // старые рецепты — фото прямо в данных
+  return './' + photo; // новые — просто путь к отдельному файлу рядом с сайтом
+}
+
+function openPhotoLightbox(src) {
+  var box = $('photo-lightbox');
+  var img = $('photo-lightbox-img');
+  if (!box || !img) return;
+  img.src = src;
+  box.classList.add('show');
+}
+
+function closePhotoLightbox() {
+  var box = $('photo-lightbox');
+  if (box) box.classList.remove('show');
+}
+
+/* ================================================================
+   СМЕНА ФОТО ШАПКИ / ФОНА САЙТА
+   Хранятся отдельными файлами: images/site-header.jpg и
+   images/site-background.jpg. При загрузке страницы мы пробуем их
+   подгрузить и, если они есть, подменяем ими встроенные по умолчанию.
+   ================================================================ */
+async function changeSitePhoto(input, kind) {
+  var file = input.files[0];
+  if (!file) return;
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.token) {
+    showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️) — иначе фото сохранится только у вас');
+  }
+
+  showToast('📤 Загружаю фото...');
+  var dataUrl = await compressImage(file, { maxWidth: 1400, quality: 0.82 });
+  var path = 'images/site-' + kind + '.jpg';
+  applySitePhoto(kind, dataUrl); // применяем сразу, не дожидаясь ответа GitHub
+
+  var uploaded = await uploadImageAtPath(dataUrl, path, 'Фото ' + (kind === 'header' ? 'шапки' : 'фона') + ' (' + new Date().toLocaleString('ru-RU') + ')');
+  if (uploaded) {
+    showToast('✅ Фото ' + (kind === 'header' ? 'шапки' : 'фона') + ' обновлено для всех посетителей');
+  } else {
+    showToast('⚠️ Фото применено только у вас — не удалось сохранить на GitHub');
+  }
+}
+
+function applySitePhoto(kind, dataUrl) {
+  if (kind === 'header') {
+    var header = document.querySelector('.header');
+    if (header) {
+      header.style.backgroundImage =
+        'linear-gradient(180deg, rgba(10,8,10,.35) 0%, rgba(10,8,10,.55) 55%, rgba(15,12,18,.88) 100%), url(' + dataUrl + ')';
+    }
+  } else if (kind === 'background') {
+    document.body.style.backgroundImage =
+      'linear-gradient(rgba(15,12,18,.91), rgba(15,12,18,.95)), url(' + dataUrl + ')';
+  }
+}
+
+async function loadCustomSitePhotos() {
+  ['header', 'background'].forEach(function(kind) {
+    var path = './images/site-' + kind + '.jpg';
+    var img = new Image();
+    img.onload = function() { applySitePhoto(kind, path); };
+    img.onerror = function() { /* кастомного фото нет — остаётся встроенное по умолчанию */ };
+    img.src = path + '?v=' + Date.now();
+  });
+}
+
+async function syncToGithub(manual) {
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
+    if (manual) showToast('⚠️ GitHub-синхронизация не настроена (кнопка ⚙️ в разделе "Добавить")');
+    return;
+  }
+
+  try {
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + GH_DATA_PATH;
+    var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
+
+    var sha = null;
+    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    if (getRes.status === 200) {
+      var getData = await getRes.json();
+      sha = getData.sha;
+    } else if (getRes.status !== 404) {
+      throw new Error('Проверка файла: HTTP ' + getRes.status);
+    }
+
+    var body = {
+      message: 'Обновление рецептов (' + new Date().toLocaleString('ru-RU') + ')',
+      content: b64EncodeUnicode(JSON.stringify(recipes, null, 2)),
+      branch: cfg.branch
+    };
+    if (sha) body.sha = sha;
+
+    var putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+      body: JSON.stringify(body)
+    });
+
+    if (!putRes.ok) {
+      var errData = await putRes.json().catch(function() { return {}; });
+      throw new Error(errData.message || ('HTTP ' + putRes.status));
+    }
+
+    localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: true, time: Date.now() }));
+    dataSource = 'github'; // то, что сейчас в recipes[], только что успешно опубликовано — это и есть актуальные данные
+    if (manual) showToast('✅ Сохранено на GitHub');
+  } catch (e) {
+    console.error('GitHub sync error:', e);
+    localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: false, time: Date.now(), error: e.message }));
+    showToast('⚠️ Не удалось сохранить на GitHub: ' + e.message);
+  }
+  if (currentTab === 'admin') renderAdminPanel();
+}
+
+var dataSource = 'local'; // 'github' | 'local' — откуда реально загружены показанные сейчас данные
+
+async function syncFromGithub() {
+  try {
+    var res = await fetch('./' + GH_DATA_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return; // файла ещё нет или открыто локально — тихий фолбэк на localStorage
+    var data = await res.json();
+    if (Array.isArray(data)) {
+      recipes = data;
+      dataSource = 'github';
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch(e) {}
+      if (currentTab === 'categories') renderCategoriesList();
+      else if (currentTab === 'categories') renderCategoriesList();
+      else if (currentTab === 'admin') renderAdminPanel();
+    }
+  } catch (e) {
+    // Тихий фолбэк: например file:// не позволяет fetch по CORS-политике браузера
+    console.warn('syncFromGithub: используются локальные данные', e);
+  }
+}
+
+/* ================================================================
+   ПУБЛИКАЦИЯ ТЕКУЩЕГО СПИСКА (только для администратора)
+   Берём текущую страницу как есть и "запекаем" все рецепты (recipes)
+   в константу SEED_RECIPES внутри новой копии файла. Скачанный файл
+   нужно загрузить на хостинг (например, GitHub Pages) — тогда любой
+   посетитель ссылки увидит актуальный список сразу при открытии,
+   без зависимости от localStorage конкретного браузера.
+   ================================================================ */
+function exportSnapshot() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!recipes.length) { showToast('⚠️ Список пуст — нечего публиковать'); return; }
+
+  var tabBeforeExport = currentTab;
+  switchTab('categories'); // чистое стартовое состояние для нового файла
+
+  try {
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var seedJson = JSON.stringify(recipes);
+    var re = /const SEED_RECIPES = \[[\s\S]*?\];\n/;
+    if (!re.test(html)) {
+      showToast('⚠️ Не удалось найти место для вставки данных');
+    } else {
+      html = html.replace(re, 'const SEED_RECIPES = ' + seedJson + ';\n');
+
+      var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+
+      showToast('✅ Файл с ' + recipes.length + ' рецептами скачан — загрузите его на хостинг');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('⚠️ Ошибка: ' + e.message);
+  }
+
+  switchTab(tabBeforeExport === 'add' ? 'categories' : (tabBeforeExport || 'categories'));
+}
+
+/* ================================================================
+   TAB NAVIGATION
+   ================================================================ */
+let currentTab = 'categories';
+
+function switchTab(name) {
+  if (name === currentTab) return;
+  if (location.hash.indexOf('#recipe=') === 0) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const tabEl = document.querySelector('.nav-tab[data-tab="' + name + '"]');
+  if (tabEl) tabEl.classList.add('active');
+
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const contentEl = document.getElementById('tab-' + name);
+  if (contentEl) contentEl.classList.add('active');
+
+  currentTab = name;
+
+  if (name === 'categories') renderCategoriesList();
+  if (name === 'admin') renderAdminPanel();
+  if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
+}
+
+/* ================================================================
+   Открыть форму добавления с предустановленным типом
+   (вызывается из кнопок "Новая пицца" / "Новый соус")
+   ================================================================ */
+var pendingAddType = 'pizza';
+function openAddForm(type) {
+  pendingAddType = type || 'pizza';
+  switchTab('add');
+}
+
+var TYPE_LABELS = {
+  pizza: { add: '➕ Новый рецепт пиццы', edit: 'рецепт', card: '🍕', accusative: ' рецепт пиццы' },
+  pinsa: { add: '➕ Новая пинца', edit: 'пинцу', card: '🫓', accusative: ' пинцу' },
+  dough: { add: '➕ Новое тесто', edit: 'тесто', card: '🌾', accusative: ' рецепт теста' },
+  sauce: { add: '➕ Новый соус', edit: 'соус', card: '🥫', accusative: ' соус' },
+  prep: { add: '➕ Новая заготовка', edit: 'заготовку', card: '🧂', accusative: ' заготовку' },
+  focaccia: { add: '➕ Новая фокачча', edit: 'фокаччу', card: '🫓', accusative: ' фокаччу' },
+  burger: { add: '➕ Новый бургер', edit: 'бургер', card: '🍔', accusative: ' бургер' }
+};
+
+function onTypeChange() {
+  var type = $('f-type').value;
+  var sizeGroup = $('f-size-group');
+  if (sizeGroup) sizeGroup.style.display = (type === 'sauce' || type === 'dough' || type === 'prep' || type === 'burger') ? 'none' : '';
+  var info = TYPE_LABELS[type] || TYPE_LABELS.pizza;
+  var titlePrefix = editingRecipe ? '✏️ Редактировать' : '➕ Новый(ая)';
+  $('form-title').textContent = editingRecipe ? ('✏️ Редактировать ' + info.edit) : info.add;
+}
+
+/* ================================================================
+   SHORTCUT for getElementById
+   ================================================================ */
+function $(id) { return document.getElementById(id); }
+
+/* ================================================================
+   PHOTO HANDLING (compress to keep localStorage size manageable)
+   ================================================================ */
+let currentPhotoData = null;
+
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  compressImage(file, {maxWidth: 600}).then(function(data) {
+    currentPhotoData = data;
+    $('f-photo-data').value = data;
+    renderPhotoPreview(data);
+  });
+}
+
+function compressImage(file, opts) {
+  return new Promise(function(resolve) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        var c = document.createElement('canvas');
+        var w = img.width, h = img.height;
+        if (opts.maxWidth && w > opts.maxWidth) { h = h * opts.maxWidth / w; w = opts.maxWidth; }
+        if (!opts.maxHeight || h <= opts.maxHeight) {
+          c.width = w; c.height = h;
+        } else {
+          w = w * opts.maxHeight / h; h = opts.maxHeight;
+          c.width = w; c.height = h;
+        }
+        var ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', opts.quality || 0.65));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoPreview(dataUrl) {
+  var area = $('photo-area');
+  if (dataUrl) {
+    area.innerHTML = '<img src="' + dataUrl + '" alt="Фото"><input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">';
+  } else {
+    area.innerHTML = '<span class="placeholder-icon">📷</span><span class="placeholder-text">Нажмите чтобы добавить фото</span><input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">';
+  }
+}
+
+/* ================================================================
+   INGREDIENTS & STEPS ROW MANAGEMENT
+   ================================================================ */
+var editingRecipe = null;
+
+function addIngredientRow(value) {
+  if (!value) value = '';
+  var list = $('ingredients-list');
+  var row = document.createElement('div');
+  row.className = 'ingredient-row';
+  row.innerHTML = '<input type="text" placeholder="Ингредиент, например: 200 г томатного соуса или 2 кг муки">' +
+    '<div class="row-move-btns">' +
+      '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>' +
+      '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>' +
+    '</div>' +
+    '<button class="btn btn-danger btn-sm" onclick="this.parentElement.remove(); updateMoveButtonsState(); calcWeightFromIngredients(true)">✕</button>';
+  list.appendChild(row);
+  if (value) row.querySelector('input').value = value;
+
+  var input = row.querySelector('input');
+  input.addEventListener('input', function() { calcWeightFromIngredients(true); });
+  updateMoveButtonsState();
+}
+
+/* ================================================================
+   АВТОМАТИЧЕСКИЙ ПОДСЧЁТ ОБЩЕГО ВЕСА ИЗ ИНГРЕДИЕНТОВ
+   Ищет в каждой строке ингредиента число, за которым идёт "г"/"гр"
+   (граммы), и суммирует. Строки без веса в граммах (например "3 шт",
+   "по вкусу") просто пропускаются.
+   ================================================================ */
+function extractWeightGrams(text) {
+  // Сначала проверяем килограммы (2кг, 1.5 кг) — переводим в граммы
+  var mKg = text.match(/(\d+(?:[.,]\d+)?)\s*кг(?![а-яёa-z])/i);
+  if (mKg) {
+    var nKg = parseFloat(mKg[1].replace(',', '.'));
+    if (!isNaN(nKg)) return nKg * 1000;
+  }
+  // Затем граммы (200г, 200 гр)
+  var mG = text.match(/(\d+(?:[.,]\d+)?)\s*г(?:р)?(?![а-яёa-z])/i);
+  if (mG) {
+    var nG = parseFloat(mG[1].replace(',', '.'));
+    if (!isNaN(nG)) return nG;
+  }
+  return null;
+}
+
+function formatWeight(grams) {
+  if (grams === null || grams === undefined) return '';
+  if (grams >= 1000) {
+    var kg = grams / 1000;
+    var rounded = Math.round(kg * 100) / 100; // до сотых, без лишних нулей
+    return rounded + ' кг';
+  }
+  return Math.round(grams) + ' г';
+}
+
+function calcWeightFromIngredients(silent) {
+  var total = 0;
+  var found = false;
+
+  document.querySelectorAll('#ingredients-list .ingredient-row input').forEach(function(inp) {
+    var text = inp.value || '';
+    var grams = extractWeightGrams(text);
+    if (grams !== null) { total += grams; found = true; }
+  });
+
+  if (found) {
+    $('f-weight').value = Math.round(total);
+    if (!silent) showToast('🧮 Посчитано: ' + formatWeight(total) + ' (сумма ингредиентов)');
+  } else if (!silent) {
+    showToast('⚠️ Не найдено ингредиентов с весом в граммах/кг (например "200 г мука" или "2 кг мука")');
+  }
+}
+
+/* ================================================================
+   ВИДЕО В РЕЦЕПТЕ — универсальный разбор ссылки
+   Поддерживаются: YouTube, Google Диск, Vimeo, прямая ссылка на
+   видеофайл (.mp4/.webm/.mov/.ogg). Если источник не распознан —
+   вместо плеера показывается обычная ссылка "Открыть видео",
+   чтобы ничего не ломалось.
+   ================================================================ */
+function getRecipeVideos(r) {
+  if (r.videos && r.videos.length) return r.videos;
+  if (r.video) return [r.video]; // старые рецепты, сохранённые до появления списка видео
+  return [];
+}
+
+function parseVideoUrl(url) {
+  if (!url) return null;
+  url = url.trim();
+
+  // YouTube (watch, youtu.be, embed, shorts)
+  var yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  var ytShorts = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+  if (ytShorts) return { type: 'youtube', id: ytShorts[1], embedUrl: 'https://www.youtube.com/embed/' + ytShorts[1], aspect: '9-16' };
+  if (yt) return { type: 'youtube', id: yt[1], embedUrl: 'https://www.youtube.com/embed/' + yt[1], aspect: '16-9' };
+
+  // Google Drive (/file/d/ID/... или open?id=ID)
+  var drive = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (drive) return { type: 'drive', embedUrl: 'https://drive.google.com/file/d/' + drive[1] + '/preview', aspect: '16-9' };
+
+  // Vimeo
+  var vimeo = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeo) return { type: 'vimeo', id: vimeo[1], embedUrl: 'https://player.vimeo.com/video/' + vimeo[1], aspect: '16-9' };
+
+  // TikTok (tiktok.com/@user/video/ID) — всегда вертикальное
+  var tiktok = url.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
+  if (tiktok) return { type: 'tiktok', embedUrl: 'https://www.tiktok.com/embed/v2/' + tiktok[1], aspect: '9-16' };
+
+  // Instagram — Reels вертикальные, обычные посты чаще квадратные/4:5
+  var reel = url.match(/instagram\.com\/reel\/([a-zA-Z0-9_-]+)/);
+  if (reel) return { type: 'instagram', embedUrl: 'https://www.instagram.com/reel/' + reel[1] + '/embed', aspect: '9-16' };
+  var insta = url.match(/instagram\.com\/p\/([a-zA-Z0-9_-]+)/);
+  if (insta) return { type: 'instagram', embedUrl: 'https://www.instagram.com/p/' + insta[1] + '/embed', aspect: '4-5' };
+
+  // VK (vk.com/video-OID_ID)
+  var vk = url.match(/vk\.com\/video(-?\d+)_(\d+)/);
+  if (vk) return { type: 'vk', embedUrl: 'https://vk.com/video_ext.php?oid=' + vk[1] + '&id=' + vk[2], aspect: '16-9' };
+
+  // Facebook (обычные ссылки на видео и fb.watch)
+  if (/facebook\.com\/.+\/videos\/|fb\.watch\//.test(url)) {
+    return { type: 'facebook', embedUrl: 'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(url) + '&show_text=false', aspect: '16-9' };
+  }
+
+  // Прямая ссылка на видеофайл — точную ориентацию узнаем динамически после загрузки метаданных
+  if (/\.(mp4|webm|mov|ogg)(\?.*)?$/i.test(url)) return { type: 'direct', embedUrl: url, aspect: '16-9' };
+
+  return { type: 'unknown', embedUrl: url };
+}
+
+function renderVideoBlock(url, autoplay) {
+  var v = parseVideoUrl(url);
+  if (!v) return '';
+  var ratioClass = 'ratio-' + (v.aspect || '16-9');
+
+  if (v.type === 'direct') {
+    var attrs = autoplay ? 'controls playsinline autoplay muted loop' : 'controls playsinline loop';
+    return '<div class="video-embed-wrap ' + ratioClass + '">' +
+      '<video src="' + escAttr(v.embedUrl) + '" ' + attrs + ' onloadedmetadata="adjustVideoAspect(this)"></video></div>';
+  }
+
+  if (v.type === 'youtube') {
+    var ytParams = autoplay ? 'autoplay=1&mute=1&playsinline=1&loop=1&playlist=' + v.id : 'loop=1&playlist=' + v.id;
+    var ytUrl = v.embedUrl + '?' + ytParams;
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  if (v.type === 'vimeo') {
+    var vimeoParams = autoplay ? 'autoplay=1&muted=1&loop=1' : 'loop=1';
+    var vimeoUrl = v.embedUrl + '?' + vimeoParams;
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  if (v.type === 'drive') {
+    // У предпросмотра Google Диска нет параметра автовоспроизведения/повтора —
+    // запускается вручную одним нажатием на Play внутри плеера.
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+
+  // Соцсети (Instagram, VK, Facebook, TikTok) — их плееры не поддерживают
+  // автовоспроизведение/повтор через ссылку, включаются нажатием Play вручную.
+  // Если автор закрыл пост от показа на чужих сайтах — есть запасная ссылка.
+  if (v.type === 'tiktok' || v.type === 'instagram' || v.type === 'vk' || v.type === 'facebook') {
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+      + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не отображается? Открыть оригинал →</a>';
+  }
+
+  // Источник не распознан — просто ссылка
+  return '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">🎬 Открыть видео →</a>';
+}
+
+function adjustVideoAspect(videoEl) {
+  if (!videoEl.videoWidth || !videoEl.videoHeight) return;
+  var wrap = videoEl.parentElement;
+  if (!wrap) return;
+  wrap.classList.remove('ratio-16-9', 'ratio-9-16', 'ratio-4-5');
+  wrap.style.aspectRatio = videoEl.videoWidth + ' / ' + videoEl.videoHeight;
+  if (videoEl.videoWidth < videoEl.videoHeight) {
+    // Портретное видео — ограничиваем по высоте, чтобы целиком влезало на экран без прокрутки
+    wrap.style.maxHeight = '68vh';
+    wrap.style.width = 'auto';
+    wrap.style.maxWidth = '100%';
+  } else {
+    wrap.style.width = '100%';
+    wrap.style.maxHeight = '';
+  }
+}
+
+function addStepRow(value) {
+  if (!value) value = '';
+  var list = $('steps-list');
+  var row = document.createElement('div');
+  row.className = 'step-row';
+  var num = list.children.length + 1;
+  row.innerHTML = '<span class="step-num">' + num + '</span>' +
+    '<input type="text" placeholder="Шаг ' + num + ': ...">\n'
+    + '<div class="row-move-btns">'
+    +   '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>'
+    +   '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>'
+    + '</div>'
+    + '<button class="btn btn-danger btn-sm" onclick="removeStep(this)">✕</button>';
+  list.appendChild(row);
+  if (value) row.querySelector('input').value = value;
+  renumberSteps();
+}
+
+function removeStep(btn) {
+  btn.closest('.step-row').remove();
+  renumberSteps();
+}
+
+function renumberSteps() {
+  var rows = document.querySelectorAll('#steps-list .step-row');
+  updateMoveButtonsState();
+  for (var i = 0; i < rows.length; i++) {
+    rows[i].querySelector('.step-num').textContent = i + 1;
+  }
+}
+
+/* ================================================================
+   SAVE / EDIT RECIPE
+   ================================================================ */
+/* ================================================================
+   ПЕРЕМЕЩЕНИЕ ИНГРЕДИЕНТОВ / ШАГОВ (вверх-вниз кнопками)
+   Работает одинаково надёжно мышкой и пальцем на телефоне —
+   в отличие от перетаскивания (drag-and-drop), которое на iPhone
+   часто ведёт себя нестабильно внутри прокручиваемых форм.
+   ================================================================ */
+function moveRow(btn, dir) {
+  var row = btn.closest('.ingredient-row, .step-row, .video-row');
+  if (!row) return;
+  var sibling = dir === 'up' ? row.previousElementSibling : row.nextElementSibling;
+  if (!sibling) return;
+
+  if (dir === 'up') row.parentNode.insertBefore(row, sibling);
+  else row.parentNode.insertBefore(sibling, row);
+
+  if (row.classList.contains('step-row')) renumberSteps();
+  updateMoveButtonsState();
+
+  var inp = row.querySelector('input');
+  if (inp) inp.focus();
+}
+
+function updateMoveButtonsState() {
+  ['ingredients-list', 'steps-list', 'videos-list'].forEach(function(listId) {
+    var rows = document.querySelectorAll('#' + listId + ' > div');
+    rows.forEach(function(row, i) {
+      var upBtn = row.querySelector('.row-move-btns button:first-child');
+      var downBtn = row.querySelector('.row-move-btns button:last-child');
+      if (upBtn) upBtn.disabled = (i === 0);
+      if (downBtn) downBtn.disabled = (i === rows.length - 1);
+    });
+  });
+}
+
+function addVideoRow(value) {
+  if (!value) value = '';
+  var list = $('videos-list');
+  var row = document.createElement('div');
+  row.className = 'video-row';
+  row.innerHTML =
+    '<div class="video-row-inputs">' +
+      '<input type="text" placeholder="Вставьте ссылку на видео" oninput="previewVideoRow(this)">' +
+      '<div class="row-move-btns">' +
+        '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>' +
+        '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>' +
+      '</div>' +
+      '<button class="btn btn-danger btn-sm" onclick="this.closest(\'.video-row\').remove(); updateMoveButtonsState()">✕</button>' +
+    '</div>' +
+    '<p class="video-row-hint"></p>';
+  list.appendChild(row);
+  if (value) row.querySelector('input').value = value;
+  previewVideoRow(row.querySelector('input'));
+  updateMoveButtonsState();
+}
+
+function previewVideoRow(input) {
+  var url = input.value.trim();
+  var hint = input.closest('.video-row').querySelector('.video-row-hint');
+  if (!hint) return;
+  if (!url) { hint.textContent = ''; return; }
+
+  var v = parseVideoUrl(url);
+  var labels = {
+    youtube: '✅ YouTube — плеер запустится автоматически и будет повторяться по кругу.',
+    drive: '✅ Google Диск — запуск вручную (Play внутри плеера).',
+    vimeo: '✅ Vimeo — плеер запустится автоматически и будет повторяться по кругу.',
+    tiktok: '✅ TikTok — запуск вручную.',
+    instagram: '✅ Instagram — запуск вручную, только для публичных постов/Reels.',
+    vk: '✅ VK — запуск вручную.',
+    facebook: '✅ Facebook — запуск вручную, только для публичных видео.',
+    direct: '✅ Прямая ссылка на видеофайл — автовоспроизведение по кругу.',
+    unknown: '⚠️ Источник не распознан — будет показана обычная ссылка.'
+  };
+  hint.textContent = labels[v.type] || '';
+}
+
+function resetForm() {
+  editingRecipe = null;
+  var type = pendingAddType || 'pizza';
+  pendingAddType = 'pizza';
+  $('f-type').value = type;
+  $('form-title').textContent = (TYPE_LABELS[type] || TYPE_LABELS.pizza).add;
+  $('f-name').value = '';
+  $('f-time').value = '';
+  $('f-size').value = '';
+  $('f-calories').value = '';
+  $('f-weight').value = '';
+  $('f-style').value = '';
+  $('videos-list').innerHTML = '';
+  $('ingredients-list').innerHTML = '';
+  $('steps-list').innerHTML = '';
+  currentPhotoData = null;
+  $('f-photo-data').value = '';
+  renderPhotoPreview(null);
+  addIngredientRow();
+  addStepRow();
+  onTypeChange();
+}
+
+async function saveRecipe() {
+  if (!isAdmin()) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
+  var name = $('f-name').value.trim();
+  if (!name) { showToast('⚠️ Укажите название рецепта'); return; }
+
+  var ingredients = [];
+  document.querySelectorAll('#ingredients-list .ingredient-row input').forEach(function(inp) {
+    var v = inp.value.trim();
+    if (v) ingredients.push(v);
+  });
+  if (!ingredients.length) { showToast('⚠️ Добавьте хотя бы один ингредиент'); return; }
+
+  var steps = [];
+  document.querySelectorAll('#steps-list .step-row input').forEach(function(inp) {
+    var v = inp.value.trim();
+    if (v) steps.push(v);
+  });
+  if (!steps.length) { showToast('⚠️ Добавьте хотя бы один шаг приготовления'); return; }
+
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    var proceed = await customConfirm(
+      'На этом устройстве не настроена синхронизация с GitHub.\n\n' +
+      'Рецепт сохранится только в этом браузере и может пропасть при следующем заходе на сайт. ' +
+      'Рекомендуется сначала настроить синхронизацию (⚙️).\n\n' +
+      'Сохранить всё равно, только локально?',
+      '⚠️ Синхронизация не настроена'
+    );
+    if (!proceed) return;
+  }
+
+  var videos = [];
+  document.querySelectorAll('#videos-list .video-row input').forEach(function(inp) {
+    var v = inp.value.trim();
+    if (v) videos.push(v);
+  });
+
+  var recipeId = editingRecipe ? editingRecipe.id : uid();
+
+  // Если фото ещё хранится как base64 (новое или старое немигрированное) —
+  // пробуем перенести его отдельным файлом на GitHub, чтобы не раздувать recipes.json
+  var photoValue = $('f-photo-data').value || null;
+  if (photoValue && photoValue.indexOf('data:image') === 0 && cfg && cfg.token) {
+    showToast('📤 Загружаю фото на GitHub...');
+    var uploadedPath = await uploadPhotoToGithub(photoValue, recipeId);
+    if (uploadedPath) {
+      photoValue = uploadedPath;
+    } else {
+      showToast('⚠️ Не удалось загрузить фото отдельно — сохранено внутри рецепта, как раньше');
+    }
+  }
+
+  var recipe = {
+    id: recipeId,
+    type: $('f-type').value || 'pizza',
+    name: name,
+    photo: photoValue,
+    time: parseInt($('f-time').value) || null,
+    size: $('f-size').value || null,
+    calories: parseInt($('f-calories').value) || null,
+    weight: parseInt($('f-weight').value) || null,
+    style: $('f-style').value.trim() || null,
+    videos: videos,
+    ingredients: ingredients,
+    steps: steps
+  };
+
+  if (editingRecipe) {
+    var idx = -1;
+    for (var i = 0; i < recipes.length; i++) {
+      if (recipes[i].id === recipe.id) { idx = i; break; }
+    }
+    if (idx >= 0) recipes[idx] = recipe;
+    else recipes.push(recipe);
+    showToast('✅ Рецепт обновлён');
+  } else {
+    recipes.push(recipe);
+    var typeNames = { sauce: '✅ Соус добавлен!', pinsa: '✅ Пинца добавлена!', dough: '✅ Тесто добавлено!', pizza: '✅ Пицца добавлена!', prep: '✅ Заготовка добавлена!', focaccia: '✅ Фокачча добавлена!', burger: '✅ Бургер добавлен!' };
+    showToast(typeNames[recipe.type] || typeNames.pizza);
+  }
+
+  var saved = saveAll();
+  if (!saved) return; // Could not save - abort
+
+  resetForm();
+  switchTab('categories');
+}
+
+/* ================================================================
+   RENDER LIST TABS (Pizza / Pinsa / Dough / Sauces)
+   ================================================================ */
+function tagColorClass(text) {
+  var sum = 0;
+  for (var i = 0; i < text.length; i++) sum += text.charCodeAt(i);
+  return 'tag-' + (sum % 5);
+}
+
+function renderCards(containerEl, countEl, items, emptyText) {
+  countEl.textContent = 'Всего: ' + items.length;
+
+  if (!items.length) {
+    containerEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🍕</div>\n'
+      + '<p>' + emptyText + '</p></div>';
+    return;
+  }
+
+  var typeEmoji = { sauce: '🥫', pinsa: '🫓', dough: '🌾', pizza: '🍕', prep: '🧂', focaccia: '🫓', burger: '🍔' };
+  var typeNames = { sauce: 'Соус', pinsa: 'Пинца', dough: 'Тесто', pizza: 'Пицца', prep: 'Заготовка', focaccia: 'Фокачча', burger: 'Бургер' };
+
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    var r = items[i];
+    var typeClass = 'type-' + (r.type || 'pizza');
+    html += '<div class="recipe-card" onclick="openDetail(\'' + r.id + '\')">' +
+      (r.photo ? '<img class="card-thumb" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="">' :
+        '<div class="card-thumb" style="display:flex;align-items:center;justify-content:center;font-size:32px">' + (typeEmoji[r.type] || '🍕') + '</div>') +
+      '<div class="card-info">\n'
+      + '  <h3>' + esc(r.name) + '</h3>\n'
+      + '  <div class="card-meta">' +
+        '<span class="badge type-badge ' + typeClass + '">' + (typeNames[r.type] || 'Пицца') + '</span>' +
+        (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
+        (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
+        (r.weight ? '<span class="badge badge-cal">⚖️ ' + formatWeight(r.weight) + '</span>' : '') +
+        (getRecipeVideos(r).length ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5"></circle><path d="M10 8l6 4-6 4V8z"></path></svg>Видео</span>' : '') +
+      '</div>\n'
+    + '</div>'
+    + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
+    +   '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>'
+    + '</button>'
+    + '<span class="card-chevron">›</span></div>';
+  }
+  containerEl.innerHTML = html;
+}
+
+function applySearch(items, inputId) {
+  var input = $(inputId);
+  var q = input ? input.value.trim().toLowerCase() : '';
+  if (!q) return items;
+  return items.filter(function(r) { return r.name && r.name.toLowerCase().indexOf(q) !== -1; });
+}
+
+/* ================================================================
+   ВКЛАДКА "РЕЦЕПТЫ" — единый список всех типов
+   ================================================================ */
+/* ================================================================
+   ВКЛАДКА "КАТЕГОРИИ" — фильтр по типу через чипы
+   ================================================================ */
+var currentCategoryFilter = '';
+
+function selectCategoryChip(type) {
+  currentCategoryFilter = type;
+  document.querySelectorAll('#category-chips .chip').forEach(function(chip) {
+    chip.classList.toggle('active', chip.dataset.type === type);
+  });
+  renderCategoriesList();
+}
+
+function renderCategoriesList() {
+  var items = currentCategoryFilter
+    ? recipes.filter(function(r) { return (r.type || 'pizza') === currentCategoryFilter; })
+    : recipes.slice();
+  items = applySearch(items, 'search-categories');
+  renderCards($('categories-list'), $('categories-count'), items, 'Ничего не найдено');
+}
+
+/* ================================================================
+   ВКЛАДКА "АДМИН-ПАНЕЛЬ"
+   ================================================================ */
+function renderAdminPanel() {
+  var countEl = $('admin-total-count');
+  if (countEl) countEl.textContent = recipes.length + ' шт.';
+  var panelBtn = $('admin-panel-toggle-btn');
+  if (panelBtn) panelBtn.textContent = isAdmin() ? '🔓 Выйти' : '🔒 Войти';
+
+  var statusEl = $('gh-sync-status');
+  var linkEl = $('gh-sync-link');
+  if (!statusEl || !linkEl) return;
+
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
+    statusEl.textContent = '⚪ Синхронизация ещё не настроена';
+    statusEl.style.color = 'var(--text-muted)';
+    linkEl.innerHTML = '';
+    return;
+  }
+
+  var sourceNote = dataSource === 'github'
+    ? '📥 Сейчас показаны данные, реально полученные с GitHub только что.'
+    : '📥 Сейчас показаны локальные данные этого устройства (получить свежие с GitHub не удалось — см. статус ниже).';
+
+  var raw = null;
+  try { raw = JSON.parse(localStorage.getItem(GH_STATUS_KEY)); } catch(e) {}
+
+  if (!raw) {
+    statusEl.textContent = '⚪ Настроено, но синхронизации ещё не было';
+    statusEl.style.color = 'var(--text-muted)';
+  } else {
+    var when = new Date(raw.time).toLocaleString('ru-RU');
+    if (raw.ok) {
+      statusEl.textContent = '🟢 Последняя публикация успешна: ' + when;
+      statusEl.style.color = '#8fe3ac';
+    } else {
+      statusEl.textContent = '🔴 Ошибка публикации (' + when + '): ' + (raw.error || '');
+      statusEl.style.color = '#ff9aa8';
+    }
+  }
+
+  var fileUrl = 'https://github.com/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/blob/' + encodeURIComponent(cfg.branch) + '/' + GH_DATA_PATH;
+  linkEl.innerHTML = sourceNote + '<br><a href="' + fileUrl + '" target="_blank" rel="noopener" style="color:var(--accent)">Открыть ' + GH_DATA_PATH + ' на GitHub →</a>';
+}
+
+/* ================================================================
+   DETAIL VIEW
+   ================================================================ */
+function openDetail(id, autoplayVideo) {
+  var r = null;
+  for (var i = 0; i < recipes.length; i++) {
+    if (recipes[i].id === id) { r = recipes[i]; break; }
+  }
+  if (!r) { showToast('Рецепт не найден'); return; }
+  currentTab = 'detail';
+
+  // Обновляем адресную строку — так на этот конкретный рецепт можно поделиться прямой ссылкой
+  var shareUrl = location.pathname + location.search + '#recipe=' + encodeURIComponent(id);
+  if (location.hash !== '#recipe=' + encodeURIComponent(id)) {
+    history.pushState({ recipeId: id }, '', shareUrl);
+  }
+
+  // Возврат всегда на единый список "Рецепты"
+  var originTab = 'categories';
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  var originTabEl = document.querySelector('.nav-tab[data-tab="' + originTab + '"]');
+  if (originTabEl) originTabEl.classList.add('active');
+
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  $('tab-detail').classList.add('active');
+
+  var backBtn = document.querySelector('.detail-back');
+  if (backBtn) backBtn.setAttribute('onclick', "closeDetail('" + originTab + "')");
+
+  var body = $('detail-body');
+  body.innerHTML =
+    (r.photo ? '<img class="detail-photo" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="" onclick="openPhotoLightbox(this.src)" style="cursor:zoom-in">' : '') +
+    getRecipeVideos(r).map(function(v) { return renderVideoBlock(v, !!autoplayVideo); }).join('') +
+    '<h2 class="detail-title">' + esc(r.name) + '</h2>' +
+    '<div class="detail-meta">' +
+      (r.style ? '<span class="detail-badge">🏷 ' + esc(r.style) + '</span>' : '') +
+      (r.time ? '<span class="detail-badge">⏱ Время: ' + r.time + ' мин</span>' : '') +
+      (r.size ? '<span class="detail-badge">📐 Размер: ' + esc(r.size) + '</span>' : '') +
+      (r.calories ? '<span class="detail-badge">🔥 Калорийность: ' + r.calories + ' ккал</span>' : '') +
+      (r.weight ? '<span class="detail-badge">⚖️ Общий вес: ' + formatWeight(r.weight) + '</span>' : '') +
+    '</div>' +
+
+    '<div class="section-title">Ингредиенты:</div>\n'
+    + '<ul class="ingredients-list">' +
+      (r.ingredients.map ? r.ingredients.map(function(i) { return '<li>• ' + esc(i) + '</li>'; }).join('') : '') +
+    '</ul>' +
+
+    '<div class="section-title">Шаги приготовления:</div>\n'
+    + '<ol class="steps-list">' +
+      (r.steps.map ? r.steps.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') : '') +
+    '</ol>' +
+
+    '<div class="qr-share-card">' +
+      '<h3>📤 Поделиться этим рецептом</h3>' +
+      '<p>Отсканируйте QR-код или отправьте ссылку — рецепт откроется сразу, без поиска в списке</p>' +
+      '<div id="recipe-qr-canvas" class="qr-canvas-holder"></div>' +
+      '<div class="qr-share-actions">' +
+        '<a class="btn btn-telegram" id="telegram-share-btn" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.8 19.8c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.7 13.1l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3z"></path></svg>Telegram</a>' +
+        '<button class="btn btn-ghost" onclick="shareRecipeLink(\'' + r.id + '\')">🔗 Скопировать ссылку</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<!-- Actions (только для администратора) -->\n'
+    + (isAdmin() ?
+      '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">' +
+        '<button class="btn btn-primary" onclick="editFromDetail(\'' + r.id + '\')">✏️ Редактировать</button>' +
+        '<button class="btn btn-danger" onclick="deleteRecipe(\'' + r.id + '\')">🗑 Удалить</button>' +
+      '</div>' : '');
+
+  renderRecipeQR(r.id, r.name);
+}
+
+/* ================================================================
+   ПРЯМЫЕ ССЫЛКИ НА РЕЦЕПТ (#recipe=ID в адресе страницы)
+   ================================================================ */
+function getRecipeShareUrl(id) {
+  return location.origin + location.pathname + location.search + '#recipe=' + encodeURIComponent(id);
+}
+
+function renderRecipeQR(id, name) {
+  var holder = $('recipe-qr-canvas');
+  if (!holder) return;
+  var url = getRecipeShareUrl(id);
+  holder.innerHTML = '';
+
+  if (window.QRCode) {
+    try {
+      new QRCode(holder, {
+        text: url,
+        width: 180,
+        height: 180,
+        colorDark: '#1a1a2e',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch (e) {
+      console.error('QR error:', e);
+      holder.innerHTML = '<a href="' + escAttr(url) + '" style="color:#1a1a2e;font-size:13px;word-break:break-all">' + escAttr(url) + '</a>';
+    }
+  } else {
+    // Библиотека не загрузилась (например нет интернета при первом открытии) —
+    // показываем саму ссылку текстом, чтобы поделиться всё равно было можно
+    holder.innerHTML = '<a href="' + escAttr(url) + '" style="color:#1a1a2e;font-size:13px;word-break:break-all">' + escAttr(url) + '</a>';
+  }
+
+  var tgBtn = $('telegram-share-btn');
+  if (tgBtn) {
+    var text = encodeURIComponent('🍕 ' + (name || 'Рецепт') + ' — Route 20');
+    tgBtn.href = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + text;
+  }
+}
+
+function shareRecipeLink(id) {
+  var url = getRecipeShareUrl(id);
+  copyTextToClipboard(url);
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('🔗 Ссылка скопирована');
+    }).catch(function() {
+      legacyCopy(text);
+    });
+  } else {
+    legacyCopy(text);
+  }
+}
+
+function legacyCopy(text) {
+  // Фолбэк для старых браузеров без Clipboard API (например старый Safari/Android WebView)
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(ok ? '🔗 Ссылка скопирована' : text);
+  } catch (e) {
+    showToast(text);
+  }
+}
+
+function closeDetail(originTab) {
+  // Убираем #recipe=... из адреса при выходе из детального просмотра
+  history.pushState(null, '', location.pathname + location.search);
+  switchTab(originTab);
+}
+
+function openRecipeFromHash(isFinalAttempt) {
+  var m = location.hash.match(/^#recipe=(.+)$/);
+  if (!m) return;
+  var id = decodeURIComponent(m[1]);
+  var exists = recipes.some(function(r) { return r.id === id; });
+  if (exists) {
+    openDetail(id);
+  } else if (isFinalAttempt) {
+    showToast('⚠️ Рецепт по этой ссылке не найден (возможно, удалён)');
+  }
+}
+
+window.addEventListener('popstate', function() {
+  if (location.hash.indexOf('#recipe=') === 0) {
+    openRecipeFromHash();
+  } else if (currentTab === 'detail') {
+    switchTab('categories');
+  }
+});
+
+function editFromDetail(id) {
+  if (!isAdmin()) { showToast('🔒 Редактирование доступно только в режиме редактирования'); return; }
+  var r = null;
+  for (var i = 0; i < recipes.length; i++) {
+    if (recipes[i].id === id) { r = recipes[i]; break; }
+  }
+  if (!r) return;
+
+  var recType = r.type || 'pizza';
+  pendingAddType = recType;
+  switchTab('add'); // сбрасывает форму (и editingRecipe) в чистое состояние
+
+  editingRecipe = JSON.parse(JSON.stringify(r)); // деep copy — устанавливаем ПОСЛЕ сброса формы
+
+  $('f-type').value = recType;
+  onTypeChange();
+  $('form-title').textContent = '✏️ Редактировать ' + (TYPE_LABELS[recType] || TYPE_LABELS.pizza).edit;
+  $('f-name').value = r.name;
+  $('f-time').value = r.time || '';
+  $('f-size').value = r.size || '';
+  $('f-calories').value = r.calories || '';
+  $('f-weight').value = r.weight || '';
+  $('f-style').value = r.style || '';
+  $('videos-list').innerHTML = '';
+  getRecipeVideos(r).forEach(function(v) { addVideoRow(v); });
+
+  currentPhotoData = r.photo;
+  $('f-photo-data').value = r.photo || '';
+  renderPhotoPreview(r.photo);
+
+  $('ingredients-list').innerHTML = '';
+  if (r.ingredients) {
+    for (var j = 0; j < r.ingredients.length; j++) addIngredientRow(r.ingredients[j]);
+  }
+
+  $('steps-list').innerHTML = '';
+  if (r.steps) {
+    for (var k = 0; k < r.steps.length; k++) addStepRow(r.steps[k]);
+  }
+}
+
+async function deleteRecipe(id) {
+  if (!isAdmin()) { showToast('🔒 Удаление доступно только в режиме редактирования'); return; }
+  var ok = await customConfirm('Удалить этот рецепт?');
+  if (!ok) return;
+  recipes = recipes.filter(function(r) { return r.id !== id; });
+  saveAll();
+  showToast('🗑 Рецепт удалён');
+  switchTab('categories');
+}
+
+/* ================================================================
+   UTILITY
+   ================================================================ */
+function esc(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// For use in HTML attribute values (like src="...")
+function escAttr(str) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ================================================================
+   INIT — all event listeners bound after DOM is ready
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  applyAdminUI();
+  loadRecipes();
+  loadCustomSitePhotos();
+
+  var hasDeepLink = /^#recipe=/.test(location.hash);
+
+  if (hasDeepLink) {
+    showDetailLoading(); // сразу показываем "Загрузка рецепта...", без мелькания общего списка
+  } else {
+    renderCategoriesList();
+  }
+
+  openRecipeFromHash(false); // если рецепт уже есть в локальном кэше — откроется сразу, минуя загрузку
+
+  syncFromGithub().then(function() {
+    openRecipeFromHash(true); // финальная попытка на свежих данных с GitHub
+    if (hasDeepLink && currentTab !== 'detail') {
+      // Ссылка была, но рецепт так и не нашёлся — показываем обычный список вместо "вечной загрузки"
+      switchTab('categories');
+    }
+  });
+
+  // Tab click handlers
+  document.querySelectorAll('.nav-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() { switchTab(tab.dataset.tab); });
+  });
+});
+
+function showDetailLoading() {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var detailTab = $('tab-detail');
+  if (detailTab) detailTab.classList.add('active');
+  var body = $('detail-body');
+  if (body) body.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)">Загрузка рецепта…</div>';
+  currentTab = 'detail';
+}
 </script>
+
+
+
 </body></html>
