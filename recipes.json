@@ -1189,7 +1189,12 @@
     "calories": null,
     "weight": 12256,
     "style": null,
-    "videos": [],
+    "videos": [
+      "https://youtube.com/shorts/8SC_Dw-cLnQ?si=je-Umvdjnwvlj3Qh",
+      "https://youtube.com/shorts/u4n09QJPZVQ?si=xGRVKlzKFnH6jtU-",
+      "https://youtube.com/shorts/Vjem_GxQB7w?si=9YU2xGZDQ3mvPChk",
+      "https://youtube.com/shorts/ewGRBZjTJEQ?si=zcTor79EChmEU8GI"
+    ],
     "ingredients": [
       "——ПЕРВЫЙ ЭТАП——",
       "Лед краш  1950г",
