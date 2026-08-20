@@ -8,26 +8,34 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
 <title>🍕 Route 20 — Римские пекарни</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #1a1a2e;
-    --surface: #16213e;
-    --card: #0f3460;
+    --bg: #191621;
+    --surface: #1c1926;
+    --card: #241f33;
     --accent: #e94560;
-    --text: #eee;
-    --text-muted: #aaa;
+    --accent-2: #f2a154;
+    --accent-grad: linear-gradient(135deg, #ff5f6d, #e94560 55%, #c0392b);
+    --text: #f1eee9;
+    --text-muted: #a9a3b5;
     --success: #2ecc71;
     --warning: #f39c12;
 
+    --font-display: 'Fraunces', 'Georgia', serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
     /* "Тёплое стекло" — полупрозрачные поверхности поверх фото-фона */
-    --glass-bg: rgba(22, 30, 55, .58);
-    --glass-bg-strong: rgba(20, 27, 50, .72);
-    --glass-border: rgba(255, 255, 255, .08);
-    --glass-blur: 16px;
-    --radius-lg: 20px;
+    --glass-bg: rgba(26, 22, 36, .58);
+    --glass-bg-strong: rgba(23, 19, 32, .74);
+    --glass-border: rgba(255, 255, 255, .09);
+    --glass-blur: 18px;
+    --radius-lg: 22px;
     --radius-md: 16px;
-    --shadow-soft: 0 8px 28px rgba(0, 0, 0, .35);
-    --shadow-accent: 0 8px 24px rgba(233, 69, 96, .25);
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, .38);
+    --shadow-accent: 0 10px 26px rgba(233, 69, 96, .3);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,9 +43,9 @@
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-body);
     background:
-      linear-gradient(rgba(15,12,18,.91), rgba(15,12,18,.95)),
+      linear-gradient(rgba(14,11,17,.92), rgba(14,11,17,.96)),
       url(images/site-background.jpg);
     background-size: cover;
     background-position: center;
@@ -47,9 +55,25 @@
     min-height: 100vh;
     min-height: 100dvh; /* учитывает адресную строку/панели браузера на iOS и Android */
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior-y: contain;
   }
+  ::selection { background: var(--accent); color: #fff; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: .05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: .1px; }
 
   /* ===== HEADER ===== */
   .header {
@@ -70,13 +94,23 @@
     box-shadow: 0 4px 20px rgba(0,0,0,.3);
   }
   .header h1 {
-    font-size: 30px; margin-bottom: 4px; letter-spacing: .5px; font-weight: 800;
-    text-shadow: 0 2px 10px rgba(0,0,0,.7);
+    font-family: var(--font-display);
+    font-size: 34px; margin-bottom: 6px; letter-spacing: .2px; font-weight: 700;
+    font-style: italic;
+    text-shadow: 0 2px 14px rgba(0,0,0,.75);
   }
   .header p {
-    opacity: .95; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+    opacity: .9; font-size: 12px; letter-spacing: 4px; text-transform: uppercase;
+    font-weight: 600;
     text-shadow: 0 1px 6px rgba(0,0,0,.7);
+    position: relative;
+    display: inline-flex; align-items: center; gap: 10px;
   }
+  .header p::before, .header p::after {
+    content: ''; width: 22px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5));
+  }
+  .header p::after { transform: rotate(180deg); }
   /* Кнопки в углах шапки — стиль "тёмный квадрат, иконка + подпись" как в макете */
   .header-corner-btn {
     position: absolute;
@@ -114,18 +148,31 @@
     stroke-linecap: round; stroke-linejoin: round;
     pointer-events: none;
   }
-  .search-wrap .search-input { margin-bottom: 0; padding-left: 42px; }
+  .search-wrap .search-input { margin-bottom: 0; padding-left: 42px; padding-right: 38px; }
+  .search-clear {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,.08);
+    color: var(--text-muted); font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease, color .15s ease;
+  }
+  .search-clear:hover { background: rgba(233,69,96,.25); color: #fff; }
+  .search-clear:active { transform: translateY(-50%) scale(.9); }
 
   /* Чипы категорий (вкладка "Категории") */
   .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
-    padding: 8px 14px;
+    padding: 9px 15px;
     border-radius: 20px;
     background: rgba(255,255,255,.05);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: var(--text-muted);
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     border: 1px solid var(--glass-border);
     touch-action: manipulation;
@@ -133,8 +180,9 @@
     -webkit-tap-highlight-color: transparent;
     transition: transform .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
   }
+  .chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
   .chip:active { transform: scale(.94); }
-  .chip.active { background: linear-gradient(135deg, var(--accent), #c0392b); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
+  .chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
 
   /* Админ-панель */
   .admin-panel-card {
@@ -211,10 +259,14 @@
     -webkit-touch-callout: none;
     touch-action: manipulation;
   }
-  .nav-tab .nav-icon { line-height: 1; display: flex; transition: transform .25s ease; }
-  .nav-tab .nav-icon svg { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-tab .nav-icon {
+    line-height: 1; display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 12px;
+    transition: transform .25s ease, background .25s ease;
+  }
+  .nav-tab .nav-icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .nav-tab .nav-label {
-    font-size: 11px; line-height: 1; letter-spacing: .2px;
+    font-size: 11px; line-height: 1; letter-spacing: .2px; font-weight: 600;
     border-bottom: 2px solid transparent; padding-bottom: 3px;
     transition: border-color .25s ease;
   }
@@ -222,7 +274,7 @@
   .nav-tab:active { transform: scale(.94); }
   .nav-tab[data-tab="admin"] { color: var(--accent); }
   .nav-tab.active { color: var(--accent); }
-  .nav-tab.active .nav-icon { transform: translateY(-1px); }
+  .nav-tab.active .nav-icon { background: rgba(233,69,96,.16); transform: translateY(-1px); }
   .nav-tab.active .nav-label { border-bottom-color: var(--accent); }
 
   /* ===== CONTENT AREA ===== */
@@ -236,11 +288,11 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-bottom: 14px;
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    margin-bottom: 12px;
     cursor: pointer;
-    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
     display: flex;
     gap: 14px;
     align-items: center;
@@ -248,8 +300,18 @@
     -webkit-tap-highlight-color: transparent;
     animation: cardIn .35s ease backwards;
   }
-  .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); background: var(--glass-bg-strong); }
+  .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); background: var(--glass-bg-strong); border-color: rgba(233,69,96,.3); }
   .recipe-card:active { transform: translateY(-1px) scale(.99); }
+
+  /* Цветная полоска слева по типу рецепта — для быстрого сканирования списка */
+  .recipe-card { border-left: 3px solid transparent; }
+  .recipe-card.ctype-pizza    { border-left-color: #c0475a; }
+  .recipe-card.ctype-pinsa    { border-left-color: #a3703c; }
+  .recipe-card.ctype-dough    { border-left-color: #7c8aa3; }
+  .recipe-card.ctype-sauce    { border-left-color: #45a578; }
+  .recipe-card.ctype-prep     { border-left-color: #9b72c9; }
+  .recipe-card.ctype-focaccia { border-left-color: #c9a13e; }
+  .recipe-card.ctype-burger   { border-left-color: #b0602f; }
 
   @keyframes cardIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -257,12 +319,14 @@
   }
 
   .card-thumb {
-    width: 90px; height: 90px; border-radius: 10px;
+    width: 92px; height: 92px; border-radius: 14px;
     object-fit: cover; flex-shrink: 0;
     background: var(--surface);
+    box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    border: 1px solid rgba(255,255,255,.06);
   }
   .card-info { flex: 1; min-width: 0; }
-  .card-info h3 { font-size: 18px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-info h3 { font-family: var(--font-display); font-weight: 600; font-size: 18px; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 20px; padding-left: 4px; }
   .card-share-btn {
@@ -372,7 +436,7 @@
     appearance: none;
   }
   .btn:active { transform: scale(.96); }
-  .btn-primary { background: linear-gradient(135deg, var(--accent), #c0392b); box-shadow: var(--shadow-accent); }
+  .btn-primary { background: var(--accent-grad); box-shadow: var(--shadow-accent); }
   .btn-primary:hover { filter: brightness(1.12); }
   .btn-success { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; box-shadow: 0 8px 22px rgba(46,204,113,.25); }
   .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
@@ -431,7 +495,9 @@
   .detail-back { margin-bottom: 16px; }
   .detail-photo {
     width: 100%; max-height: 320px; object-fit: cover;
-    border-radius: 14px; margin-bottom: 16px;
+    border-radius: var(--radius-lg); margin-bottom: 18px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.4);
+    border: 1px solid rgba(255,255,255,.08);
   }
   .video-embed-wrap {
     position: relative;
@@ -478,21 +544,31 @@
     display: inline-flex; align-items: center; gap: 8px;
   }
   .btn-telegram svg { width: 16px; height: 16px; fill: #fff; }
-  .detail-title { font-size: 28px; margin-bottom: 8px; }
+  .detail-title { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 29px; margin-bottom: 10px; }
   .detail-meta {
-    display: flex; gap: 10px; flex-wrap: wrap;
-    margin-bottom: 20px;
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 22px;
   }
   .detail-badge {
-    padding: 6px 14px; border-radius: 20px;
-    background: var(--card); font-size: 13px;
+    padding: 7px 14px; border-radius: 20px;
+    background: var(--card); font-size: 12.5px;
+    font-weight: 600;
     color: var(--text);
+    border: 1px solid var(--glass-border);
   }
 
   .section-title {
-    font-size: 18px; margin: 18px 0 10px;
-    padding-bottom: 6px;
-    border-bottom: 2px solid rgba(233,69,96,.4);
+    font-family: var(--font-display); font-weight: 600;
+    font-size: 20px; margin: 26px 0 14px;
+    padding-bottom: 8px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 2px solid rgba(233,69,96,.35);
+  }
+  .section-title::before {
+    content: '';
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-grad);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgba(233,69,96,.15);
   }
 
   .ingredients-list li,
@@ -507,10 +583,13 @@
   }
   .ingr-row {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 8px 0;
+    gap: 10px; padding: 10px 10px;
     border-bottom: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px;
     font-size: 15px;
+    transition: background .15s ease;
   }
+  .ingr-row:hover { background: rgba(255,255,255,.03); }
   .ingr-row:last-of-type { border-bottom: none; }
   .ingr-row-plain {
     color: var(--text-muted); font-size: 13.5px;
@@ -537,22 +616,50 @@
     padding: 6px 4px;
   }
   .ingr-calc-reset { margin-top: 14px; }
-  .steps-list ol { padding-left: 0; counter-reset: step; }
+  .steps-list { padding-left: 0; counter-reset: step; }
   .steps-list li {
     counter-increment: step;
     position: relative;
-    padding-left: 36px;
-    margin-bottom: 12px; font-size: 15px;
+    padding-left: 42px;
+    padding-top: 2px;
+    margin-bottom: 16px; font-size: 15px;
+    min-height: 28px;
   }
   .steps-list li::before {
     content: counter(step);
     position: absolute; left: 0; top: 0;
-    width: 26px; height: 26px;
+    width: 28px; height: 28px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--accent-grad);
+    box-shadow: 0 4px 10px rgba(233,69,96,.35);
     display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-family: var(--font-body);
     font-size: 13px; font-weight: 700;
   }
+  .steps-list li:not(:last-child)::after {
+    content: '';
+    position: absolute; left: 13px; top: 30px; bottom: -14px;
+    width: 2px;
+    background: linear-gradient(rgba(233,69,96,.35), rgba(233,69,96,0));
+  }
+  .steps-list li { cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: opacity .2s ease; }
+  .steps-list li.step-done { opacity: .5; text-decoration: line-through; text-decoration-color: var(--text-muted); }
+  .steps-list li.step-done::before { content: '✓'; background: var(--success); box-shadow: 0 4px 10px rgba(46,204,113,.35); }
+
+  /* ===== SKELETON LOADING ===== */
+  .skeleton {
+    background: linear-gradient(100deg, rgba(255,255,255,.05) 30%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.05) 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 10px;
+  }
+  @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  .skeleton-photo { width: 100%; height: 240px; border-radius: var(--radius-lg); margin-bottom: 18px; }
+  .skeleton-title { width: 65%; height: 30px; margin-bottom: 14px; border-radius: 8px; }
+  .skeleton-badges { display: flex; gap: 8px; background: none; animation: none; margin-bottom: 22px; }
+  .skeleton-chip { width: 90px; height: 26px; border-radius: 20px; }
+  .skeleton-line { height: 15px; margin-bottom: 10px; width: 100%; }
 
   /* ===== EMPTY STATE ===== */
   .empty-state {
@@ -560,7 +667,8 @@
     padding: 60px 20px;
     color: var(--text-muted);
   }
-  .empty-icon { font-size: 64px; margin-bottom: 12px; opacity: .5; }
+  .empty-icon { font-size: 60px; margin-bottom: 14px; opacity: .55; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+  .empty-state h3 { font-family: var(--font-display); font-style: italic; }
 
   /* ===== TOAST ===== */
   .toast {
@@ -676,7 +784,11 @@
 
 <!-- TAB: CATEGORIES (фильтр по типу) -->
 <div id="tab-categories" class="tab-content active">
-  <input type="text" class="search-input" id="search-categories" placeholder="🔍 Поиск по названию рецепта..." oninput="renderCategoriesList()">
+  <div class="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <input type="text" class="search-input" id="search-categories" placeholder="Поиск по названию рецепта..." oninput="renderCategoriesList(); toggleSearchClear('search-categories')">
+    <button type="button" class="search-clear" id="search-categories-clear" onclick="clearSearchInput('search-categories')" title="Очистить" style="display:none">✕</button>
+  </div>
   <div class="chip-row" id="category-chips">
     <span class="chip active" data-type="" onclick="selectCategoryChip('')">Все</span>
     <span class="chip" data-type="pizza" onclick="selectCategoryChip('pizza')">🍕 Пицца</span>
@@ -910,7 +1022,7 @@
    без необходимости вводить рецепты заново на каждом устройстве.
    НЕ РЕДАКТИРУЙТЕ эту строку руками — она перезаписывается автоматически.
    ================================================================ */
-const SEED_RECIPES = [{"id":"pmrb7mcv49gqq6","type":"pizza","name":"Ронда","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":520,"style":null,"video":"https://www.youtube.com/watch?v=MI507KB-WGw","ingredients":["Тесто 250г","Соус красный 80г","Моцарелла 100г","Салями 50г","Ветчина 40г"],"steps":["Раскатываем тесто","Помещаем на сет","Наносим соус","Добавляем сыр","Добавляем салями и ветчину, последовательность не принцепиально","Растягиваем по форме сета (если изначальный диаметр меньше)","Запекаем до готовности","ПОДАЧА","Выкладываем на тарелку","Режим на 6 частей","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrb8ccgpw6zp9","type":"sauce","name":"Тар-Тар","photo":null,"time":null,"size":null,"calories":null,"weight":1030,"style":"Чеснок, огурец, майонез,сливки, зелень","ingredients":["Майонез 550г","Огурец маринованный 200г","Сливки кулинарные 200г","Лимон, сок 30г","Чеснок чищеный 25г","Зелень (укроп) 25г"],"steps":["Готовим чашу термомикса","Погружаем все выше перечисленные ингредиенты","Включаем термомикс на макс скорость","ждем 30сек-1 минуту","Переливаем в соусник","Готово!"]},{"id":"pmrb8sit1fdxjj","type":"pinsa","name":"Курица-Грибы","photo":null,"time":null,"size":null,"calories":null,"weight":442,"style":null,"ingredients":["Соус белый 50г","Моцарелла 50г","Куриное филе МХП 40г","Грибы 20г","Зелень 2г","Соус Тар-Тар 30г","Заготовка пинца 250г"],"steps":["На заговотвку пинцы наносим соус","Добавляем сыр","Добавляем курицу","Добавляем грибы","Доводим до готовности","Выкладываем на доску накрытую пергавментом","Посыпаем зеленью","Наливаем соус, в железный если в зал, в пластиковый если с собой"]},{"id":"pmrb9dfnm8q191","type":"dough","name":"Замес на 80шт","photo":null,"time":null,"size":null,"calories":null,"weight":15702,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 8200г","Мука 6100г","Лед краш 2700","Вода 800г","---->ВТОРОЙ ЭТАП<----","Лед краш 1400г","Вода 400г","Соль 280г","Оливковое масло 140г"],"steps":["Подготавливаем лед краш 2700г в большую тару","Добавляем воду 0,800г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmrdgqlbhw99ri","type":"sauce","name":"Цезарь","photo":null,"time":null,"size":null,"calories":null,"weight":562,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Соус соевый 20г","Горчица Американская 15г","Горчица острая 15г","Соус ворчестер 15г","Сок лимона (фреш) 5г","Анчоус 15г","Пармезан крошка 25г","Соус шрирача 2г","Соль 10г","Сахар 10г","Масло растительное 350г","Анчоусное масло 30г","Вода очищенная 50г"],"steps":["Погружаем все ингредиенты в термомикс (кроме растительного масла и воды)","Перебиваем на скорости 4,5 примероно 30-60 секунд, что бы всё перебилось и получилаь однородная масса","Далее тонкой струёй добавляем растительное масло","Далее добавляем воду","Переливаем в соусник","Готово!"]},{"id":"pmrdxto6n9esk7","type":"pizza","name":"Маргарита","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 120г","Моцарелла 120г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, украшаем базиликом, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdxz8we1l453","type":"pizza","name":"Гавайская","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":580,"style":null,"video":null,"ingredients":["Тесто 250г","Есть два варианта пиццы , на красном и белом соусе","Красный-белый соус 80г","Моцарелла 100г","Курица МХП 80г","Маслины 20г","Ананас 50г"],"steps":["Раскатка теста","Добавляем соус (делается на обоих соусах) красный, белый, по требованию","Добавляем сыр","Добавляем курицу МХП","Добавляем ананас","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy2kkmn71bt","type":"pizza","name":"Цезарь","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":410,"style":null,"video":null,"ingredients":["Соус белый 80г","Моцарелла 100г","Курица МХП 60г","Бекон 40г","Черри 40г","Айсберг 40г","Пармезан 20г","Соус Цезарь 30г"],"steps":["Раскатка теста","Добавляем соус белый","Добавляем сыр","Добавляем курицу мхп","Добавляем бекон","Запекаем до готовности, далее украшаем","Нарезаем пиццу на порции (на шесть частей)","Добавляем айсберг (заранее рвем на мелкие части) наносим равномерно на всю пиццу","Добавляем черри , так же равномерно по всей пицце","Наносим соус (так же ровными красивыми линиями)","Посыпаем пармезаном","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy7a94dv9qy","type":"pizza","name":"Пеперони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Колбаса чоризо 80г","250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем сыр","Добавляем чоризо","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdydwdd1b7nr","type":"pizza","name":"4 сыра","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":510,"style":null,"video":null,"ingredients":["Белый соус 80г","Моцарелла 60г","Микс сыров 120г","Тесто 250г"],"steps":["Раскатка теста","Добавляем соус","Добавляем сыр","Добавляем микс сыров","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdyj66zke8yc","type":"pizza","name":"Кальцоне","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":535,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Салями 40г","Грибы 25г","Тесто 250г"],"steps":["Раскатка теста, на этот раз при помощи скалки раскатываем небольшой круг (лепешку)","Наносим красный соус","Добавляем сыр","Добавляем салями","Добавляем ветчину","Добавляем грибы","Далее сворачиваем так, что бы форма напоминала чебурек","Тщательно продавливаем весь край","Обрезаем край где продавливали , для создания красивой ровной формы","Далее аккуратно кладем на сетку (сет)","По середине делаем маленький надрыв","Добавляем туда  каплю красного соуса","Добавляем маленькую щепотку сыра","Запекаем до готовности","Выкладываем на украшенную красным соусом тарелку, поливаем оливковым маслом","Готово!"]},{"id":"pmrdyoouyt80ea","type":"pizza","name":"Бабушка берлускони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":630,"style":null,"video":"https://www.instagram.com/reel/DaSJFj8gg1j/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ==","ingredients":["Красный соус 80г","Горчица 5г","Моцарелла 100г","Колбаса Чоризо 30г","Бекон 30г","Лук маринованный 40г","Лук зеленый 15г","Хамон 30г","Черри 50г","Тесто 250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем горчицу","Добавляем сыр","Добавляем чоризо","Добавляем бекон","Добавляем черри","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","После готовности выкладываем хамон, равномерно по всей пицце","Посыпаем зеленым луком","Готово!"]},{"id":"pmrdyuk49q1e4j","type":"pizza","name":"Мясная с сырным соусом","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":635,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Салями 50г","Курица мхп 50г","Бекон 50г","Лук маринованный 25г","Сырный соус 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем курицу мхп","Добавляем салями","Добавляем бекон","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Сырный соус наносим после того как приготовили и разрезали пиццу на порции","Готово!"]},{"id":"pmrdywx27k0sda","type":"pizza","name":"Американо","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":590,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Балык 40г","Грибы (шампиньоны) 30г","Помидор 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем ветчину","Добавляем балык","Добавляем грибы","Добавляем помидор","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdz0gryij2i9","type":"pizza","name":"Пицца с креветкой","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":543,"style":null,"video":null,"ingredients":["Соус айоло 100г","Моцарелла 100г","Креветка 6шт","Черри 30г","Перец болгарский (свежий) 30г","Маслины 20г","Руккола 10г","Хлопья миндаль 3г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус айоли","Добавляем сыр","Выкладываем креветку (изначально нарезав их по полам, должно получится 12 половинок)","Добавляем черри","Добавляем перец болгарский","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Добавляем равномерно рукколу","Посыпаем хлопьями миндаля","Готово!"]},{"id":"pmrdz5zxne27uz","type":"pizza","name":"Пицца с руколой и томатами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":540,"style":null,"video":null,"ingredients":["Соус красный 80г","Моцарелла 100г","Помидор свежий 80г","Руколла 15г","Пармезан стружка 10г","Масло чесночное 5г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Добавляем помидоры","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Добавляем руколу","Поливаем чесночным маслом","Посыпаем пармезаном","Готово!"]},{"id":"pmrdzp3e3ts21m","type":"pizza","name":"Фокача с прованскими травами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":257,"style":null,"video":null,"ingredients":["Тесто 250г","Оливковое масло 2г","Прованские травы 5г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до готовности","Режем на шесть частей","Поливаем оливковым маслом, и посыпаем травами","Готово!"]},{"id":"pmrdzs5objg0ak","type":"pizza","name":"Фокача с пармезаном","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":270,"style":null,"video":null,"ingredients":["Тесто 250г","Пармезан крошка 20г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до полуготовности","Посыпаем пармезаном, доводим до готовности","Режем на шесть частей","Готово!"]},{"id":"pmre2vah2ulin7","type":"prep","name":"Груша карамель","photo":null,"time":null,"size":null,"calories":null,"weight":null,"style":null,"video":null,"ingredients":["Груша"],"steps":["Помыть грушу","Отрезать хвосты","Разрезать по полам вдоль","Вырезать сердцевину","Нарезать на слайсе вдоль , первый и последний срез не берём","Взвешиваем , на 1 кг груши 600мл воды 300гр сахара","Кипятим воду  отталкиваясь от предыдущего пункта","Заливаем сироп в грушу (заранее погрузив её в подходящую тару)","Ставим на печку на девятку","Помешиваем ,как закипит 3 минуты и снимаем","Переливаем в контейнер","Готово!"]},{"id":"pmre37xk2bab99","type":"sauce","name":"Помадоро","photo":null,"time":null,"size":null,"calories":null,"weight":15388,"style":null,"video":null,"ingredients":["Пульпа 15000г","Соль 120г","Сахар 100г","Базилик 150г","Орегано 18г"],"steps":["Выливаем пульпу в заранее подготовленную тару (ведро пищевое)","Набираем пульпу в чашу темромикса (не полную,что бы можно было перемешать все ингредиенты)","Добавляем соль,сахар, базалик","Перебиваем все до однородной массы","Далее перебитое в термомикесе,переливаем в общую массу","Высыпаем Орегано","Тщательно перемешиваем","Разливаем по контейнерам","Готово!"]},{"id":"pmre3hjktvgbud","type":"dough","name":"Замес на 60шт","photo":null,"time":null,"size":null,"calories":null,"weight":14416,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 6150г","Мука 4575г","Лед краш 2025г","Вода 600г","---->ВТОРОЙ ЭТАП<----","Лед краш 1050г","Вода 300г","Соль 210г","Оливковое масло 105г"],"steps":["Подготавливаем лед краш 2025г в большую тару","Добавляем воду 600г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmre3tzdka0ady","type":"dough","name":"Закваска","photo":null,"time":null,"size":null,"calories":null,"weight":10022,"style":null,"video":null,"ingredients":["Мука 6900г","Вода 3100г","Дрожжи сухие 22г"],"steps":["Подготавливаем тару с водой","Добавляем дрожжи","Перемешиваем","Помещаем муку в тестомес","Выливаем подготовленную воду с дрожжами","Включаем вторую скорость","Доводим до состояния хлопья, закваска не должна быть как тесто","Вынимаем в ведро (пищевое, заранее вымытое)","Готово"]},{"id":"pmre4a4o9s96t8","type":"prep","name":"Котлета бургер","photo":null,"time":null,"size":null,"calories":null,"weight":2124,"style":null,"video":null,"ingredients":["Говядина 1600г","Сало 200г","Цибуля жареная 200г","Соль 18г","Специи для мяса 4г","Перец черный молотый 2г","Вода очищенная 100г"],"steps":["Чистим лук , обжариваем до золотистого цвета","Делаем фарш, перекручиваем лук,мясо,сало (обрезать шкуру с сала) в мясорубке","В фарш добавляем соль,специи, перец, воду","Перемешиваем","Хорошо отбиваем","Делим на порции по 120г (делаем шарики)","Формируем котлеты"]},{"id":"pmre4pira2dizf","type":"prep","name":"Лук мармелад","photo":null,"time":null,"size":null,"calories":null,"weight":1800,"style":null,"video":null,"ingredients":["Уксус бальзамический 600г","Сахар песок 200г","Мед 200г","Вино красное глинтвейн (для кухни) 600г","Масло растительное 200г","Лук синий (уже чищеный) 2кг"],"steps":["-"]},{"id":"pmre5at74ehwn7","type":"pizza","name":"Бургер","photo":null,"time":null,"size":null,"calories":null,"weight":376,"style":null,"video":null,"ingredients":["Булка бургер 1шт","Котлета бургер п/ф 1шт","Салат айсебрг 20г","Помидор п/ф 30г","Соус винегрет 20г","Лук мармелад 10г","Картофельные дипы 100г","Огурец маринованный 20г","Соус барбекю с копченой сливой (Реберня) 40г","Соус сырный 75г","Масло растительное 60г (для жарки)","Соль 1г"],"steps":["Обжариваем булку до румяности","На нижнюю часть булки наносим соус барбекю, кладем огурец, салат айберг","На верхнюю часть булки наносим соус винегрет , кладем помидор","Готовим дипы,жарим котлету","Готовим сковороду для подачи, поливаем сырным соусом","Помещаем котлету на салат айсберг, наносим на котлету лук мармелад","Накрываем верхней частью булки","Разрезаем бургер пополам","Помещаем в сковороду","Выкладываем вокруг бургера дипы","Греем в печи, подаём!"]},{"id":"pmre5walkc5bvn","type":"sauce","name":"Соус винегрет","photo":null,"time":null,"size":null,"calories":null,"weight":900,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Уксус бальзамический 70г","Сахар песок 70г","Горчица 160г","Соус соевый 100г","Масло растительное 500г"],"steps":["Смешиваем все ингредиенты в термомиксе (кроме растительного масла)","Перебиваем до однородной массы на скорости 4,5 примерно 30-60с","Далее тонкой струёй добавляем растительное масло (прямо во время работы термомикса)","Переливаем в соусник","Готово!"]},{"id":"pmre61buq2jpnl","type":"prep","name":"Трюфельный мёд","photo":null,"time":null,"size":null,"calories":null,"weight":1070,"style":null,"video":null,"ingredients":["Мёд 870г","Трюфельная паста 130г","Уксус бальзамический 70г"],"steps":["Перебить всё до однеородной массы в термомиксе","Перелить в соусник","Готово!"]},{"id":"pmre6a2zfmz71z","type":"dough","name":"Замес на 40шт","photo":null,"time":null,"size":null,"calories":null,"weight":10010,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 4100г","Мука 3050г","Лед краш 1350г","Вода 400г","---->ВТОРОЙ ЭТАП<----","Лед краш 700г","Вода 200г","Соль 140г","Оливковое масло 70г"],"steps":["Подготавливаем лед краш 1350г в большую тару","Добавляем воду 400г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmri78p4dcupy9","type":"pinsa","name":"Пинца карбонара","photo":null,"time":null,"size":null,"calories":null,"weight":475,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 80г","Бекон 80г","Рукола 10г","Крем пармеджан 15г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем бекон","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частай","Перед подачей добавляем руколу , и поливаем соусом пармеджан","Готово!"]},{"id":"pmri7ls2tzvl4u","type":"pinsa","name":"Пинца салями блю чиз","photo":null,"time":null,"size":null,"calories":null,"weight":460,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 50г","Колбаса чоризо 60г","Сыр горганзола 25г","Рукола 10г","Кешью 10г","Спайси майонез 15г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем чоризо","Добавляем горганзолу","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Перед подачей добавляем руколу , и поливаем спайси майнонезом","Готово!"]},{"id":"pmri7v7ur8h81n","type":"pinsa","name":"Пинца груша-сыр дорблю, трюфельный мед","photo":null,"time":null,"size":null,"calories":null,"weight":540,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 50г","Груша карамель 80г","Микс сыра 70г","Кешью 20г","Мед трюфель 30г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем  Грушу","Добавляем  Микс сыров","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Поливаем медом, и посыпаем орешками","Готово!"]},{"id":"pmri8coqtnhg2i","type":"pinsa","name":"Пинца с прошуто","photo":null,"time":null,"size":null,"calories":null,"weight":450,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус красный 50г","Моцарелла 50г","Прошуто 40г","Рукола 15г","Пармезан 10г","Бальзамик 5г","Соус Тар-тар 30г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Выкладываем хамон","Выкладываем руколу","Поливаем бальзамиком","Посыпаем пармезаном","Наливаем в соусник Тар-тар","Готово!"]},{"id":"pmri8ixevxlm8i","type":"prep","name":"Микс сыра","photo":null,"time":null,"size":null,"calories":null,"weight":1000,"style":null,"video":null,"ingredients":["Пармезан 200г","Бри 150г","Дорблю 150г","Твердый 500г"],"steps":["Режем на куски (такие что бы помещалось в мясорубку)","Перемалываем в мясорубке равномерно добавляя все сыры","Фасуем по пакетам","Вакуумируем всё что расфасовали","Готово!"]},{"id":"pmri8n2uqv0zec","type":"sauce","name":"Сырный","photo":null,"time":null,"size":null,"calories":null,"weight":1000,"style":null,"video":null,"ingredients":["Сливки 33% 300г","Сыр чеддер 400г","Молоко 300г"],"steps":["Смешиваем молоко и сливки","Доводим до кипения","Помещаем чеддер","Не перестаем мешать до тех пор пока на венчике не будет остатков сыра","Далее разливаем по соусникам","Готово!"]},{"id":"pmri8r4y7zqffd","type":"sauce","name":"Соус белый","photo":null,"time":null,"size":null,"calories":null,"weight":1025,"style":null,"video":null,"ingredients":["Сливки 33% 500г","Сыр янтарь 500г","Соль 10г","Орегано 15г"],"steps":["Помещаем сливки ,янтарь, соль в термомикс","Перебиваем до однородной массы","Добавляем орегано","Ждем буквально 10с и выключаем","Переливаем в гастроемкость","Готово!"]},{"id":"pmri9gg5u1ksco","type":"sauce","name":"Крем пармеджан","photo":null,"time":null,"size":null,"calories":null,"weight":1270,"style":null,"video":null,"ingredients":["Сливки 1000г","Пармезан крошка 240г","Перец черный молотый 2г","Соль 16г","Сахар 12г"],"steps":["Поместить все в чашу для погружного блендера","Тщательно перемешать","Перелить в соусник","Готово!"]},{"id":"pmsf7vmq83y0uo","type":"dough","name":"Пинца маленький замес","photo":null,"time":null,"size":null,"calories":null,"weight":8177,"style":null,"video":null,"ingredients":["———ПЕРВЫЙ ЭТАП———","Лед краш 1300г","Вода 200г","Мука 2080г","Закваска 3300г","Дрожжи живые 32г","——ВТОРОЙ ЭТАП——","Лед краш 780г","Вода 240г","Соль 145г","Масло оливковое 100г"],"steps":["-"]},{"id":"pmsf8ajjm4ew9g","type":"dough","name":"Пинца большой замес","photo":null,"time":null,"size":null,"calories":null,"weight":12256,"style":null,"video":null,"ingredients":["——ПЕРВЫЙ ЭТАП——","Лед краш  1950г","Вода 300г","Мука 3120г","Закваска 4950г","Дрожжи живые 48г","——ВТРОЙ ЭТАП——","Лед краш 1170г","Вода 350г","Соль 218г","Масло оливковое 150г"],"steps":["-"]},{"id":"pmsf92nt2yoqyu","type":"sauce","name":"Домашний майонез 1кг","photo":null,"time":null,"size":null,"calories":null,"weight":1089,"style":null,"video":null,"ingredients":["Хондами 20г","Уксус винный 40г","Яйцо куриное 60г","Горчица американская 30г","Горчица крепкая 20г","Соус шрирача 3г","Соус ворчестер 20г","Соль каменная 6г","Сахар песок 15г","Масло растительное 800г","Фреш лимона 15г","Вода очищенная 60г"],"steps":["-"]},{"id":"pmsf98ear6jt35","type":"sauce","name":"Спайси майонез","photo":null,"time":null,"size":null,"calories":null,"weight":1260,"style":null,"video":null,"ingredients":["Майонез домашний 1кг","Сосус шрирача 130г","Сосус свит Чили 130г"],"steps":["-"]}];
+const SEED_RECIPES = [{"id":"pmrb7mcv49gqq6","type":"pizza","name":"Ронда","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":520,"style":null,"video":"https://www.youtube.com/watch?v=MI507KB-WGw","ingredients":["Тесто 250г","Соус красный 80г","Моцарелла 100г","Салями 50г","Ветчина 40г"],"steps":["Раскатываем тесто","Помещаем на сет","Наносим соус","Добавляем сыр","Добавляем салями и ветчину, последовательность не принцепиально","Растягиваем по форме сета (если изначальный диаметр меньше)","Запекаем до готовности","ПОДАЧА","Выкладываем на тарелку","Режим на 6 частей","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrb8ccgpw6zp9","type":"sauce","name":"Тар-Тар","photo":null,"time":null,"size":null,"calories":null,"weight":1030,"style":"Чеснок, огурец, майонез,сливки, зелень","ingredients":["Майонез 550г","Огурец маринованный 200г","Сливки кулинарные 200г","Лимон, сок 30г","Чеснок чищеный 25г","Зелень (укроп) 25г"],"steps":["Готовим чашу термомикса","Погружаем все выше перечисленные ингредиенты","Включаем термомикс на макс скорость","ждем 30сек-1 минуту","Переливаем в соусник","Готово!"]},{"id":"pmrb8sit1fdxjj","type":"pinsa","name":"Курица-Грибы","photo":null,"time":null,"size":null,"calories":null,"weight":442,"style":null,"ingredients":["Соус белый 50г","Моцарелла 50г","Куриное филе МХП 40г","Грибы 20г","Зелень 2г","Соус Тар-Тар 30г","Заготовка пинца 250г"],"steps":["На заговотвку пинцы наносим соус","Добавляем сыр","Добавляем курицу","Добавляем грибы","Доводим до готовности","Выкладываем на доску накрытую пергавментом","Посыпаем зеленью","Наливаем соус, в железный если в зал, в пластиковый если с собой"]},{"id":"pmrb9dfnm8q191","type":"dough","name":"Замес на 80шт","photo":null,"time":null,"size":null,"calories":null,"weight":15702,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 8200г","Мука 6100г","Лед краш 2700","Вода 800г","---->ВТОРОЙ ЭТАП<----","Лед краш 1400г","Вода 400г","Соль 280г","Оливковое масло 140г"],"steps":["Подготавливаем лед краш 2700г в большую тару","Добавляем воду 800г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmrdgqlbhw99ri","type":"sauce","name":"Цезарь","photo":null,"time":null,"size":null,"calories":null,"weight":562,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Соус соевый 20г","Горчица Американская 15г","Горчица острая 15г","Соус ворчестер 15г","Сок лимона (фреш) 5г","Анчоус 15г","Пармезан крошка 25г","Соус шрирача 2г","Соль 10г","Сахар 10г","Масло растительное 350г","Анчоусное масло 30г","Вода очищенная 50г"],"steps":["Погружаем все ингредиенты в термомикс (кроме растительного масла и воды)","Перебиваем на скорости 4,5 примероно 30-60 секунд, что бы всё перебилось и получилаь однородная масса","Далее тонкой струёй добавляем растительное масло","Далее добавляем воду","Переливаем в соусник","Готово!"]},{"id":"pmrdxto6n9esk7","type":"pizza","name":"Маргарита","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 120г","Моцарелла 120г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, украшаем базиликом, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdxz8we1l453","type":"pizza","name":"Гавайская","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":580,"style":null,"video":null,"ingredients":["Тесто 250г","Есть два варианта пиццы , на красном и белом соусе","Красный-белый соус 80г","Моцарелла 100г","Курица МХП 80г","Маслины 20г","Ананас 50г"],"steps":["Раскатка теста","Добавляем соус (делается на обоих соусах) красный, белый, по требованию","Добавляем сыр","Добавляем курицу МХП","Добавляем ананас","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy2kkmn71bt","type":"pizza","name":"Цезарь","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":410,"style":null,"video":null,"ingredients":["Соус белый 80г","Моцарелла 100г","Курица МХП 60г","Бекон 40г","Черри 40г","Айсберг 40г","Пармезан 20г","Соус Цезарь 30г"],"steps":["Раскатка теста","Добавляем соус белый","Добавляем сыр","Добавляем курицу мхп","Добавляем бекон","Запекаем до готовности, далее украшаем","Нарезаем пиццу на порции (на шесть частей)","Добавляем айсберг (заранее рвем на мелкие части) наносим равномерно на всю пиццу","Добавляем черри , так же равномерно по всей пицце","Наносим соус (так же ровными красивыми линиями)","Посыпаем пармезаном","Поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdy7a94dv9qy","type":"pizza","name":"Пеперони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":490,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Колбаса чоризо 80г","Тесто 250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем сыр","Добавляем чоризо","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdydwdd1b7nr","type":"pizza","name":"4 сыра","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":510,"style":null,"video":null,"ingredients":["Белый соус 80г","Моцарелла 60г","Микс сыров 120г","Тесто 250г"],"steps":["Раскатка теста","Добавляем соус","Добавляем сыр","Добавляем микс сыров","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdyj66zke8yc","type":"pizza","name":"Кальцоне","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":535,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Салями 40г","Грибы 25г","Тесто 250г"],"steps":["Раскатка теста, на этот раз при помощи скалки раскатываем небольшой круг (лепешку)","Наносим красный соус","Добавляем сыр","Добавляем салями","Добавляем ветчину","Добавляем грибы","Далее сворачиваем так, что бы форма напоминала чебурек","Тщательно продавливаем весь край","Обрезаем край где продавливали , для создания красивой ровной формы","Далее аккуратно кладем на сетку (сет)","По середине делаем маленький надрыв","Добавляем туда  каплю красного соуса","Добавляем маленькую щепотку сыра","Запекаем до готовности","Выкладываем на украшенную красным соусом тарелку, поливаем оливковым маслом","Готово!"]},{"id":"pmrdyoouyt80ea","type":"pizza","name":"Бабушка берлускони","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":630,"style":null,"video":"https://www.instagram.com/reel/DaSJFj8gg1j/?utm_source=ig_web_copy_link&igsh=NTc4MTIwNjQ2YQ==","ingredients":["Красный соус 80г","Горчица 5г","Моцарелла 100г","Колбаса Чоризо 30г","Бекон 30г","Лук маринованный 40г","Лук зеленый 15г","Хамон 30г","Черри 50г","Тесто 250г"],"steps":["Раскатка теста","Добавляем красный соус","Добавляем горчицу","Добавляем сыр","Добавляем чоризо","Добавляем бекон","Добавляем черри","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","После готовности выкладываем хамон, равномерно по всей пицце","Посыпаем зеленым луком","Готово!"]},{"id":"pmrdyuk49q1e4j","type":"pizza","name":"Мясная с сырным соусом","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":635,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 80г","Салями 50г","Курица мхп 50г","Бекон 50г","Лук маринованный 25г","Сырный соус 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем курицу мхп","Добавляем салями","Добавляем бекон","Добавляем лук маринованный","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Сырный соус наносим после того как приготовили и разрезали пиццу на порции","Готово!"]},{"id":"pmrdywx27k0sda","type":"pizza","name":"Американо","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":590,"style":null,"video":null,"ingredients":["Красный соус 80г","Моцарелла 100г","Ветчина 40г","Балык 40г","Грибы (шампиньоны) 30г","Помидор 50г","Тесто 250г"],"steps":["Раскатка теста","Наносим красный соус","Добавляем сыр","Добавляем ветчину","Добавляем балык","Добавляем грибы","Добавляем помидор","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Готово!"]},{"id":"pmrdz0gryij2i9","type":"pizza","name":"Пицца с креветкой","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":543,"style":null,"video":null,"ingredients":["Соус айоло 100г","Моцарелла 100г","Креветка 6шт","Черри 30г","Перец болгарский (свежий) 30г","Маслины 20г","Руккола 10г","Хлопья миндаль 3г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус айоли","Добавляем сыр","Выкладываем креветку (изначально нарезав их по полам, должно получится 12 половинок)","Добавляем черри","Добавляем перец болгарский","Добавляем маслины","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Добавляем равномерно рукколу","Посыпаем хлопьями миндаля","Готово!"]},{"id":"pmrdz5zxne27uz","type":"pizza","name":"Пицца с руколой и томатами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":540,"style":null,"video":null,"ingredients":["Соус красный 80г","Моцарелла 100г","Помидор свежий 80г","Руколла 15г","Пармезан стружка 10г","Масло чесночное 5г","Тесто 250г"],"steps":["Раскатка теста","Наносим соус","Добавляем сыр","Добавляем помидоры","Запекаем до готовности","Выкладываем на тарелку , режем на шесть частей, поливаем бортики оливковым маслом","Добавляем руколу","Поливаем чесночным маслом","Посыпаем пармезаном","Готово!"]},{"id":"pmrdzp3e3ts21m","type":"pizza","name":"Фокача с прованскими травами","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":257,"style":null,"video":null,"ingredients":["Тесто 250г","Оливковое масло 2г","Прованские травы 5г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до готовности","Режем на шесть частей","Поливаем оливковым маслом, и посыпаем травами","Готово!"]},{"id":"pmrdzs5objg0ak","type":"pizza","name":"Фокача с пармезаном","photo":null,"time":null,"size":"Средняя (30 см)","calories":null,"weight":270,"style":null,"video":null,"ingredients":["Тесто 250г","Пармезан крошка 20г"],"steps":["Раскатываем тесто что бы получилась лепешка размером с сет","Обрезаем лишние края, тем самым придавая ровную круглую форму","Запекаем до полуготовности","Посыпаем пармезаном, доводим до готовности","Режем на шесть частей","Готово!"]},{"id":"pmre2vah2ulin7","type":"prep","name":"Груша карамель","photo":null,"time":null,"size":null,"calories":null,"weight":null,"style":null,"video":null,"ingredients":["Груша"],"steps":["Помыть грушу","Отрезать хвосты","Разрезать по полам вдоль","Вырезать сердцевину","Нарезать на слайсе вдоль , первый и последний срез не берём","Взвешиваем , на 1 кг груши 600мл воды 300гр сахара","Кипятим воду  отталкиваясь от предыдущего пункта","Заливаем сироп в грушу (заранее погрузив её в подходящую тару)","Ставим на печку на девятку","Помешиваем ,как закипит 3 минуты и снимаем","Переливаем в контейнер","Готово!"]},{"id":"pmre37xk2bab99","type":"sauce","name":"Помадоро","photo":null,"time":null,"size":null,"calories":null,"weight":15388,"style":null,"video":null,"ingredients":["Пульпа 15000г","Соль 120г","Сахар 100г","Базилик 150г","Орегано 18г"],"steps":["Выливаем пульпу в заранее подготовленную тару (ведро пищевое)","Набираем пульпу в чашу темромикса (не полную,что бы можно было перемешать все ингредиенты)","Добавляем соль,сахар, базалик","Перебиваем все до однородной массы","Далее перебитое в термомикесе,переливаем в общую массу","Высыпаем Орегано","Тщательно перемешиваем","Разливаем по контейнерам","Готово!"]},{"id":"pmre3hjktvgbud","type":"dough","name":"Замес на 60шт","photo":null,"time":null,"size":null,"calories":null,"weight":14416,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 6150г","Мука 4575г","Лед краш 2025г","Вода 600г","---->ВТОРОЙ ЭТАП<----","Лед краш 1050г","Вода 300г","Соль 210г","Оливковое масло 105г"],"steps":["Подготавливаем лед краш 2025г в большую тару","Добавляем воду 600г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmre3tzdka0ady","type":"dough","name":"Закваска","photo":null,"time":null,"size":null,"calories":null,"weight":10022,"style":null,"video":null,"ingredients":["Мука 6900г","Вода 3100г","Дрожжи сухие 22г"],"steps":["Подготавливаем тару с водой","Добавляем дрожжи","Перемешиваем","Помещаем муку в тестомес","Выливаем подготовленную воду с дрожжами","Включаем вторую скорость","Доводим до состояния хлопья, закваска не должна быть как тесто","Вынимаем в ведро (пищевое, заранее вымытое)","Готово"]},{"id":"pmre4a4o9s96t8","type":"prep","name":"Котлета бургер","photo":null,"time":null,"size":null,"calories":null,"weight":2124,"style":null,"video":null,"ingredients":["Говядина 1600г","Сало 200г","Цибуля жареная 200г","Соль 18г","Специи для мяса 4г","Перец черный молотый 2г","Вода очищенная 100г"],"steps":["Чистим лук , обжариваем до золотистого цвета","Делаем фарш, перекручиваем лук,мясо,сало (обрезать шкуру с сала) в мясорубке","В фарш добавляем соль,специи, перец, воду","Перемешиваем","Хорошо отбиваем","Делим на порции по 120г (делаем шарики)","Формируем котлеты"]},{"id":"pmre4pira2dizf","type":"prep","name":"Лук мармелад","photo":null,"time":null,"size":null,"calories":null,"weight":1800,"style":null,"video":null,"ingredients":["Уксус бальзамический 600г","Сахар песок 200г","Мед 200г","Вино красное глинтвейн (для кухни) 600г","Масло растительное 200г","Лук синий (уже чищеный) 2кг"],"steps":["-"]},{"id":"pmre5at74ehwn7","type":"pizza","name":"Бургер","photo":null,"time":null,"size":null,"calories":null,"weight":376,"style":null,"video":null,"ingredients":["Булка бургер 1шт","Котлета бургер п/ф 1шт","Салат айсебрг 20г","Помидор п/ф 30г","Соус винегрет 20г","Лук мармелад 10г","Картофельные дипы 100г","Огурец маринованный 20г","Соус барбекю с копченой сливой (Реберня) 40г","Соус сырный 75г","Масло растительное 60г (для жарки)","Соль 1г"],"steps":["Обжариваем булку до румяности","На нижнюю часть булки наносим соус барбекю, кладем огурец, салат айберг","На верхнюю часть булки наносим соус винегрет , кладем помидор","Готовим дипы,жарим котлету","Готовим сковороду для подачи, поливаем сырным соусом","Помещаем котлету на салат айсберг, наносим на котлету лук мармелад","Накрываем верхней частью булки","Разрезаем бургер пополам","Помещаем в сковороду","Выкладываем вокруг бургера дипы","Греем в печи, подаём!"]},{"id":"pmre5walkc5bvn","type":"sauce","name":"Соус винегрет","photo":null,"time":null,"size":null,"calories":null,"weight":900,"style":null,"video":null,"ingredients":["Яйцо куриное 2шт","Уксус бальзамический 70г","Сахар песок 70г","Горчица 160г","Соус соевый 100г","Масло растительное 500г"],"steps":["Смешиваем все ингредиенты в термомиксе (кроме растительного масла)","Перебиваем до однородной массы на скорости 4,5 примерно 30-60с","Далее тонкой струёй добавляем растительное масло (прямо во время работы термомикса)","Переливаем в соусник","Готово!"]},{"id":"pmre61buq2jpnl","type":"prep","name":"Трюфельный мёд","photo":null,"time":null,"size":null,"calories":null,"weight":1070,"style":null,"video":null,"ingredients":["Мёд 870г","Трюфельная паста 130г","Уксус бальзамический 70г"],"steps":["Перебить всё до однеородной массы в термомиксе","Перелить в соусник","Готово!"]},{"id":"pmre6a2zfmz71z","type":"dough","name":"Замес на 40шт","photo":null,"time":null,"size":null,"calories":null,"weight":10010,"style":null,"video":null,"ingredients":["---->ПЕРВЫЙ ЭТАП<----","Закваска 4100г","Мука 3050г","Лед краш 1350г","Вода 400г","---->ВТОРОЙ ЭТАП<----","Лед краш 700г","Вода 200г","Соль 140г","Оливковое масло 70г"],"steps":["Подготавливаем лед краш 1350г в большую тару","Добавляем воду 400г","Загружаем в тестомес закваску","Добавляем муку","Заливаем заранее подготовленным льдом с водой","Включаем на первую скорость","Подготавливаем всё для второго этапа по принципу первого","Ждем пока тесто соберется до  однородной массы","Переключаем на вторую скорость","По надобности доливаем лед с водой (который заранее подготовили) порционально, должно выйти 5 доливок","Перед последней доливкой добавляем соль","Далее когда тесто снова собереться добавляем оливковое масло","Доводим до нужной температуры","Вынимаем, отбиваем, распределяем  по 250г, формируем в шарики, после смазываем маслом, и упаковываем в пакеты"]},{"id":"pmri78p4dcupy9","type":"pinsa","name":"Пинца карбонара","photo":null,"time":null,"size":null,"calories":null,"weight":475,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 80г","Бекон 80г","Рукола 10г","Крем пармеджан 15г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем бекон","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частай","Перед подачей добавляем руколу , и поливаем соусом пармеджан","Готово!"]},{"id":"pmri7ls2tzvl4u","type":"pinsa","name":"Пинца салями блю чиз","photo":null,"time":null,"size":null,"calories":null,"weight":460,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 50г","Колбаса чоризо 60г","Сыр горганзола 25г","Рукола 10г","Кешью 10г","Спайси майонез 15г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем чоризо","Добавляем горганзолу","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Перед подачей добавляем руколу , и поливаем спайси майнонезом","Готово!"]},{"id":"pmri7v7ur8h81n","type":"pinsa","name":"Пинца груша-сыр дорблю, трюфельный мед","photo":null,"time":null,"size":null,"calories":null,"weight":540,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус белый 40г","Моцарелла 50г","Груша карамель 80г","Микс сыра 70г","Кешью 20г","Мед трюфель 30г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Добавляем  Грушу","Добавляем  Микс сыров","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Поливаем медом, и посыпаем орешками","Готово!"]},{"id":"pmri8coqtnhg2i","type":"pinsa","name":"Пинца с прошуто","photo":null,"time":null,"size":null,"calories":null,"weight":450,"style":null,"video":null,"ingredients":["Пинца заготовка 250г","Соус красный 50г","Моцарелла 50г","Прошуто 40г","Рукола 15г","Пармезан 10г","Бальзамик 5г","Соус Тар-тар 30г"],"steps":["Наносим соус на заготовку","Добавляем сыр","Запекаем до готовности","Выкладываем на доску накрытую пергавментом и режем на шесть частей","Выкладываем хамон","Выкладываем руколу","Поливаем бальзамиком","Посыпаем пармезаном","Наливаем в соусник Тар-тар","Готово!"]},{"id":"pmri8ixevxlm8i","type":"prep","name":"Микс сыра","photo":null,"time":null,"size":null,"calories":null,"weight":1000,"style":null,"video":null,"ingredients":["Пармезан 200г","Бри 150г","Дорблю 150г","Твердый 500г"],"steps":["Режем на куски (такие что бы помещалось в мясорубку)","Перемалываем в мясорубке равномерно добавляя все сыры","Фасуем по пакетам","Вакуумируем всё что расфасовали","Готово!"]},{"id":"pmri8n2uqv0zec","type":"sauce","name":"Сырный","photo":null,"time":null,"size":null,"calories":null,"weight":1000,"style":null,"video":null,"ingredients":["Сливки 33% 300г","Сыр чеддер 400г","Молоко 300г"],"steps":["Смешиваем молоко и сливки","Доводим до кипения","Помещаем чеддер","Не перестаем мешать до тех пор пока на венчике не будет остатков сыра","Далее разливаем по соусникам","Готово!"]},{"id":"pmri8r4y7zqffd","type":"sauce","name":"Соус белый","photo":null,"time":null,"size":null,"calories":null,"weight":1025,"style":null,"video":null,"ingredients":["Сливки 33% 500г","Сыр янтарь 500г","Соль 10г","Орегано 15г"],"steps":["Помещаем сливки ,янтарь, соль в термомикс","Перебиваем до однородной массы","Добавляем орегано","Ждем буквально 10с и выключаем","Переливаем в гастроемкость","Готово!"]},{"id":"pmri9gg5u1ksco","type":"sauce","name":"Крем пармеджан","photo":null,"time":null,"size":null,"calories":null,"weight":1270,"style":null,"video":null,"ingredients":["Сливки 1000г","Пармезан крошка 240г","Перец черный молотый 2г","Соль 16г","Сахар 12г"],"steps":["Поместить все в чашу для погружного блендера","Тщательно перемешать","Перелить в соусник","Готово!"]},{"id":"pmsf7vmq83y0uo","type":"dough","name":"Пинца маленький замес","photo":null,"time":null,"size":null,"calories":null,"weight":8177,"style":null,"video":null,"ingredients":["———ПЕРВЫЙ ЭТАП———","Лед краш 1300г","Вода 200г","Мука 2080г","Закваска 3300г","Дрожжи живые 32г","——ВТОРОЙ ЭТАП——","Лед краш 780г","Вода 240г","Соль 145г","Масло оливковое 100г"],"steps":["-"]},{"id":"pmsf8ajjm4ew9g","type":"dough","name":"Пинца большой замес","photo":null,"time":null,"size":null,"calories":null,"weight":12256,"style":null,"video":null,"ingredients":["——ПЕРВЫЙ ЭТАП——","Лед краш  1950г","Вода 300г","Мука 3120г","Закваска 4950г","Дрожжи живые 48г","——ВТРОЙ ЭТАП——","Лед краш 1170г","Вода 350г","Соль 218г","Масло оливковое 150г"],"steps":["-"]},{"id":"pmsf92nt2yoqyu","type":"sauce","name":"Домашний майонез 1кг","photo":null,"time":null,"size":null,"calories":null,"weight":1089,"style":null,"video":null,"ingredients":["Хондами 20г","Уксус винный 40г","Яйцо куриное 60г","Горчица американская 30г","Горчица крепкая 20г","Соус шрирача 3г","Соус ворчестер 20г","Соль каменная 6г","Сахар песок 15г","Масло растительное 800г","Фреш лимона 15г","Вода очищенная 60г"],"steps":["-"]},{"id":"pmsf98ear6jt35","type":"sauce","name":"Спайси майонез","photo":null,"time":null,"size":null,"calories":null,"weight":1260,"style":null,"video":null,"ingredients":["Майонез домашний 1кг","Сосус шрирача 130г","Сосус свит Чили 130г"],"steps":["-"]}];
 
 const STORAGE_KEY = 'pizza_recipes_v3';
 let recipes = [];
@@ -2069,7 +2181,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
     var r = items[i];
     var typeClass = 'type-' + (r.type || 'pizza');
     var delay = Math.min(i, 8) * 0.04;
-    html += '<div class="recipe-card" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
+    html += '<div class="recipe-card ctype-' + (r.type || 'pizza') + '" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
       (r.photo ? '<img class="card-thumb" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="">' :
         '<div class="card-thumb" style="display:flex;align-items:center;justify-content:center;font-size:32px">' + (typeEmoji[r.type] || '🍕') + '</div>') +
       '<div class="card-info">\n'
@@ -2095,6 +2207,22 @@ function applySearch(items, inputId) {
   var q = input ? input.value.trim().toLowerCase() : '';
   if (!q) return items;
   return items.filter(function(r) { return r.name && r.name.toLowerCase().indexOf(q) !== -1; });
+}
+
+function toggleSearchClear(inputId) {
+  var input = $(inputId);
+  var clearBtn = $(inputId + '-clear');
+  if (!input || !clearBtn) return;
+  clearBtn.style.display = input.value ? 'flex' : 'none';
+}
+
+function clearSearchInput(inputId) {
+  var input = $(inputId);
+  if (!input) return;
+  input.value = '';
+  toggleSearchClear(inputId);
+  input.focus();
+  if (inputId === 'search-categories') renderCategoriesList();
 }
 
 /* ================================================================
@@ -2341,7 +2469,7 @@ function openDetail(id, autoplayVideo) {
 
     '<div class="section-title">Шаги приготовления:</div>\n'
     + '<ol class="steps-list">' +
-      (r.steps.map ? r.steps.map(function(s) { return '<li>' + esc(s) + '</li>'; }).join('') : '') +
+      (r.steps.map ? r.steps.map(function(s) { return '<li onclick="this.classList.toggle(\'step-done\')">' + esc(s) + '</li>'; }).join('') : '') +
     '</ol>' +
 
     '<div class="qr-share-card">' +
@@ -2568,7 +2696,18 @@ function showDetailLoading() {
   var detailTab = $('tab-detail');
   if (detailTab) detailTab.classList.add('active');
   var body = $('detail-body');
-  if (body) body.innerHTML = '<div style="text-align:center;padding:80px 20px;color:var(--text-muted)">Загрузка рецепта…</div>';
+  if (body) body.innerHTML =
+    '<div class="skeleton skeleton-photo"></div>' +
+    '<div class="skeleton skeleton-title"></div>' +
+    '<div class="skeleton skeleton-badges">' +
+      '<div class="skeleton skeleton-chip"></div>' +
+      '<div class="skeleton skeleton-chip"></div>' +
+      '<div class="skeleton skeleton-chip"></div>' +
+    '</div>' +
+    '<div class="skeleton skeleton-line" style="width:40%"></div>' +
+    '<div class="skeleton skeleton-line"></div>' +
+    '<div class="skeleton skeleton-line"></div>' +
+    '<div class="skeleton skeleton-line" style="width:70%"></div>';
   currentTab = 'detail';
 }
 </script>
