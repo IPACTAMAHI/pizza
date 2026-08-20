@@ -602,11 +602,13 @@
     "time": null,
     "size": null,
     "calories": null,
-    "weight": null,
+    "weight": 1600,
     "style": null,
     "videos": [],
     "ingredients": [
-      "Груша"
+      "Груша 1000г",
+      "Вода 600г",
+      "Сахар 300"
     ],
     "steps": [
       "Помыть грушу",
