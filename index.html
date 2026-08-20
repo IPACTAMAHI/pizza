@@ -491,6 +491,44 @@
   .steps-list li {
     margin-bottom: 8px; font-size: 15px;
   }
+
+  /* ===== ИНГРЕДИЕНТЫ-КАЛЬКУЛЯТОР ===== */
+  .ingr-calc-hint {
+    font-size: 12.5px; color: var(--text-muted);
+    margin-bottom: 10px; line-height: 1.4;
+  }
+  .ingr-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    font-size: 15px;
+  }
+  .ingr-row:last-of-type { border-bottom: none; }
+  .ingr-row-plain {
+    color: var(--text-muted); font-size: 13.5px;
+    padding: 6px 0; border-bottom: none;
+  }
+  .ingr-name { flex: 1; min-width: 0; word-break: break-word; }
+  .ingr-suffix { color: var(--text-muted); font-size: 12.5px; }
+  .ingr-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .ingr-input {
+    width: 74px; padding: 7px 8px; border-radius: 10px;
+    border: 1px solid var(--glass-border); background: var(--card);
+    color: var(--text); font-size: 14.5px; text-align: right;
+    -moz-appearance: textfield;
+  }
+  .ingr-input:focus { outline: none; border-color: var(--accent); }
+  .ingr-input::-webkit-outer-spin-button,
+  .ingr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .ingr-unit, .ingr-unit-static {
+    font-size: 13.5px; color: var(--text-muted); min-width: 30px;
+  }
+  .ingr-unit {
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--glass-border); border-radius: 8px;
+    padding: 6px 4px;
+  }
+  .ingr-calc-reset { margin-top: 14px; }
   .steps-list ol { padding-left: 0; counter-reset: step; }
   .steps-list li {
     counter-increment: step;
@@ -2058,6 +2096,133 @@ function renderAdminPanel() {
 }
 
 /* ================================================================
+   КАЛЬКУЛЯТОР ИНГРЕДИЕНТОВ (пропорциональный пересчёт раскладки)
+   ================================================================
+   Ингредиенты хранятся в рецептах простой строкой вида
+   "Говядина 1600г". Мы разбираем такую строку на название,
+   число и единицу измерения. Когда пользователь меняет
+   количество ЛЮБОГО ингредиента (и, если применимо, единицу —
+   г/кг, мл/л), мы вычисляем коэффициент пересчёта относительно
+   исходного рецепта и применяем его ко всем остальным
+   ингредиентам этой карточки. Работает одинаково для всех
+   рецептов — отдельного калькулятора на каждую карточку не нужно.
+*/
+var UNIT_FACTORS = {
+  'г': 1, 'кг': 1000,
+  'мл': 1, 'л': 1000,
+  'шт': 1
+};
+var UNIT_GROUPS = {
+  weight: ['г', 'кг'],
+  volume: ['мл', 'л'],
+  count: ['шт']
+};
+function normalizeUnit(u) {
+  if (!u) return '';
+  u = u.trim().toLowerCase().replace(/\.$/, '');
+  if (u === 'g') return 'г';
+  if (u === 'kg') return 'кг';
+  if (u === 'ml') return 'мл';
+  if (u === 'l') return 'л';
+  if (u === 'pcs' || u === 'шт') return 'шт';
+  if (u === 'г' || u === 'кг' || u === 'мл' || u === 'л') return u;
+  return u;
+}
+function unitGroupFor(unit) {
+  if (UNIT_GROUPS.weight.indexOf(unit) !== -1) return 'weight';
+  if (UNIT_GROUPS.volume.indexOf(unit) !== -1) return 'volume';
+  if (UNIT_GROUPS.count.indexOf(unit) !== -1) return 'count';
+  return null;
+}
+function formatQty(num) {
+  if (!isFinite(num)) return '';
+  var rounded = Math.round(num * 100) / 100;
+  if (Math.abs(rounded - Math.round(rounded)) < 0.005) return String(Math.round(rounded));
+  return String(rounded);
+}
+function parseIngredientLine(raw) {
+  var m = raw.match(/^(.*?)(\d+(?:[.,]\d+)?)\s*(кг|г\.?|мл|л|шт\.?|kg|g|ml|l)?(.*)$/i);
+  if (!m) return { raw: raw, matched: false };
+  var amount = parseFloat(m[2].replace(',', '.'));
+  if (!isFinite(amount)) return { raw: raw, matched: false };
+  return {
+    raw: raw,
+    matched: true,
+    name: m[1].trim(),
+    amount: amount,
+    unit: normalizeUnit(m[3] || ''),
+    suffix: (m[4] || '').trim()
+  };
+}
+function renderIngredientsCalc(r) {
+  var parsed = (r.ingredients && r.ingredients.map) ? r.ingredients.map(parseIngredientLine) : [];
+  window.__ingrCalc = parsed;
+  window.__ingrCalcRecipe = r;
+
+  var rowsHtml = parsed.map(function(p, idx) {
+    if (!p.matched) {
+      return '<div class="ingr-row ingr-row-plain">• ' + esc(p.raw) + '</div>';
+    }
+    var group = unitGroupFor(p.unit);
+    var unitHtml;
+    if (group && UNIT_GROUPS[group].length > 1) {
+      unitHtml = '<select class="ingr-unit" data-idx="' + idx + '" onchange="ingrCalcRecompute(' + idx + ')">' +
+        UNIT_GROUPS[group].map(function(u) {
+          return '<option value="' + u + '"' + (u === p.unit ? ' selected' : '') + '>' + u + '</option>';
+        }).join('') +
+        '</select>';
+    } else {
+      unitHtml = p.unit ? '<span class="ingr-unit-static">' + esc(p.unit) + '</span>' : '';
+    }
+    return '<div class="ingr-row">' +
+      '<span class="ingr-name">' + esc(p.name) +
+        (p.suffix ? ' <span class="ingr-suffix">' + esc(p.suffix) + '</span>' : '') +
+      '</span>' +
+      '<span class="ingr-controls">' +
+        '<input type="number" inputmode="decimal" step="any" class="ingr-input" data-idx="' + idx + '" ' +
+          'value="' + formatQty(p.amount) + '" oninput="ingrCalcRecompute(' + idx + ')">' +
+        unitHtml +
+      '</span>' +
+    '</div>';
+  }).join('');
+
+  return '<div class="ingr-calc">' +
+    '<div class="ingr-calc-hint">🧮 Введите нужное количество любого ингредиента (при необходимости смените г/кг или мл/л) — остальные пересчитаются автоматически.</div>' +
+    rowsHtml +
+    '<button type="button" class="btn btn-ghost btn-sm ingr-calc-reset" onclick="resetIngrCalc()">↺ Сбросить к исходному рецепту</button>' +
+  '</div>';
+}
+function ingrCalcRecompute(anchorIdx) {
+  var parsed = window.__ingrCalc;
+  if (!parsed) return;
+  var input = document.querySelector('.ingr-input[data-idx="' + anchorIdx + '"]');
+  if (!input) return;
+  var enteredVal = parseFloat((input.value || '').replace(',', '.'));
+  if (!isFinite(enteredVal) || enteredVal < 0) return;
+
+  var anchor = parsed[anchorIdx];
+  var select = document.querySelector('.ingr-unit[data-idx="' + anchorIdx + '"]');
+  var enteredUnit = select ? select.value : anchor.unit;
+  var factorEntered = UNIT_FACTORS[enteredUnit] || 1;
+  var factorOriginal = UNIT_FACTORS[anchor.unit] || 1;
+
+  var ratio = (enteredVal * factorEntered) / (anchor.amount * factorOriginal);
+  if (!isFinite(ratio) || ratio <= 0) return;
+
+  parsed.forEach(function(p, idx) {
+    if (!p.matched || idx === anchorIdx) return;
+    var fieldInput = document.querySelector('.ingr-input[data-idx="' + idx + '"]');
+    if (fieldInput) fieldInput.value = formatQty(p.amount * ratio);
+  });
+}
+function resetIngrCalc() {
+  var r = window.__ingrCalcRecipe;
+  if (!r) return;
+  var holder = document.querySelector('.ingr-calc');
+  if (holder) holder.outerHTML = renderIngredientsCalc(r);
+}
+
+/* ================================================================
    DETAIL VIEW
    ================================================================ */
 function openDetail(id, autoplayVideo) {
@@ -2100,9 +2265,7 @@ function openDetail(id, autoplayVideo) {
     '</div>' +
 
     '<div class="section-title">Ингредиенты:</div>\n'
-    + '<ul class="ingredients-list">' +
-      (r.ingredients.map ? r.ingredients.map(function(i) { return '<li>• ' + esc(i) + '</li>'; }).join('') : '') +
-    '</ul>' +
+    + renderIngredientsCalc(r) +
 
     '<div class="section-title">Шаги приготовления:</div>\n'
     + '<ol class="steps-list">' +
