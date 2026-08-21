@@ -20,7 +20,7 @@
     --accent-2: #b8892c;
     --accent-grad: linear-gradient(135deg, #d9645a, #bf4038 55%, #8f2a24);
     --text: #2b241e;
-    --text-muted: #8c8072;
+    --text-muted: #564d42;
     --success: #2f8f5b;
     --warning: #b8781f;
 
@@ -757,6 +757,14 @@
 </head>
 <body>
 
+<!-- ПРОВЕРКА ДОСТУПА — короткий экран, пока проверяем, не заблокирован ли этот телефон -->
+<div id="access-gate-overlay" style="position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;">
+  <div style="text-align:center;color:var(--text-muted);font-family:var(--font-body)">
+    <div style="font-size:32px;margin-bottom:10px">🍕</div>
+    Загрузка…
+  </div>
+</div>
+
 <!-- HEADER -->
 <div class="header">
   <button class="header-corner-btn export-toggle admin-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Опубликовать текущий список">
@@ -869,6 +877,19 @@
       <span>Всего рецептов</span>
       <span id="admin-total-count" style="color:var(--text-muted)">40 шт.</span>
     </div>
+  </div>
+
+  <div class="admin-panel-card admin-only">
+    <div class="admin-panel-row">
+      <span>👥 Участники (доступ по ссылке)</span>
+      <button class="btn btn-ghost btn-sm" onclick="addParticipantManually()">+ Добавить</button>
+    </div>
+    <p class="admin-panel-hint">
+      Когда новый человек первый раз откроет сайт, ему предложат представиться, и внизу экрана
+      у него появится персональный код устройства. Спросите у него этот код и имя, и добавьте сюда —
+      тогда сможете в любой момент закрыть именно этому человеку доступ, не трогая остальных.
+    </p>
+    <div id="participants-list" style="margin-top:10px"></div>
   </div>
 </div>
 <!-- TAB: ADD / EDIT -->
@@ -993,7 +1014,7 @@
 
 <!-- TOAST -->
 <!-- FOOTER -->
-<div class="app-footer">Route 20 — Римские пекарни</div>
+<div class="app-footer">Route 20 — Римские пекарни<br><span id="device-code-footer" style="color:var(--text-muted);font-size:11px"></span></div>
 
 <!-- TOAST -->
 <div class="toast" id="toast">✅ Сохранено на GitHub</div>
@@ -1137,6 +1158,222 @@ function customPrompt(message, defaultValue, title, inputType) {
 
 function customConfirm(message, title) {
   return showModal({ title: title || 'Подтверждение', message: message, withInput: false });
+}
+
+/* ================================================================
+   УЧАСТНИКИ — КТО ПОЛЬЗУЕТСЯ САЙТОМ ПО ССЫЛКЕ / QR
+
+   Ссылка/QR общие на всех — персональных ссылок нет. Вместо этого:
+   1) при первом визите браузер генерирует себе случайный "код устройства"
+      и просит представиться (не пароль, просто имя для администратора);
+   2) администратор вручную добавляет пару "имя + код" в админ-панели
+      (код участник называет лично, глядя на низ экрана своего телефона) —
+      это единственный способ передать запись в общий список, так как
+      обычный посетитель не имеет прав на запись в GitHub, только
+      администратор;
+   3) список хранится в participants.json рядом с recipes.json — читают
+      его все (чтобы проверить, не заблокировали ли именно их устройство),
+      а изменяют только вы, через уже настроенный GitHub-токен.
+
+   ВАЖНО (честно, без иллюзий): это не защита от копирования контента,
+   пока доступ активен, и не помешает передать ссылку до момента блокировки.
+   Это способ увидеть, кто пользуется сайтом, и быстро закрыть доступ
+   конкретному человеку, когда он уволился, — как только у него на
+   телефоне будет интернет и сайт обновит данные.
+   ================================================================ */
+const DEVICE_ID_KEY = 'r20_device_id';
+const DEVICE_NAME_KEY = 'r20_device_name';
+const PARTICIPANTS_KEY = 'r20_participants_cache';
+const PARTICIPANTS_PATH = 'participants.json';
+
+var participants = [];
+
+function getDeviceId() {
+  var id = localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
+
+function showDeviceCodeInFooter() {
+  var el = $('device-code-footer');
+  if (el) el.textContent = 'Код устройства: ' + getDeviceId();
+}
+
+async function ensureParticipantName() {
+  if (isAdmin()) return; // администратора эта система не касается — у него доступ через GitHub-ключ
+  var name = localStorage.getItem(DEVICE_NAME_KEY);
+  if (name) return;
+  var entered = await customPrompt(
+    'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом.',
+    '', '👋 Добро пожаловать в Route 20'
+  );
+  localStorage.setItem(DEVICE_NAME_KEY, (entered && entered.trim()) ? entered.trim() : 'Без имени');
+}
+
+function loadParticipantsLocal() {
+  try {
+    var raw = localStorage.getItem(PARTICIPANTS_KEY);
+    participants = raw ? JSON.parse(raw) : [];
+  } catch (e) { participants = []; }
+}
+
+function saveParticipantsLocal() {
+  try { localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(participants)); } catch (e) {}
+}
+
+async function syncParticipantsFromGithub() {
+  try {
+    var res = await fetch('./' + PARTICIPANTS_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return; // файла ещё нет (никого не добавляли) или открыто локально — тихий фолбэк
+    var data = await res.json();
+    if (Array.isArray(data)) {
+      participants = data;
+      saveParticipantsLocal();
+      if (currentTab === 'admin') renderParticipantsList();
+    }
+  } catch (e) {
+    console.warn('syncParticipantsFromGithub: используются локальные данные', e);
+  }
+}
+
+async function syncParticipantsToGithub() {
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
+    showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
+    return false;
+  }
+  try {
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + PARTICIPANTS_PATH;
+    var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
+
+    var sha = null;
+    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    if (getRes.status === 200) {
+      var getData = await getRes.json();
+      sha = getData.sha;
+    } else if (getRes.status !== 404) {
+      throw new Error('Проверка файла: HTTP ' + getRes.status);
+    }
+
+    var body = {
+      message: 'Обновление списка участников (' + new Date().toLocaleString('ru-RU') + ')',
+      content: b64EncodeUnicode(JSON.stringify(participants, null, 2)),
+      branch: cfg.branch
+    };
+    if (sha) body.sha = sha;
+
+    var putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+      body: JSON.stringify(body)
+    });
+
+    if (!putRes.ok) {
+      var errData = await putRes.json().catch(function() { return {}; });
+      throw new Error(errData.message || ('HTTP ' + putRes.status));
+    }
+
+    saveParticipantsLocal();
+    return true;
+  } catch (e) {
+    console.error('syncParticipantsToGithub error:', e);
+    showToast('⚠️ Не удалось сохранить список участников: ' + e.message);
+    return false;
+  }
+}
+
+async function checkParticipantBlock() {
+  if (isAdmin()) return false;
+  await syncParticipantsFromGithub();
+  var me = participants.filter(function(p) { return p.id === getDeviceId(); })[0];
+  return !!(me && me.blocked);
+}
+
+function showBlockedScreen() {
+  document.body.innerHTML =
+    '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
+      '<div>' +
+        '<div style="font-size:56px;margin-bottom:16px">🔒</div>' +
+        '<h2 style="font-family:var(--font-display);margin-bottom:10px">Доступ закрыт</h2>' +
+        '<p style="color:var(--text-muted);max-width:320px;margin:0 auto">Если считаете, что это ошибка — обратитесь к администратору.</p>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderParticipantsList() {
+  var holder = $('participants-list');
+  if (!holder) return;
+  if (!participants.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">Пока никого не добавили — список появится, когда вы добавите первого участника.</p>';
+    return;
+  }
+  holder.innerHTML = participants.map(function(p) {
+    var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--glass-border)">' +
+      '<div style="min-width:0">' +
+        '<strong>' + esc(p.name) + '</strong>' + (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
+        '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0">' +
+        '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')">✕</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function addParticipantManually() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var name = await customPrompt('Как зовут участника?', '', '➕ Добавить участника (1/2)');
+  if (name === null || !name.trim()) return;
+  var code = await customPrompt('Код устройства — участник видит его внизу своего экрана, под названием сайта:', '', '➕ Добавить участника (2/2)');
+  if (code === null || !code.trim()) return;
+
+  var id = code.trim().toUpperCase();
+  if (participants.some(function(p) { return p.id === id; })) {
+    showToast('⚠️ Участник с таким кодом уже есть в списке');
+    return;
+  }
+
+  participants.push({ id: id, name: name.trim(), addedAt: Date.now(), blocked: false });
+  renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var ok = await syncParticipantsToGithub();
+  showToast(ok ? '✅ Участник добавлен' : '⚠️ Сохранено только на этом устройстве');
+}
+
+async function toggleParticipantBlock(id) {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+  if (!p) return;
+  var willBlock = !p.blocked;
+  var ok = await customConfirm(
+    willBlock
+      ? 'Закрыть доступ для «' + p.name + '»?\n\nОн потеряет доступ к рецептам, как только его телефон снова подключится к интернету. Остальные участники не пострадают.'
+      : 'Вернуть доступ для «' + p.name + '»?'
+  );
+  if (!ok) return;
+
+  p.blocked = willBlock;
+  p.blockedAt = willBlock ? Date.now() : null;
+  renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var saved = await syncParticipantsToGithub();
+  showToast(saved ? (willBlock ? '🚫 Доступ закрыт' : '🔓 Доступ открыт') : '⚠️ Сохранено только на этом устройстве');
+}
+
+async function removeParticipant(id) {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var ok = await customConfirm('Удалить эту запись из списка участников?');
+  if (!ok) return;
+  participants = participants.filter(function(x) { return x.id !== id; });
+  renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var saved = await syncParticipantsToGithub();
+  showToast(saved ? '🗑 Удалено' : '⚠️ Сохранено только на этом устройстве');
 }
 
 /* ================================================================
@@ -1670,7 +1907,7 @@ function switchTab(name) {
   currentTab = name;
 
   if (name === 'categories') renderCategoriesList();
-  if (name === 'admin') renderAdminPanel();
+  if (name === 'admin') { renderAdminPanel(); renderParticipantsList(); }
   if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
 }
 
@@ -2707,7 +2944,20 @@ function escAttr(str) {
 /* ================================================================
    INIT — all event listeners bound after DOM is ready
    ================================================================ */
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() { initApp(); });
+
+async function initApp() {
+  loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
+
+  var blocked = await checkParticipantBlock();
+  if (blocked) { showBlockedScreen(); return; }
+
+  var gateOverlay = $('access-gate-overlay');
+  if (gateOverlay) gateOverlay.remove();
+
+  await ensureParticipantName();
+  showDeviceCodeInFooter();
+
   applyAdminUI();
   loadRecipes();
   loadCustomSitePhotos();
@@ -2734,7 +2984,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.nav-tab').forEach(function(tab) {
     tab.addEventListener('click', function() { switchTab(tab.dataset.tab); });
   });
-});
+}
 
 function showDetailLoading() {
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
