@@ -2399,6 +2399,11 @@ function renderIngredientsCalc(r) {
     '<button type="button" class="btn btn-ghost btn-sm ingr-calc-reset" onclick="resetIngrCalc()">↺ Сбросить к исходному рецепту</button>' +
   '</div>';
 }
+// Названия ингредиентов, которые в разделе "Тесто" считаются
+// одной общей жидкостью (лёд тает в воду) — см. ingrCalcRecompute.
+function isIceIngredient(name) { return /^лё?д\s*краш$/i.test((name || '').trim()); }
+function isWaterIngredient(name) { return /^вода$/i.test((name || '').trim()); }
+
 function ingrCalcRecompute(anchorIdx) {
   var parsed = window.__ingrCalc;
   if (!parsed) return;
@@ -2412,6 +2417,36 @@ function ingrCalcRecompute(anchorIdx) {
   var enteredUnit = select ? select.value : anchor.unit;
   var factorEntered = UNIT_FACTORS[enteredUnit] || 1;
   var factorOriginal = UNIT_FACTORS[anchor.unit] || 1;
+
+  // Особый случай — только для "Тесто": лёд краш и вода одного этапа
+  // считаются общей жидкостью. Меняем анкор — на столько же грамм,
+  // но в обратную сторону, сдвигаем его пару. Остальные ингредиенты
+  // калькулятора не трогаем.
+  var recipe = window.__ingrCalcRecipe;
+  if (recipe && recipe.type === 'dough' && (isIceIngredient(anchor.name) || isWaterIngredient(anchor.name))) {
+    var iceIdxs = [], waterIdxs = [];
+    parsed.forEach(function(p, idx) {
+      if (!p.matched) return;
+      if (isIceIngredient(p.name)) iceIdxs.push(idx);
+      else if (isWaterIngredient(p.name)) waterIdxs.push(idx);
+    });
+    var isAnchorIce = isIceIngredient(anchor.name);
+    var ownGroup = isAnchorIce ? iceIdxs : waterIdxs;
+    var pairGroup = isAnchorIce ? waterIdxs : iceIdxs;
+    var posInGroup = ownGroup.indexOf(anchorIdx);
+    var partnerIdx = posInGroup !== -1 ? pairGroup[posInGroup] : undefined;
+
+    if (partnerIdx !== undefined) {
+      var partner = parsed[partnerIdx];
+      var partnerFactor = UNIT_FACTORS[partner.unit] || 1;
+      var deltaGrams = (enteredVal * factorEntered) - (anchor.amount * factorOriginal);
+      var partnerNewGrams = Math.max(0, (partner.amount * partnerFactor) - deltaGrams);
+      var partnerInput = document.querySelector('.ingr-input[data-idx="' + partnerIdx + '"]');
+      if (partnerInput) partnerInput.value = formatQty(partnerNewGrams / partnerFactor);
+      return; // остальные ингредиенты не пересчитываем
+    }
+    // нет пары (например, у "Закваски" нет льда) — считаем как обычно ниже
+  }
 
   var ratio = (enteredVal * factorEntered) / (anchor.amount * factorOriginal);
   if (!isFinite(ratio) || ratio <= 0) return;
