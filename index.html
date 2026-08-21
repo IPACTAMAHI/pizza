@@ -92,6 +92,8 @@
     position: relative;
     z-index: 100;
     box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    max-width: 900px;
+    margin: 0 auto;
   }
   .header h1 {
     font-family: var(--font-display);
@@ -744,6 +746,9 @@
     .card-thumb { width: 70px; height: 70px; }
     .nav-tab { padding: 10px 4px; font-size: 13px; }
   }
+  @media (min-width: 901px) {
+    .header { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  }
 </style>
 </head>
 <body>
@@ -779,7 +784,7 @@
 </div>
 <!-- Подсказка для гостей: как войти в режим администратора -->
 <div class="admin-login-hint guest-only" id="admin-login-hint" onclick="toggleAdmin()">
-  🔒 Вы просматриваете рецепты как гость. Нажмите, чтобы войти по ключу GitHub и получить доступ к редактированию.
+  🔒 Режим просмотра. Нажмите, чтобы войти и получить доступ к редактированию.
 </div>
 
 <!-- TAB: CATEGORIES (фильтр по типу) -->
@@ -1892,24 +1897,26 @@ function renderVideoBlock(url, autoplay) {
   if (v.type === 'youtube') {
     var ytParams = autoplay ? 'autoplay=1&mute=1&playsinline=1&loop=1&playlist=' + v.id : 'loop=1&playlist=' + v.id;
     var ytUrl = v.embedUrl + '?' + ytParams;
-    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
+      + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не загрузилось? Открыть на YouTube →</a>';
   }
   if (v.type === 'vimeo') {
     var vimeoParams = autoplay ? 'autoplay=1&muted=1&loop=1' : 'loop=1';
     var vimeoUrl = v.embedUrl + '?' + vimeoParams;
-    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(vimeoUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
+      + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не загрузилось? Открыть на Vimeo →</a>';
   }
   if (v.type === 'drive') {
     // У предпросмотра Google Диска нет параметра автовоспроизведения/повтора —
     // запускается вручную одним нажатием на Play внутри плеера.
-    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
   }
 
   // Соцсети (Instagram, VK, Facebook, TikTok) — их плееры не поддерживают
   // автовоспроизведение/повтор через ссылку, включаются нажатием Play вручную.
   // Если автор закрыл пост от показа на чужих сайтах — есть запасная ссылка.
   if (v.type === 'tiktok' || v.type === 'instagram' || v.type === 'vk' || v.type === 'facebook') {
-    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+    return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(v.embedUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
       + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не отображается? Открыть оригинал →</a>';
   }
 
