@@ -1728,9 +1728,9 @@ async function testGithubConnection() {
 
   try {
     var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo);
-    var res = await fetch(apiUrl, {
+    var res = await fetchWithTimeout(apiUrl, {
       headers: { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' }
-    });
+    }, 15000);
 
     if (res.status === 401) {
       throw new Error('Токен неверный или устарел (401). Создайте новый токен и введите заново.');
@@ -1754,8 +1754,9 @@ async function testGithubConnection() {
     }
     showToast('✅ Соединение с GitHub работает');
   } catch (e) {
+    var message = (e && e.name === 'AbortError') ? 'Не удалось подключиться — истекло время ожидания. Проверьте интернет и попробуйте ещё раз.' : e.message;
     console.error('testGithubConnection error:', e);
-    if (resultEl) { resultEl.textContent = '🔴 ' + e.message; resultEl.style.color = '#ff9aa8'; }
+    if (resultEl) { resultEl.textContent = '🔴 ' + message; resultEl.style.color = '#ff9aa8'; }
     showToast('⚠️ Проверка не пройдена — подробности в админ-панели');
   }
 }
@@ -1903,7 +1904,28 @@ async function loadCustomSitePhotos() {
   });
 }
 
-async function syncToGithub(manual) {
+/* Обёртка над fetch с тайм-аутом — иначе на медленном интернете запрос
+   к GitHub может зависнуть без вообще какой-либо ошибки. */
+function fetchWithTimeout(url, opts, timeoutMs) {
+  var controller = new AbortController();
+  var timer = setTimeout(function() { controller.abort(); }, timeoutMs || 20000);
+  return fetch(url, Object.assign({}, opts, { signal: controller.signal }))
+    .finally(function() { clearTimeout(timer); });
+}
+
+/* Синхронизации ставятся в очередь, а не запускаются параллельно —
+   иначе два почти одновременных сохранения (например ручное "Сохранить"
+   и фоновая автосинхронизация) читают одну и ту же версию файла (sha),
+   и второй PUT-запрос GitHub отклоняет как устаревший (409 Conflict).
+   Это и есть самая частая причина "иногда падает синхронизация". */
+var ghSyncChain = Promise.resolve();
+function syncToGithub(manual) {
+  var run = ghSyncChain.then(function() { return doSyncToGithub(manual); });
+  ghSyncChain = run.catch(function() {}); // ошибка одного шага не должна блокировать очередь навсегда
+  return run;
+}
+
+async function doSyncToGithub(manual, isRetry) {
   var cfg = getGithubConfig();
   if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
     if (manual) showToast('⚠️ GitHub-синхронизация не настроена (кнопка ⚙️ в разделе "Добавить")');
@@ -1915,10 +1937,12 @@ async function syncToGithub(manual) {
     var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
 
     var sha = null;
-    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    var getRes = await fetchWithTimeout(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers }, 20000);
     if (getRes.status === 200) {
       var getData = await getRes.json();
       sha = getData.sha;
+    } else if (getRes.status === 401) {
+      throw new Error('Токен неверный или устарел (401). Обновите его в настройках синхронизации.');
     } else if (getRes.status !== 404) {
       throw new Error('Проверка файла: HTTP ' + getRes.status);
     }
@@ -1930,11 +1954,18 @@ async function syncToGithub(manual) {
     };
     if (sha) body.sha = sha;
 
-    var putRes = await fetch(apiUrl, {
+    var putRes = await fetchWithTimeout(apiUrl, {
       method: 'PUT',
       headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
       body: JSON.stringify(body)
-    });
+    }, 20000);
+
+    if (putRes.status === 409 && !isRetry) {
+      // Кто-то (или фоновая синхронизация чуть раньше) успел записать файл
+      // между нашим GET и PUT — забираем актуальный sha и пробуем ещё раз,
+      // один раз, без участия пользователя.
+      return doSyncToGithub(manual, true);
+    }
 
     if (!putRes.ok) {
       var errData = await putRes.json().catch(function() { return {}; });
@@ -1945,9 +1976,10 @@ async function syncToGithub(manual) {
     dataSource = 'github'; // то, что сейчас в recipes[], только что успешно опубликовано — это и есть актуальные данные
     if (manual) showToast('✅ Сохранено на GitHub');
   } catch (e) {
+    var message = (e && e.name === 'AbortError') ? 'Не удалось подключиться — истекло время ожидания. Проверьте интернет и попробуйте ещё раз.' : (e.message || String(e));
     console.error('GitHub sync error:', e);
-    localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: false, time: Date.now(), error: e.message }));
-    showToast('⚠️ Не удалось сохранить на GitHub: ' + e.message);
+    localStorage.setItem(GH_STATUS_KEY, JSON.stringify({ ok: false, time: Date.now(), error: message }));
+    showToast('⚠️ Не удалось сохранить на GitHub: ' + message);
   }
   if (currentTab === 'admin') renderAdminPanel();
 }
