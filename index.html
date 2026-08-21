@@ -2855,6 +2855,7 @@ function openDetail(id, autoplayVideo) {
 
   document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
   $('tab-detail').classList.add('active');
+  window.scrollTo(0, 0);
 
   var backBtn = document.querySelector('.detail-back');
   if (backBtn) backBtn.setAttribute('onclick', "closeDetail('" + originTab + "')");
@@ -3124,6 +3125,7 @@ function showDetailLoading() {
   document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
   var detailTab = $('tab-detail');
   if (detailTab) detailTab.classList.add('active');
+  window.scrollTo(0, 0);
   var body = $('detail-body');
   if (body) body.innerHTML =
     '<div class="skeleton skeleton-photo"></div>' +
