@@ -1895,7 +1895,7 @@ function renderVideoBlock(url, autoplay) {
   }
 
   if (v.type === 'youtube') {
-    var ytParams = autoplay ? 'autoplay=1&mute=1&playsinline=1&loop=1&playlist=' + v.id : 'loop=1&playlist=' + v.id;
+    var ytParams = autoplay ? 'autoplay=1&mute=1&playsinline=1&rel=0' : 'rel=0';
     var ytUrl = v.embedUrl + '?' + ytParams;
     return '<div class="video-embed-wrap ' + ratioClass + '"><iframe src="' + escAttr(ytUrl) + '" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
       + '<a class="video-fallback-link" href="' + escAttr(url) + '" target="_blank" rel="noopener">Видео не загрузилось? Открыть на YouTube →</a>';
