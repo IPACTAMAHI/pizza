@@ -2,7 +2,7 @@
 <html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f6f1e6">
+<meta name="theme-color" content="#0b0b0d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,29 +13,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f1e6;
-    --surface: #ffffff;
-    --card: #fffdf8;
-    --accent: #bf4038;
-    --accent-2: #b8892c;
-    --accent-grad: linear-gradient(135deg, #d9645a, #bf4038 55%, #8f2a24);
-    --text: #2b241e;
-    --text-muted: #564d42;
-    --success: #2f8f5b;
-    --warning: #b8781f;
+    --bg: #0b0b0d;
+    --surface: #18171a;
+    --card: #1c1b1e;
+    --accent: #e2564b;
+    --accent-2: #d9a54e;
+    --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 55%, #b23a30);
+    --text: #f7f4ef;
+    --text-muted: #b9b3ab;
+    --success: #3fb579;
+    --warning: #d9a54e;
 
     --font-display: 'Fraunces', 'Georgia', serif;
     --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    /* "Светлое стекло" — полупрозрачные белые поверхности поверх тёплого фона */
-    --glass-bg: rgba(255, 255, 255, .9);
-    --glass-bg-strong: rgba(255, 255, 255, .97);
-    --glass-border: rgba(43, 36, 30, .09);
+    /* Тёмные, почти непрозрачные поверхности — читаемость важнее эффекта стекла */
+    --glass-bg: rgba(24, 23, 26, .92);
+    --glass-bg-strong: rgba(28, 27, 30, .98);
+    --glass-border: rgba(255, 255, 255, .1);
     --glass-blur: 18px;
     --radius-lg: 22px;
     --radius-md: 16px;
-    --shadow-soft: 0 10px 30px rgba(90, 68, 45, .14);
-    --shadow-accent: 0 10px 26px rgba(191, 64, 56, .28);
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, .45);
+    --shadow-accent: 0 10px 26px rgba(226, 86, 75, .35);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,7 +45,7 @@
   body {
     font-family: var(--font-body);
     background:
-      linear-gradient(rgba(249,244,235,.93), rgba(249,244,235,.97)),
+      linear-gradient(rgba(10,10,12,.92), rgba(8,8,10,.97)),
       url(images/site-background.jpg);
     background-size: cover;
     background-position: center;
@@ -71,8 +71,8 @@
   }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(43,36,30,.16); border-radius: 10px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(43,36,30,.26); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.26); }
   h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: .1px; }
 
   /* ===== HEADER ===== */
@@ -91,7 +91,7 @@
     text-align: center;
     position: relative;
     z-index: 100;
-    box-shadow: 0 4px 24px rgba(60,45,30,.22);
+    box-shadow: 0 4px 24px rgba(0,0,0,.22);
     max-width: 900px;
     margin: 0 auto;
   }
@@ -156,7 +156,7 @@
   .search-clear {
     position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
     width: 28px; height: 28px; border-radius: 50%;
-    border: none; background: rgba(43,36,30,.06);
+    border: none; background: rgba(255,255,255,.06);
     color: var(--text-muted); font-size: 13px;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; touch-action: manipulation;
@@ -171,7 +171,7 @@
   .chip {
     padding: 9px 15px;
     border-radius: 20px;
-    background: rgba(255,255,255,.55);
+    background: rgba(255,255,255,.06);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     color: var(--text-muted);
@@ -184,7 +184,7 @@
     -webkit-tap-highlight-color: transparent;
     transition: transform .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
   }
-  .chip:hover { color: var(--text); border-color: rgba(43,36,30,.2); }
+  .chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
   .chip:active { transform: scale(.94); }
   .chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
 
@@ -278,7 +278,7 @@
   .nav-tab:active { transform: scale(.94); }
   .nav-tab[data-tab="admin"] { color: var(--accent); }
   .nav-tab.active { color: var(--accent); }
-  .nav-tab.active .nav-icon { background: rgba(191,64,56,.13); transform: translateY(-1px); }
+  .nav-tab.active .nav-icon { background: rgba(226,86,75,.13); transform: translateY(-1px); }
   .nav-tab.active .nav-label { border-bottom-color: var(--accent); }
 
   /* ===== CONTENT AREA ===== */
@@ -304,18 +304,11 @@
     -webkit-tap-highlight-color: transparent;
     animation: cardIn .35s ease backwards;
   }
-  .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); background: var(--glass-bg-strong); border-color: rgba(191,64,56,.28); }
+  .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); background: var(--glass-bg-strong); border-color: rgba(226,86,75,.28); }
   .recipe-card:active { transform: translateY(-1px) scale(.99); }
 
   /* Цветная полоска слева по типу рецепта — для быстрого сканирования списка */
   .recipe-card { border-left: 3px solid transparent; }
-  .recipe-card.ctype-pizza    { border-left-color: #b23a45; }
-  .recipe-card.ctype-pinsa    { border-left-color: #8a6033; }
-  .recipe-card.ctype-dough    { border-left-color: #5b6b85; }
-  .recipe-card.ctype-sauce    { border-left-color: #3d7a5c; }
-  .recipe-card.ctype-prep     { border-left-color: #7c5aa3; }
-  .recipe-card.ctype-focaccia { border-left-color: #a3821f; }
-  .recipe-card.ctype-burger   { border-left-color: #94502a; }
 
   @keyframes cardIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -326,8 +319,8 @@
     width: 92px; height: 92px; border-radius: 14px;
     object-fit: cover; flex-shrink: 0;
     background: var(--surface);
-    box-shadow: 0 4px 14px rgba(60,45,30,.18);
-    border: 1px solid rgba(43,36,30,.08);
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    border: 1px solid rgba(255,255,255,.08);
   }
   .card-info { flex: 1; min-width: 0; }
   .card-info h3 { font-family: var(--font-display); font-weight: 600; font-size: 18px; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -338,7 +331,7 @@
     width: 34px; height: 34px;
     border-radius: 50%;
     border: none;
-    background: rgba(43,36,30,.05);
+    background: rgba(255,255,255,.05);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     touch-action: manipulation;
@@ -349,11 +342,11 @@
     stroke: var(--text-muted); fill: none;
     stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
   }
-  .card-share-btn:hover { background: rgba(191,64,56,.16); }
+  .card-share-btn:hover { background: rgba(226,86,75,.16); }
   .card-share-btn:hover svg { stroke: var(--accent); }
   .badge {
     font-size: 12px; padding: 3px 10px;
-    border-radius: 20px; background: rgba(43,36,30,.09);
+    border-radius: 20px; background: rgba(255,255,255,.09);
     color: var(--text);
   }
   .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
@@ -370,18 +363,14 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     transition: transform .1s, background .15s;
-    box-shadow: 0 3px 10px rgba(191,64,56,.32);
+    box-shadow: 0 3px 10px rgba(226,86,75,.32);
   }
   .badge-video-active svg { width: 16px; height: 16px; fill: #fff; flex-shrink: 0; }
   .badge-video-active:hover { background: #d9645a !important; }
   .badge-video-active:active { transform: scale(0.95); }
 
-  /* Цветные бейджи произвольного тега/стиля — циклический набор цветов */
-  .tag-0 { background: rgba(91,107,133,.14);  color: #4a5872; }
-  .tag-1 { background: rgba(184,137,44,.16);  color: #8a5c14; }
-  .tag-2 { background: rgba(61,122,92,.15);   color: #256b46; }
-  .tag-3 { background: rgba(124,90,163,.15);  color: #6a4791; }
-  .tag-4 { background: rgba(45,120,163,.15);  color: #1f6685; }
+  /* Бейдж категории/стиля рецепта — единый нейтральный цвет на всех карточках */
+  .badge-style { background: rgba(217,165,78,.2); color: #ecd4a0; }
 
   /* ===== FORMS ===== */
   .form-group { margin-bottom: 14px; }
@@ -395,7 +384,7 @@
   input[type="text"], input[type="number"], textarea, select {
     width: 100%;
     padding: 12px 14px;
-    background: rgba(43,36,30,.035);
+    background: rgba(255,255,255,.035);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     color: var(--text);
@@ -405,20 +394,20 @@
     -webkit-appearance: none;
     appearance: none;
   }
-  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(191,64,56,.16); }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,86,75,.16); }
 
   /* Photo upload */
   .photo-upload {
     width: 100%; height: 160px;
     background: var(--surface);
-    border: 2px dashed rgba(43,36,30,.18);
+    border: 2px dashed rgba(255,255,255,.18);
     border-radius: 14px;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     cursor: pointer; transition: all .2s;
     position: relative;
   }
-  .photo-upload:hover { border-color: var(--accent); background: rgba(191,64,56,.05); }
+  .photo-upload:hover { border-color: var(--accent); background: rgba(226,86,75,.05); }
   .photo-upload img { max-width: 100%; max-height: 100%; object-fit: contain; }
   .photo-upload .placeholder-icon { font-size: 40px; margin-bottom: 6px; opacity: .5; }
   .photo-upload .placeholder-text { font-size: 13px; color: var(--text-muted); }
@@ -445,13 +434,13 @@
   .btn-success { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; box-shadow: 0 8px 22px rgba(46,204,113,.25); }
   .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
   .btn-ghost {
-    background: rgba(43,36,30,.04);
+    background: rgba(255,255,255,.04);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--glass-border);
     color: var(--text-muted);
   }
-  .btn-ghost:hover { background: rgba(43,36,30,.08); color: var(--text); }
+  .btn-ghost:hover { background: rgba(255,255,255,.08); color: var(--text); }
   .btn-sm { padding: 8px 16px; font-size: 13px; }
 
   /* Ingredients list in form */
@@ -473,7 +462,7 @@
   .row-move-btns button {
     width: 28px; height: 19px; padding: 0;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(43,36,30,.06); border: none; border-radius: 5px;
+    background: rgba(255,255,255,.06); border: none; border-radius: 5px;
     color: var(--text-muted); cursor: pointer;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
@@ -501,8 +490,8 @@
   .detail-photo {
     width: 100%; max-height: 320px; object-fit: cover;
     border-radius: var(--radius-lg); margin-bottom: 18px;
-    box-shadow: 0 12px 32px rgba(60,45,30,.22);
-    border: 1px solid rgba(43,36,30,.08);
+    box-shadow: 0 12px 32px rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.08);
   }
   .video-embed-wrap {
     position: relative;
@@ -541,7 +530,7 @@
   .qr-canvas-holder {
     display: inline-block; border-radius: 10px; background: #fff; padding: 10px;
     min-width: 180px; min-height: 180px;
-    box-shadow: 0 4px 16px rgba(60,45,30,.14);
+    box-shadow: 0 4px 16px rgba(0,0,0,.14);
   }
   .qr-canvas-holder img, .qr-canvas-holder canvas { display: block; }
   .qr-share-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
@@ -567,14 +556,14 @@
     font-family: var(--font-display); font-weight: 600;
     font-size: 20px; margin: 26px 0 14px;
     padding-bottom: 8px; display: flex; align-items: center; gap: 8px;
-    border-bottom: 2px solid rgba(191,64,56,.3);
+    border-bottom: 2px solid rgba(226,86,75,.3);
   }
   .section-title::before {
     content: '';
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent-grad);
     flex-shrink: 0;
-    box-shadow: 0 0 0 4px rgba(191,64,56,.14);
+    box-shadow: 0 0 0 4px rgba(226,86,75,.14);
   }
 
   .ingredients-list li,
@@ -590,12 +579,12 @@
   .ingr-row {
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; padding: 10px 10px;
-    border-bottom: 1px solid rgba(43,36,30,.08);
+    border-bottom: 1px solid rgba(255,255,255,.08);
     border-radius: 10px;
     font-size: 15px;
     transition: background .15s ease;
   }
-  .ingr-row:hover { background: rgba(43,36,30,.03); }
+  .ingr-row:hover { background: rgba(255,255,255,.03); }
   .ingr-row:last-of-type { border-bottom: none; }
   .ingr-row-plain {
     color: var(--text-muted); font-size: 13.5px;
@@ -637,7 +626,7 @@
     width: 28px; height: 28px;
     border-radius: 50%;
     background: var(--accent-grad);
-    box-shadow: 0 4px 10px rgba(191,64,56,.3);
+    box-shadow: 0 4px 10px rgba(226,86,75,.3);
     display: flex; align-items: center; justify-content: center;
     color: #fff;
     font-family: var(--font-body);
@@ -647,7 +636,7 @@
     content: '';
     position: absolute; left: 13px; top: 30px; bottom: -14px;
     width: 2px;
-    background: linear-gradient(rgba(191,64,56,.3), rgba(191,64,56,0));
+    background: linear-gradient(rgba(226,86,75,.3), rgba(226,86,75,0));
   }
   .steps-list li { cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: opacity .2s ease; }
   .steps-list li.step-done { opacity: .5; text-decoration: line-through; text-decoration-color: var(--text-muted); }
@@ -655,7 +644,7 @@
 
   /* ===== SKELETON LOADING ===== */
   .skeleton {
-    background: linear-gradient(100deg, rgba(43,36,30,.06) 30%, rgba(43,36,30,.13) 50%, rgba(43,36,30,.06) 70%);
+    background: linear-gradient(100deg, rgba(255,255,255,.06) 30%, rgba(255,255,255,.13) 50%, rgba(255,255,255,.06) 70%);
     background-size: 200% 100%;
     animation: shimmer 1.4s ease-in-out infinite;
     border-radius: 10px;
@@ -673,7 +662,7 @@
     padding: 60px 20px;
     color: var(--text-muted);
   }
-  .empty-icon { font-size: 60px; margin-bottom: 14px; opacity: .55; filter: drop-shadow(0 6px 14px rgba(60,45,30,.2)); }
+  .empty-icon { font-size: 60px; margin-bottom: 14px; opacity: .55; filter: drop-shadow(0 6px 14px rgba(0,0,0,.2)); }
   .empty-state h3 { font-family: var(--font-display); font-style: italic; }
 
   /* ===== TOAST ===== */
@@ -714,7 +703,7 @@
 
   .modal-overlay {
     position: fixed; inset: 0;
-    background: rgba(20,15,10,.55);
+    background: rgba(0,0,0,.6);
     display: none;
     align-items: center; justify-content: center;
     z-index: 2000;
@@ -731,7 +720,7 @@
     padding: 22px;
     max-width: 380px;
     width: 100%;
-    box-shadow: 0 10px 40px rgba(60,45,30,.28);
+    box-shadow: 0 10px 40px rgba(0,0,0,.28);
     animation: modalIn .2s ease;
   }
   @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -739,10 +728,10 @@
   .modal-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 14px; white-space: pre-line; line-height: 1.5; }
   .modal-box input {
     width: 100%; padding: 12px 14px; font-size: 16px;
-    background: var(--surface); border: 1px solid rgba(43,36,30,.14);
+    background: var(--surface); border: 1px solid rgba(255,255,255,.14);
     border-radius: 10px; color: var(--text); margin-bottom: 4px;
   }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
 
   /* ===== RESPONSIVE ===== */
   @media (max-width: 500px) {
@@ -881,6 +870,21 @@
 
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
+      <span>📤 Telegram для приёма кодов</span>
+    </div>
+    <p class="admin-panel-hint">
+      Укажите свой юзернейм в Telegram (без @). Тогда новый гость при первом входе увидит кнопку
+      «Отправить в Telegram» — она одним нажатием откроет ваш чат с готовым сообщением (имя + код устройства),
+      останется только скопировать их в поле «Добавить» ниже.
+    </p>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="admin-telegram-username" placeholder="username" style="flex:1">
+      <button class="btn btn-primary btn-sm" onclick="saveAdminTelegramUsername()">💾 Сохранить</button>
+    </div>
+  </div>
+
+  <div class="admin-panel-card admin-only">
+    <div class="admin-panel-row">
       <span>👥 Участники (доступ по ссылке)</span>
       <button class="btn btn-ghost btn-sm" onclick="addParticipantManually()">+ Добавить</button>
     </div>
@@ -902,7 +906,7 @@
   </div>
 
   <div id="add-form-fields">
-  <div id="gh-not-configured-warning" style="display:none;background:rgba(191,64,56,.12);border:1px solid rgba(191,64,56,.35);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+  <div id="gh-not-configured-warning" style="display:none;background:rgba(226,86,75,.12);border:1px solid rgba(226,86,75,.35);border-radius:12px;padding:14px 16px;margin-bottom:20px">
     <strong>⚠️ На этом устройстве не настроена синхронизация с GitHub.</strong>
     <p style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5">
       Рецепт сохранится только в этом браузере и может пропасть при следующем заходе
@@ -997,7 +1001,7 @@
     <button class="btn btn-ghost" onclick="switchTab('categories')">Отмена</button>
   </div>
 
-  <div style="margin-top:28px;padding-top:16px;border-top:1px solid rgba(43,36,30,.12);text-align:center">
+  <div style="margin-top:28px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);text-align:center">
     <button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Синхронизация с GitHub</button>
     <p style="color:var(--text-muted);font-size:12px;margin-top:8px">
       После настройки каждое сохранение будет автоматически публиковаться на GitHub.
@@ -1118,6 +1122,8 @@ function showModal(opts) {
 
     titleEl.textContent = opts.title || '';
     msgEl.textContent = opts.message || '';
+    okBtn.textContent = opts.okText || 'ОК';
+    cancelBtn.textContent = opts.cancelText || 'Отмена';
 
     if (opts.withInput) {
       inputEl.style.display = '';
@@ -1210,7 +1216,9 @@ async function ensureParticipantName() {
     'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом.',
     '', '👋 Добро пожаловать в Route 20'
   );
-  localStorage.setItem(DEVICE_NAME_KEY, (entered && entered.trim()) ? entered.trim() : 'Без имени');
+  var finalName = (entered && entered.trim()) ? entered.trim() : 'Без имени';
+  localStorage.setItem(DEVICE_NAME_KEY, finalName);
+  await offerTelegramSend(finalName);
 }
 
 function loadParticipantsLocal() {
@@ -1282,6 +1290,129 @@ async function syncParticipantsToGithub() {
     console.error('syncParticipantsToGithub error:', e);
     showToast('⚠️ Не удалось сохранить список участников: ' + e.message);
     return false;
+  }
+}
+
+/* ================================================================
+   НАСТРОЙКИ САЙТА (сейчас — только Telegram-юзернейм администратора)
+   ================================================================
+   Хранится в site-config.json рядом с recipes.json/participants.json —
+   читают все (без авторизации), пишет только администратор (через
+   уже настроенный GitHub-токен). Нужно, чтобы гость при первом входе
+   мог одним нажатием отправить своё имя и код устройства администратору
+   в Telegram, не спрашивая его лично.
+   ================================================================ */
+const SITE_CONFIG_KEY = 'r20_site_config_cache';
+const SITE_CONFIG_PATH = 'site-config.json';
+
+var siteConfig = { adminTelegram: '' };
+
+function loadSiteConfigLocal() {
+  try {
+    var raw = localStorage.getItem(SITE_CONFIG_KEY);
+    if (raw) siteConfig = Object.assign({ adminTelegram: '' }, JSON.parse(raw));
+  } catch (e) {}
+}
+
+function saveSiteConfigLocal() {
+  try { localStorage.setItem(SITE_CONFIG_KEY, JSON.stringify(siteConfig)); } catch (e) {}
+}
+
+async function syncSiteConfigFromGithub() {
+  try {
+    var res = await fetch('./' + SITE_CONFIG_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return; // файла ещё нет (Telegram не настроен) или открыто локально — тихий фолбэк
+    var data = await res.json();
+    if (data && typeof data === 'object') {
+      siteConfig = Object.assign({ adminTelegram: '' }, data);
+      saveSiteConfigLocal();
+      updateTelegramConfigField();
+    }
+  } catch (e) {
+    console.warn('syncSiteConfigFromGithub: используются локальные данные', e);
+  }
+}
+
+async function syncSiteConfigToGithub() {
+  var cfg = getGithubConfig();
+  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
+    showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
+    return false;
+  }
+  try {
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + SITE_CONFIG_PATH;
+    var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
+
+    var sha = null;
+    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    if (getRes.status === 200) {
+      var getData = await getRes.json();
+      sha = getData.sha;
+    } else if (getRes.status !== 404) {
+      throw new Error('Проверка файла: HTTP ' + getRes.status);
+    }
+
+    var body = {
+      message: 'Обновление настроек сайта (' + new Date().toLocaleString('ru-RU') + ')',
+      content: b64EncodeUnicode(JSON.stringify(siteConfig, null, 2)),
+      branch: cfg.branch
+    };
+    if (sha) body.sha = sha;
+
+    var putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+      body: JSON.stringify(body)
+    });
+
+    if (!putRes.ok) {
+      var errData = await putRes.json().catch(function() { return {}; });
+      throw new Error(errData.message || ('HTTP ' + putRes.status));
+    }
+
+    saveSiteConfigLocal();
+    return true;
+  } catch (e) {
+    console.error('syncSiteConfigToGithub error:', e);
+    showToast('⚠️ Не удалось сохранить настройки: ' + e.message);
+    return false;
+  }
+}
+
+function updateTelegramConfigField() {
+  var input = $('admin-telegram-username');
+  if (input && document.activeElement !== input) input.value = siteConfig.adminTelegram || '';
+}
+
+async function saveAdminTelegramUsername() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var input = $('admin-telegram-username');
+  if (!input) return;
+  var val = input.value.trim().replace(/^@/, '');
+  siteConfig.adminTelegram = val;
+  showToast('⏳ Сохраняю...');
+  var ok = await syncSiteConfigToGithub();
+  showToast(ok ? '✅ Telegram-юзернейм сохранён' : '⚠️ Сохранено только на этом устройстве');
+}
+
+/* Предлагаем гостю после ввода имени отправить его имя и код устройства
+   администратору в Telegram одним нажатием — чтобы не диктовать код
+   голосом. Работает только если администратор один раз указал свой
+   Telegram-юзернейм в админ-панели. */
+async function offerTelegramSend(name) {
+  if (!siteConfig.adminTelegram) return;
+  var code = getDeviceId();
+  var text = 'Здравствуйте! Хочу получить доступ к книге рецептов Route 20 🍕\nИмя: ' + name + '\nКод устройства: ' + code;
+  var send = await showModal({
+    title: '📤 Сообщить администратору',
+    message: 'Отправьте это сообщение администратору в Telegram одним нажатием — он скопирует имя и код в раздел «Участники».\n\nИмя: ' + name + '\nКод устройства: ' + code,
+    withInput: false,
+    okText: '📤 Отправить в Telegram',
+    cancelText: 'Позже'
+  });
+  if (send) {
+    var url = 'https://t.me/' + encodeURIComponent(siteConfig.adminTelegram) + '?text=' + encodeURIComponent(text);
+    window.open(url, '_blank', 'noopener');
   }
 }
 
@@ -1907,7 +2038,7 @@ function switchTab(name) {
   currentTab = name;
 
   if (name === 'categories') renderCategoriesList();
-  if (name === 'admin') { renderAdminPanel(); renderParticipantsList(); }
+  if (name === 'admin') { renderAdminPanel(); renderParticipantsList(); updateTelegramConfigField(); }
   if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
 }
 
@@ -2406,12 +2537,6 @@ async function saveRecipe() {
 /* ================================================================
    RENDER LIST TABS (Pizza / Pinsa / Dough / Sauces)
    ================================================================ */
-function tagColorClass(text) {
-  var sum = 0;
-  for (var i = 0; i < text.length; i++) sum += text.charCodeAt(i);
-  return 'tag-' + (sum % 5);
-}
-
 function renderCards(containerEl, countEl, items, emptyText) {
   countEl.textContent = 'Всего: ' + items.length;
 
@@ -2436,7 +2561,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
       + '  <h3>' + esc(r.name) + '</h3>\n'
       + '  <div class="card-meta">' +
         '<span class="badge type-badge ' + typeClass + '">' + (typeNames[r.type] || 'Пицца') + '</span>' +
-        (r.style ? '<span class="badge ' + tagColorClass(r.style) + '">' + esc(r.style) + '</span>' : '') +
+        (r.style ? '<span class="badge badge-style">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + formatWeight(r.weight) + '</span>' : '') +
         (getRecipeVideos(r).length ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5"></circle><path d="M10 8l6 4-6 4V8z"></path></svg>Видео</span>' : '') +
@@ -2642,7 +2767,7 @@ function renderIngredientsCalc(r) {
 }
 // Названия ингредиентов, которые в разделе "Тесто" считаются
 // одной общей жидкостью (лёд тает в воду) — см. ingrCalcRecompute.
-function isIceIngredient(name) { return /^лё?д\s*краш$/i.test((name || '').trim()); }
+function isIceIngredient(name) { return /^л[её]д\s*краш$/i.test((name || '').trim()); }
 function isWaterIngredient(name) { return /^вода$/i.test((name || '').trim()); }
 
 function ingrCalcRecompute(anchorIdx) {
@@ -2737,7 +2862,6 @@ function openDetail(id, autoplayVideo) {
   var body = $('detail-body');
   body.innerHTML =
     (r.photo ? '<img class="detail-photo" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="" onclick="openPhotoLightbox(this.src)" style="cursor:zoom-in">' : '') +
-    getRecipeVideos(r).map(function(v) { return renderVideoBlock(v, !!autoplayVideo); }).join('') +
     '<h2 class="detail-title">' + esc(r.name) + '</h2>' +
     '<div class="detail-meta">' +
       (r.style ? '<span class="detail-badge">🏷 ' + esc(r.style) + '</span>' : '') +
@@ -2754,6 +2878,11 @@ function openDetail(id, autoplayVideo) {
     + '<ol class="steps-list">' +
       (r.steps.map ? r.steps.map(function(s) { return '<li onclick="this.classList.toggle(\'step-done\')">' + esc(s) + '</li>'; }).join('') : '') +
     '</ol>' +
+
+    (getRecipeVideos(r).length ?
+      '<div class="section-title">Видео:</div>\n' +
+      getRecipeVideos(r).map(function(v) { return renderVideoBlock(v, !!autoplayVideo); }).join('')
+      : '') +
 
     '<div class="qr-share-card">' +
       '<h3>📤 Поделиться этим рецептом</h3>' +
@@ -2948,13 +3077,17 @@ document.addEventListener('DOMContentLoaded', function() { initApp(); });
 
 async function initApp() {
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
+  loadSiteConfigLocal();
 
-  var blocked = await checkParticipantBlock();
+  var blockedPromise = checkParticipantBlock();
+  var configPromise = syncSiteConfigFromGithub();
+  var blocked = await blockedPromise;
   if (blocked) { showBlockedScreen(); return; }
 
   var gateOverlay = $('access-gate-overlay');
   if (gateOverlay) gateOverlay.remove();
 
+  await configPromise; // нужен ДО приглашения ввести имя — от него зависит, предлагать ли отправку в Telegram
   await ensureParticipantName();
   showDeviceCodeInFooter();
 
