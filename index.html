@@ -706,7 +706,7 @@
     background: rgba(0,0,0,.6);
     display: none;
     align-items: center; justify-content: center;
-    z-index: 2000;
+    z-index: 100000;
     padding: 20px;
     padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   }
@@ -885,15 +885,25 @@
 
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
-      <span>👥 Участники (доступ по ссылке)</span>
-      <button class="btn btn-ghost btn-sm" onclick="addParticipantManually()">+ Добавить</button>
+      <span>👥 Участники (доступ по одобрению)</span>
+      <button class="btn btn-ghost btn-sm" onclick="addParticipantManually()">+ Добавить и одобрить</button>
     </div>
     <p class="admin-panel-hint">
-      Когда новый человек первый раз откроет сайт, ему предложат представиться, и внизу экрана
-      у него появится персональный код устройства. Спросите у него этот код и имя, и добавьте сюда —
-      тогда сможете в любой момент закрыть именно этому человеку доступ, не трогая остальных.
+      Теперь доступ закрыт по умолчанию: новый человек, открыв сайт, увидит «Ожидайте подтверждения
+      администратора» и не сможет ничего посмотреть, пока вы не добавите его сюда. Как только он
+      представится (и, если указан Telegram выше, отправит вам заявку), возьмите из его сообщения
+      код и имя и нажмите «+ Добавить и одобрить» — его страница сама, без перезагрузки,
+      откроет доступ в течение 10 секунд.
     </p>
+    <div id="participants-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="participants-list" style="margin-top:10px"></div>
+    <p class="admin-panel-hint" style="margin-top:10px">
+      <strong>🚫 «Блок»</strong> закрывает доступ уже одобренному человеку, но запись остаётся в списке —
+      в любой момент можно нажать «🔓 Открыть» и вернуть доступ обратно, ничего заново спрашивать не нужно.<br>
+      <strong>✕</strong> — это не разбан, а полное удаление записи из списка (например, если добавили по ошибке).
+      После удаления «отменить» уже нельзя — если понадобится снова дать доступ этому человеку,
+      его придётся добавить заново, попросив код ещё раз.
+    </p>
   </div>
 </div>
 <!-- TAB: ADD / EDIT -->
@@ -1124,6 +1134,7 @@ function showModal(opts) {
     msgEl.textContent = opts.message || '';
     okBtn.textContent = opts.okText || 'ОК';
     cancelBtn.textContent = opts.cancelText || 'Отмена';
+    cancelBtn.style.display = opts.hideCancel ? 'none' : '';
 
     if (opts.withInput) {
       inputEl.style.display = '';
@@ -1169,23 +1180,30 @@ function customConfirm(message, title) {
 /* ================================================================
    УЧАСТНИКИ — КТО ПОЛЬЗУЕТСЯ САЙТОМ ПО ССЫЛКЕ / QR
 
-   Ссылка/QR общие на всех — персональных ссылок нет. Вместо этого:
-   1) при первом визите браузер генерирует себе случайный "код устройства"
-      и просит представиться (не пароль, просто имя для администратора);
-   2) администратор вручную добавляет пару "имя + код" в админ-панели
-      (код участник называет лично, глядя на низ экрана своего телефона) —
-      это единственный способ передать запись в общий список, так как
-      обычный посетитель не имеет прав на запись в GitHub, только
-      администратор;
-   3) список хранится в participants.json рядом с recipes.json — читают
-      его все (чтобы проверить, не заблокировали ли именно их устройство),
-      а изменяют только вы, через уже настроенный GitHub-токен.
+   Ссылка/QR общие на всех — персональных ссылок нет. Вместо этого
+   доступ теперь "по одобрению" (allowlist), а не "по умолчанию открыт,
+   потом можно закрыть":
+   1) при первом визите браузер генерирует себе "код устройства" и
+      просит представиться (не пароль, просто имя для администратора);
+      если у администратора настроен Telegram — гостя ещё попросят
+      одним нажатием отправить это имя и код администратору;
+   2) дальше гость видит "Ожидайте подтверждения администратора" —
+      сайт для него ещё не открыт;
+   3) администратор вручную добавляет пару "имя + код" в админ-панели —
+      это единственный способ передать запись в общий список (обычный
+      посетитель не имеет прав на запись в GitHub, только администратор) —
+      и это же действие является одобрением: как только запись появилась
+      в списке, экран ожидания сам, без участия гостя, обновляется и
+      открывает доступ (проверка идёт каждые 10 секунд);
+   4) список хранится в participants.json рядом с recipes.json — читают
+      его все (чтобы проверить свой статус), а изменяют только вы, через
+      уже настроенный GitHub-токен.
 
-   ВАЖНО (честно, без иллюзий): это не защита от копирования контента,
-   пока доступ активен, и не помешает передать ссылку до момента блокировки.
-   Это способ увидеть, кто пользуется сайтом, и быстро закрыть доступ
-   конкретному человеку, когда он уволился, — как только у него на
-   телефоне будет интернет и сайт обновит данные.
+   ВАЖНО (честно, без иллюзий): это не защита от копирования контента
+   после того как доступ уже открыт, и не помешает передать ссылку
+   человеку с одобренным устройством. Это способ решать, КОМУ открыть
+   доступ, видеть, кто пользуется сайтом, и в любой момент закрыть
+   доступ конкретному человеку.
    ================================================================ */
 const DEVICE_ID_KEY = 'r20_device_id';
 const DEVICE_NAME_KEY = 'r20_device_name';
@@ -1203,22 +1221,70 @@ function getDeviceId() {
   return id;
 }
 
+/* ================================================================
+   "ОТПЕЧАТОК" УСТРОЙСТВА — доп. подпись браузера (рендер canvas,
+   экран, часовой пояс, число ядер и т.п.), которая остаётся ТОЙ ЖЕ
+   даже если очистить localStorage или открыть сайт в приватной/
+   инкогнито-вкладке — то есть даже переход в другую вкладку не
+   создаёт "нового человека" для системы блокировки.
+   Честно: это не железная защита — на другом браузере или на
+   устройстве с антифингерпринт-настройками отпечаток будет другим.
+   Но от обычной попытки "зайти по-новой" через инкогнито защищает.
+   ================================================================ */
+function getDeviceFingerprint() {
+  try {
+    var canvas = document.createElement('canvas');
+    var ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(0, 0, 80, 20);
+    ctx.fillStyle = '#069';
+    ctx.fillText('r20-fp', 2, 2);
+    var raw = [
+      navigator.userAgent || '',
+      navigator.language || '',
+      screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || '',
+      canvas.toDataURL()
+    ].join('||');
+    var hash = 0;
+    for (var i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0; }
+    return (hash >>> 0).toString(16);
+  } catch (e) {
+    return '';
+  }
+}
+
+function getCombinedAccessCode() {
+  var fp = getDeviceFingerprint();
+  return getDeviceId() + (fp ? ('·' + fp) : '');
+}
+
 function showDeviceCodeInFooter() {
   var el = $('device-code-footer');
-  if (el) el.textContent = 'Код устройства: ' + getDeviceId();
+  if (el) el.textContent = 'Код устройства: ' + getCombinedAccessCode();
 }
 
 async function ensureParticipantName() {
   if (isAdmin()) return; // администратора эта система не касается — у него доступ через GitHub-ключ
   var name = localStorage.getItem(DEVICE_NAME_KEY);
-  if (name) return;
-  var entered = await customPrompt(
-    'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом.',
-    '', '👋 Добро пожаловать в Route 20'
-  );
-  var finalName = (entered && entered.trim()) ? entered.trim() : 'Без имени';
+  if (name) return; // уже представлялись раньше в этом браузере
+
+  var entered = '';
+  while (!entered || !entered.trim()) {
+    entered = await showModal({
+      title: '👋 Добро пожаловать в Route 20',
+      message: 'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом. Продолжить можно только после того, как вы представитесь.',
+      withInput: true,
+      hideCancel: true,
+      okText: 'Продолжить'
+    });
+  }
+  var finalName = entered.trim();
   localStorage.setItem(DEVICE_NAME_KEY, finalName);
-  await offerTelegramSend(finalName);
+  await requireTelegramSend(finalName);
 }
 
 function loadParticipantsLocal() {
@@ -1247,50 +1313,75 @@ async function syncParticipantsFromGithub() {
   }
 }
 
-async function syncParticipantsToGithub() {
+/* Общая устойчивая запись JSON-файла в GitHub: с тайм-аутом на случай
+   медленного интернета и автоматическим повтором один раз при
+   конфликте версий (409) — той же проблемой, что чинили для
+   recipes.json (см. doSyncToGithub). Используется для participants.json
+   и site-config.json, чтобы не дублировать эту логику дважды. */
+async function putJsonToGithub(path, dataObj, commitMessage, isRetry) {
   var cfg = getGithubConfig();
   if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
-    showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
-    return false;
+    return { ok: false, error: 'GitHub-синхронизация не настроена (⚙️ в разделе «Добавить»)' };
   }
   try {
-    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + PARTICIPANTS_PATH;
+    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + path;
     var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
 
     var sha = null;
-    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
+    var getRes = await fetchWithTimeout(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers }, 20000);
     if (getRes.status === 200) {
       var getData = await getRes.json();
       sha = getData.sha;
+    } else if (getRes.status === 401) {
+      return { ok: false, error: 'Токен неверный или устарел (401). Обновите его в настройках синхронизации.' };
     } else if (getRes.status !== 404) {
-      throw new Error('Проверка файла: HTTP ' + getRes.status);
+      return { ok: false, error: 'Проверка файла: HTTP ' + getRes.status };
     }
 
-    var body = {
-      message: 'Обновление списка участников (' + new Date().toLocaleString('ru-RU') + ')',
-      content: b64EncodeUnicode(JSON.stringify(participants, null, 2)),
-      branch: cfg.branch
-    };
+    var body = { message: commitMessage, content: b64EncodeUnicode(JSON.stringify(dataObj, null, 2)), branch: cfg.branch };
     if (sha) body.sha = sha;
 
-    var putRes = await fetch(apiUrl, {
+    var putRes = await fetchWithTimeout(apiUrl, {
       method: 'PUT',
       headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
       body: JSON.stringify(body)
-    });
+    }, 20000);
 
+    if (putRes.status === 409 && !isRetry) {
+      return putJsonToGithub(path, dataObj, commitMessage, true); // кто-то успел записать первее — берём свежий sha и пробуем ещё раз
+    }
     if (!putRes.ok) {
       var errData = await putRes.json().catch(function() { return {}; });
-      throw new Error(errData.message || ('HTTP ' + putRes.status));
+      return { ok: false, error: errData.message || ('HTTP ' + putRes.status) };
     }
-
-    saveParticipantsLocal();
-    return true;
+    return { ok: true };
   } catch (e) {
-    console.error('syncParticipantsToGithub error:', e);
-    showToast('⚠️ Не удалось сохранить список участников: ' + e.message);
-    return false;
+    var msg = (e && e.name === 'AbortError') ? 'Истекло время ожидания — проверьте интернет и попробуйте ещё раз.' : (e.message || String(e));
+    return { ok: false, error: msg };
   }
+}
+
+var ghWriteQueues = {}; // path -> цепочка промисов, чтобы параллельные записи одного файла не гонялись друг с другом
+function queueGithubWrite(key, taskFn) {
+  var chain = ghWriteQueues[key] || Promise.resolve();
+  var run = chain.then(taskFn, taskFn);
+  ghWriteQueues[key] = run.catch(function() {});
+  return run;
+}
+
+function syncParticipantsToGithub() {
+  return queueGithubWrite('participants', async function() {
+    var cfg = getGithubConfig();
+    if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
+      showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
+      return false;
+    }
+    var res = await putJsonToGithub(PARTICIPANTS_PATH, participants, 'Обновление списка участников (' + new Date().toLocaleString('ru-RU') + ')');
+    if (res.ok) { saveParticipantsLocal(); return true; }
+    console.error('syncParticipantsToGithub error:', res.error);
+    showToast('⚠️ Не удалось сохранить список участников: ' + res.error);
+    return false;
+  });
 }
 
 /* ================================================================
@@ -1333,50 +1424,19 @@ async function syncSiteConfigFromGithub() {
   }
 }
 
-async function syncSiteConfigToGithub() {
-  var cfg = getGithubConfig();
-  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
-    showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
-    return false;
-  }
-  try {
-    var apiUrl = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents/' + SITE_CONFIG_PATH;
-    var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
-
-    var sha = null;
-    var getRes = await fetch(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers });
-    if (getRes.status === 200) {
-      var getData = await getRes.json();
-      sha = getData.sha;
-    } else if (getRes.status !== 404) {
-      throw new Error('Проверка файла: HTTP ' + getRes.status);
+function syncSiteConfigToGithub() {
+  return queueGithubWrite('site-config', async function() {
+    var cfg = getGithubConfig();
+    if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
+      showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
+      return false;
     }
-
-    var body = {
-      message: 'Обновление настроек сайта (' + new Date().toLocaleString('ru-RU') + ')',
-      content: b64EncodeUnicode(JSON.stringify(siteConfig, null, 2)),
-      branch: cfg.branch
-    };
-    if (sha) body.sha = sha;
-
-    var putRes = await fetch(apiUrl, {
-      method: 'PUT',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
-      body: JSON.stringify(body)
-    });
-
-    if (!putRes.ok) {
-      var errData = await putRes.json().catch(function() { return {}; });
-      throw new Error(errData.message || ('HTTP ' + putRes.status));
-    }
-
-    saveSiteConfigLocal();
-    return true;
-  } catch (e) {
-    console.error('syncSiteConfigToGithub error:', e);
-    showToast('⚠️ Не удалось сохранить настройки: ' + e.message);
+    var res = await putJsonToGithub(SITE_CONFIG_PATH, siteConfig, 'Обновление настроек сайта (' + new Date().toLocaleString('ru-RU') + ')');
+    if (res.ok) { saveSiteConfigLocal(); return true; }
+    console.error('syncSiteConfigToGithub error:', res.error);
+    showToast('⚠️ Не удалось сохранить настройки: ' + res.error);
     return false;
-  }
+  });
 }
 
 function updateTelegramConfigField() {
@@ -1399,28 +1459,91 @@ async function saveAdminTelegramUsername() {
    администратору в Telegram одним нажатием — чтобы не диктовать код
    голосом. Работает только если администратор один раз указал свой
    Telegram-юзернейм в админ-панели. */
-async function offerTelegramSend(name) {
-  if (!siteConfig.adminTelegram) return;
-  var code = getDeviceId();
+/* Открыть Telegram напрямую в приложении (минуя браузерную страницу
+   t.me с кнопкой "Открыть в приложении"), с сообщением уже готовым
+   к отправке. Если приложение не установлено (или это десктоп без
+   Telegram) — через короткую паузу тихо откроется веб-версия. */
+function openTelegramDeepLink(username, text) {
+  var appUrl = 'tg://resolve?domain=' + encodeURIComponent(username) + '&text=' + encodeURIComponent(text);
+  var webUrl = 'https://t.me/' + encodeURIComponent(username) + '?text=' + encodeURIComponent(text);
+
+  var fellBack = false;
+  function toWeb() {
+    if (fellBack) return;
+    fellBack = true;
+    window.open(webUrl, '_blank', 'noopener');
+  }
+  document.addEventListener('visibilitychange', function onVis() {
+    if (document.visibilityState === 'hidden') {
+      fellBack = true; // страница спряталась — значит приложение открылось, веб-фолбэк не нужен
+      document.removeEventListener('visibilitychange', onVis);
+    }
+  }, { once: true });
+
+  window.location.href = appUrl;
+  setTimeout(toWeb, 1200);
+}
+
+/* Обязательный шаг перед просмотром: гость должен отправить
+   администратору своё имя и код устройства в Telegram. Честно: с
+   этой страницы нельзя технически подтвердить, что сообщение реально
+   дошло — мы просто просим подтвердить это нажатием кнопки и даём
+   возможность открыть Telegram ещё раз, если оно не отправилось. */
+async function requireTelegramSend(name) {
+  if (!siteConfig.adminTelegram) return; // администратор не указал Telegram — этот шаг попросту недоступен, пропускаем
+
+  var code = getCombinedAccessCode();
   var text = 'Здравствуйте! Хочу получить доступ к книге рецептов Route 20 🍕\nИмя: ' + name + '\nКод устройства: ' + code;
-  var send = await showModal({
-    title: '📤 Сообщить администратору',
-    message: 'Отправьте это сообщение администратору в Telegram одним нажатием — он скопирует имя и код в раздел «Участники».\n\nИмя: ' + name + '\nКод устройства: ' + code,
-    withInput: false,
-    okText: '📤 Отправить в Telegram',
-    cancelText: 'Позже'
-  });
-  if (send) {
-    var url = 'https://t.me/' + encodeURIComponent(siteConfig.adminTelegram) + '?text=' + encodeURIComponent(text);
-    window.open(url, '_blank', 'noopener');
+  var messagePreview = 'Прежде чем открыть книгу рецептов, отправьте администратору это сообщение в Telegram — так он сможет одобрить вам доступ.\n\nИмя: ' + name + '\nКод устройства: ' + code;
+
+  var confirmed = false;
+  while (!confirmed) {
+    await showModal({
+      title: '📤 Один короткий шаг',
+      message: messagePreview,
+      withInput: false,
+      hideCancel: true,
+      okText: '📤 Открыть Telegram и отправить'
+    });
+    openTelegramDeepLink(siteConfig.adminTelegram, text);
+
+    confirmed = await showModal({
+      title: 'Сообщение отправлено?',
+      message: 'Нажмите «Да, отправил(а)», когда сообщение ушло администратору — тогда откроется книга рецептов.',
+      withInput: false,
+      okText: '✅ Да, отправил(а)',
+      cancelText: '↩️ Открыть Telegram ещё раз'
+    });
   }
 }
 
-async function checkParticipantBlock() {
-  if (isAdmin()) return false;
+/* Находит запись об ЭТОМ устройстве в списке участников — по коду
+   устройства или (если код изменился, например из-за инкогнито) по
+   отпечатку браузера. */
+function getMyParticipantRecord() {
+  var myId = getDeviceId();
+  var myFp = getDeviceFingerprint();
+  return participants.filter(function(p) {
+    if (p.id === myId) return true;
+    if (myFp && p.fingerprint && p.fingerprint === myFp) return true;
+    return false;
+  })[0] || null;
+}
+
+/* Статус доступа этого устройства:
+   'approved' — есть в списке участников и не заблокирован;
+   'pending'  — администратор ещё не добавил (не одобрил) это устройство;
+   'blocked'  — было одобрено, но потом заблокировано.
+   Раньше по умолчанию доступ был открыт всем, а список участников
+   служил только для последующей блокировки. Теперь наоборот: доступ
+   открывается только после того, как администратор явно добавил
+   человека в список — это и есть "одобрение". */
+async function checkParticipantStatus() {
+  if (isAdmin()) return 'approved';
   await syncParticipantsFromGithub();
-  var me = participants.filter(function(p) { return p.id === getDeviceId(); })[0];
-  return !!(me && me.blocked);
+  var me = getMyParticipantRecord();
+  if (!me) return 'pending';
+  return me.blocked ? 'blocked' : 'approved';
 }
 
 function showBlockedScreen() {
@@ -1434,23 +1557,90 @@ function showBlockedScreen() {
     '</div>';
 }
 
+/* Экран ожидания одобрения. Гость уже представился (и, если настроен
+   Telegram, отправил заявку) — теперь остаётся ждать, пока
+   администратор добавит его код в список участников. Пока это не
+   произошло, страница сама, без участия гостя, проверяет список
+   каждые 10 секунд и открывает доступ, как только он появится. */
+var pendingPollTimer = null;
+function showPendingScreen() {
+  var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
+  document.body.innerHTML =
+    '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
+      '<div>' +
+        '<div style="font-size:56px;margin-bottom:16px">⏳</div>' +
+        '<h2 style="font-family:var(--font-display);margin-bottom:10px">Ожидайте подтверждения администратора</h2>' +
+        '<p style="color:var(--text-muted);max-width:340px;margin:0 auto 14px">' +
+          (name ? esc(name) + ', вашу заявку ещё не одобрили. ' : 'Вашу заявку ещё не одобрили. ') +
+          'Как только администратор добавит вас в список участников — эта страница сама откроет книгу рецептов, ничего обновлять не нужно.' +
+        '</p>' +
+        '<p style="color:var(--text-muted);font-size:13px;margin-bottom:4px">Код устройства: ' + esc(getCombinedAccessCode()) + '</p>' +
+        '<p style="color:var(--text-muted);font-size:12px" id="pending-status-line">Проверяю каждые 10 секунд…</p>' +
+      '</div>' +
+    '</div>';
+  schedulePendingPoll();
+}
+
+function schedulePendingPoll() {
+  clearTimeout(pendingPollTimer);
+  pendingPollTimer = setTimeout(async function() {
+    await syncParticipantsFromGithub();
+    var me = getMyParticipantRecord();
+    if (me && me.blocked) { showBlockedScreen(); return; }
+    if (me && !me.blocked) { location.reload(); return; } // одобрили — перезагружаем, дальше initApp пройдёт как обычно
+    var line = $('pending-status-line');
+    if (line) line.textContent = 'Проверено ' + new Date().toLocaleTimeString('ru-RU') + ' — пока ждём. Проверяю каждые 10 секунд…';
+    schedulePendingPoll();
+  }, 10000);
+}
+
+var participantsFilter = 'all'; // 'all' | 'active' | 'blocked'
+
+function setParticipantsFilter(f) {
+  participantsFilter = f;
+  renderParticipantsList();
+}
+
 function renderParticipantsList() {
   var holder = $('participants-list');
   if (!holder) return;
+
+  var total = participants.length;
+  var blockedCount = participants.filter(function(p) { return p.blocked; }).length;
+  var filterRow = $('participants-filter-row');
+  if (filterRow) {
+    filterRow.innerHTML =
+      '<button class="btn btn-sm ' + (participantsFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'all\')">Все (' + total + ')</button>' +
+      '<button class="btn btn-sm ' + (participantsFilter === 'active' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'active\')">Активные (' + (total - blockedCount) + ')</button>' +
+      '<button class="btn btn-sm ' + (participantsFilter === 'blocked' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'blocked\')">🚫 Заблокированные (' + blockedCount + ')</button>';
+  }
+
   if (!participants.length) {
     holder.innerHTML = '<p class="admin-panel-hint">Пока никого не добавили — список появится, когда вы добавите первого участника.</p>';
     return;
   }
-  holder.innerHTML = participants.map(function(p) {
+
+  var shown = participants.filter(function(p) {
+    if (participantsFilter === 'active') return !p.blocked;
+    if (participantsFilter === 'blocked') return !!p.blocked;
+    return true;
+  });
+
+  if (!shown.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">' + (participantsFilter === 'blocked' ? 'Заблокированных пока нет.' : 'Никого не найдено.') + '</p>';
+    return;
+  }
+
+  holder.innerHTML = shown.map(function(p) {
     var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--glass-border)">' +
       '<div style="min-width:0">' +
         '<strong>' + esc(p.name) + '</strong>' + (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
-        '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
+        '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0">' +
-        '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
-        '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')">✕</button>' +
+        '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1460,16 +1650,28 @@ async function addParticipantManually() {
   if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var name = await customPrompt('Как зовут участника?', '', '➕ Добавить участника (1/2)');
   if (name === null || !name.trim()) return;
-  var code = await customPrompt('Код устройства — участник видит его внизу своего экрана, под названием сайта:', '', '➕ Добавить участника (2/2)');
-  if (code === null || !code.trim()) return;
+  var pasted = await customPrompt(
+    'Вставьте код устройства. Можно вставить прямо всё сообщение из Telegram целиком — лишний текст уберётся сам:',
+    '', '➕ Добавить участника (2/2)'
+  );
+  if (pasted === null || !pasted.trim()) return;
 
-  var id = code.trim().toUpperCase();
+  // Формат кода: XXXX-XXXX·отпечаток (отпечаток может отсутствовать у старых записей)
+  var combo = pasted.match(/([A-Z0-9]{4}-[A-Z0-9]{4})\s*[·:]\s*([0-9a-f]{4,10})/i);
+  var idOnly = pasted.match(/[A-Z0-9]{4}-[A-Z0-9]{4}/i);
+  if (!combo && !idOnly) {
+    showToast('⚠️ Не нашёл код устройства в этом тексте (формат XXXX-XXXX)');
+    return;
+  }
+  var id = (combo ? combo[1] : idOnly[0]).toUpperCase();
+  var fingerprint = combo ? combo[2].toLowerCase() : '';
+
   if (participants.some(function(p) { return p.id === id; })) {
     showToast('⚠️ Участник с таким кодом уже есть в списке');
     return;
   }
 
-  participants.push({ id: id, name: name.trim(), addedAt: Date.now(), blocked: false });
+  participants.push({ id: id, fingerprint: fingerprint, name: name.trim(), addedAt: Date.now(), blocked: false });
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var ok = await syncParticipantsToGithub();
@@ -3112,16 +3314,28 @@ async function initApp() {
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
   loadSiteConfigLocal();
 
-  var blockedPromise = checkParticipantBlock();
   var configPromise = syncSiteConfigFromGithub();
-  var blocked = await blockedPromise;
-  if (blocked) { showBlockedScreen(); return; }
+
+  // Если это устройство уже когда-то заблокировали — не тратим его время на
+  // повторный ввод имени и отправку в Telegram, сразу показываем отказ.
+  if (!isAdmin()) {
+    await syncParticipantsFromGithub();
+    var already = getMyParticipantRecord();
+    if (already && already.blocked) { showBlockedScreen(); return; }
+  }
+
+  await configPromise; // нужен ДО приглашения ввести имя — от него зависит, обязателен ли шаг с Telegram
+  await ensureParticipantName(); // держит экран "Загрузка…" поверх контента, пока гость не пройдёт этот шаг
+
+  if (!isAdmin()) {
+    var status = await checkParticipantStatus(); // ещё раз, свежо — вдруг администратор уже успел одобрить, пока шёл диалог выше
+    if (status === 'blocked') { showBlockedScreen(); return; }
+    if (status === 'pending') { showPendingScreen(); return; }
+  }
 
   var gateOverlay = $('access-gate-overlay');
   if (gateOverlay) gateOverlay.remove();
 
-  await configPromise; // нужен ДО приглашения ввести имя — от него зависит, предлагать ли отправку в Telegram
-  await ensureParticipantName();
   showDeviceCodeInFooter();
 
   applyAdminUI();
