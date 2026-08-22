@@ -3,6 +3,7 @@
     "id": "5P3G-LQWW",
     "name": "Гарі",
     "addedAt": 1787409793542,
-    "blocked": false
+    "blocked": true,
+    "blockedAt": 1787434443208
   }
 ]
