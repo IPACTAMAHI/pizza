@@ -451,6 +451,43 @@
   .ingredient-row input { flex: 1; }
   .ingredient-row button { flex-shrink: 0; }
 
+  /* ===== ЗАКУПКА (калькулятор недельной закупки) ===== */
+  .purchase-row {
+    background: var(--card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .purchase-row-top .purchase-name { flex: 1; }
+  .purchase-remove {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; border: none;
+    background: rgba(231,76,60,.14); color: #e2564b; font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .purchase-remove:active { transform: scale(.92); }
+  .purchase-row-fields {
+    display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 8px;
+  }
+  .purchase-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  .purchase-field select, .purchase-field input {
+    padding: 9px 8px; font-size: 14px; width: 100%;
+  }
+  .purchase-result {
+    padding: 9px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    text-align: center; min-height: 38px; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.05); color: var(--text-muted);
+  }
+  .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
+  .purchase-result-ok { background: rgba(63,181,121,.14); color: var(--success); }
+  @media (max-width: 480px) {
+    .purchase-row-fields { grid-template-columns: 1fr 1fr; }
+    .purchase-field-unit { order: -1; }
+  }
+
   /* Videos list in form */
   .video-row { margin-bottom: 10px; }
   .video-row-inputs { display: flex; gap: 8px; align-items: center; }
@@ -778,6 +815,10 @@
     <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="16" y2="15"></line></svg></span>
     <span class="nav-label">Категории</span>
   </div>
+  <div class="nav-tab" data-tab="purchase">
+    <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 2-1.58l1.65-7.42H5.12"></path></svg></span>
+    <span class="nav-label">Закупка</span>
+  </div>
   <div class="nav-tab admin-only" data-tab="admin">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
     <span class="nav-label">Админ-панель / Настройки</span>
@@ -809,6 +850,35 @@
     <span id="categories-count" style="font-size:14px;color:var(--text-muted)">Всего: 15</span>
   </div>
   <div id="categories-list"></div>
+</div>
+
+<!-- TAB: ЗАКУПКА -->
+<div id="tab-purchase" class="tab-content">
+  <h2 style="margin-bottom:14px">📦 Закупка</h2>
+
+  <div class="chip-row" id="purchase-subtabs" style="margin-bottom:12px">
+    <span class="chip active" data-cat="pizza" onclick="selectPurchaseCategory('pizza')">🍕 Закупка на неделю — Пицца бар</span>
+    <span class="chip" data-cat="hot" onclick="selectPurchaseCategory('hot')">🔥 Закупка на неделю — Горячий цех</span>
+  </div>
+
+  <div class="ingr-calc-hint" style="margin-bottom:14px">
+    🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить,
+    округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
+  </div>
+
+  <div id="purchase-list"></div>
+
+  <button type="button" class="btn btn-ghost btn-sm" onclick="addPurchaseRow()" style="margin:4px 0 18px;width:100%">+ Добавить ингредиент</button>
+
+  <div style="margin-bottom:14px">
+    <span id="purchase-summary" style="font-size:13px;color:var(--text-muted)"></span>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+    <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
+  </div>
 </div>
 
 <!-- TAB: ADMIN PANEL -->
@@ -902,7 +972,11 @@
       в любой момент можно нажать «🔓 Открыть» и вернуть доступ обратно, ничего заново спрашивать не нужно.<br>
       <strong>✕</strong> — это не разбан, а полное удаление записи из списка (например, если добавили по ошибке).
       После удаления «отменить» уже нельзя — если понадобится снова дать доступ этому человеку,
-      его придётся добавить заново, попросив код ещё раз.
+      его придётся добавить заново, попросив код ещё раз.<br>
+      <strong>👑 «Сделать админом»</strong> — даёт участнику полный доступ к редактированию рецептов и
+      к этой же админ-панели прямо на его устройстве, без ввода GitHub-ключа. Публиковать изменения на
+      GitHub он сможет, только если сам отдельно настроит синхронизацию (⚙️ в форме рецепта) — до этого
+      его правки сохраняются только в его браузере. Права можно в любой момент снять кнопкой «👤 Снять админа».
     </p>
   </div>
 </div>
@@ -1052,6 +1126,7 @@
 
 <!-- Библиотека генерации QR-кодов (кэшируется браузером после первой загрузки) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 
 <script>
 /* ================================================================
@@ -1631,19 +1706,123 @@ function renderParticipantsList() {
     return;
   }
 
+  var devMode = isDeveloper();
   holder.innerHTML = shown.map(function(p) {
     var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--glass-border)">' +
+    var isRoleAdmin = p.role === 'admin';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--glass-border);flex-wrap:wrap">' +
       '<div style="min-width:0">' +
-        '<strong>' + esc(p.name) + '</strong>' + (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
+        '<strong>' + esc(p.name) + '</strong>' +
+        (isRoleAdmin ? ' <span style="color:var(--accent-2);font-size:12px">· 👑 админ</span>' : '') +
+        (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
-      '<div style="display:flex;gap:6px;flex-shrink:0">' +
+      '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
+        (devMode ? '<button class="btn btn-sm ' + (isRoleAdmin ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantAdmin(\'' + escAttr(p.id) + '\')" title="' + (isRoleAdmin ? 'Снять права администратора (нужно подтверждение ключом)' : 'Дать права администратора (нужно подтверждение ключом)') + '">' + (isRoleAdmin ? '👤 Снять админа' : '👑 Сделать админом') + '</button>' : '') +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
-        '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
+        (devMode ? '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' : '') +
       '</div>' +
     '</div>';
   }).join('');
+}
+
+async function toggleParticipantAdmin(id) {
+  if (!isDeveloper()) { showToast('🔒 Назначать и снимать администраторов может только разработчик (вход по GitHub-ключу)'); return; }
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+  if (!p) return;
+  var willGrant = p.role !== 'admin';
+
+  if (!willGrant) {
+    var myRecord = getMyParticipantRecord();
+    var isSelf = myRecord && myRecord.id === p.id;
+    if (isSelf) {
+      var okSelf = await customConfirm('Вы хотите снять права администратора с самой записи, привязанной к вашему устройству. Ваш вход по GitHub-ключу при этом не пострадает. Продолжить?');
+      if (!okSelf) return;
+    }
+  }
+
+  // Каждое назначение или снятие админа требует заново подтвердить его
+  // вашим ключом — так же, как при обычном входе. Это не даёт кому-то
+  // выдать себе или другому лишние права, просто оказавшись рядом с
+  // вашим уже разблокированным устройством.
+  var confirmed = await confirmWithDeveloperKey(willGrant ? '🔑 Подтверждение назначения' : '🔑 Подтверждение снятия прав');
+  if (!confirmed) return;
+
+  var ok = await customConfirm(
+    willGrant
+      ? 'Назначить «' + p.name + '» администратором?\n\nОн сможет добавлять и редактировать рецепты, а также управлять базовыми функциями — без ввода GitHub-ключа (сохранять изменения на GitHub он сможет, только если сам настроит синхронизацию). Назначать/снимать других админов и удалять участников он не сможет — это остаётся только у вас.'
+      : 'Снять права администратора с «' + p.name + '»?'
+  );
+  if (!ok) return;
+
+  p.role = willGrant ? 'admin' : 'viewer';
+  renderParticipantsList();
+  applyAdminUI();
+  showToast('⏳ Сохраняю...');
+  var saved = await syncParticipantsToGithub();
+  showToast(saved ? (willGrant ? '👑 Права администратора выданы' : '👤 Права администратора сняты') : '⚠️ Сохранено только на этом устройстве');
+
+  if (willGrant) {
+    var wantsFull = await customConfirm(
+      'Локальные права редактирования выданы сразу.\n\n' +
+      'Хотите также подготовить для «' + p.name + '» отдельный GitHub-ключ, чтобы у него был ПОЛНЫЙ доступ,' +
+      ' включая публикацию изменений на GitHub? Ключ нужно будет отправить ему лично (например в Telegram) —' +
+      ' сайт не передаёт его автоматически и никому не показывает.'
+    );
+    if (wantsFull) await prepareAdminHandoffMessage(p);
+  }
+}
+
+/* ================================================================
+   ПЕРЕДАЧА GITHUB-КЛЮЧА НОВОМУ АДМИНУ
+   ================================================================
+   ВАЖНО: сайт статический и публичный — файл participants.json,
+   как и recipes.json, читается без какой-либо авторизации. Поэтому
+   хранить в нём реальный GitHub-токен с правом записи НЕЛЬЗЯ: это
+   значило бы выложить рабочий ключ от репозитория в открытый доступ
+   для кого угодно, а не только для назначенного админа.
+   Вместо этого ключ вводится здесь один раз, собирается в готовое
+   сообщение и копируется в буфер обмена — администратор сам
+   пересылает его человеку по любому личному каналу (Telegram и т.п.).
+   Сайт этот ключ нигде не сохраняет и не отправляет самостоятельно.
+   Лучше всего создать для этого человека ОТДЕЛЬНЫЙ токен (в GitHub:
+   fine-grained token, доступ только к этому репозиторию) — тогда его
+   можно будет отозвать позже, не трогая ключи остальных админов.
+   ================================================================ */
+async function prepareAdminHandoffMessage(p) {
+  var cfg = getGithubConfig() || {};
+
+  var owner = await customPrompt('GitHub — владелец репозитория:', cfg.owner || '', '🔑 Ключ для «' + p.name + '» (1/3)');
+  if (owner === null) return;
+  owner = owner.trim();
+  if (!owner) { showToast('⚠️ Нужно указать владельца репозитория'); return; }
+
+  var repo = await customPrompt('Название репозитория:', cfg.repo || '', '🔑 Ключ для «' + p.name + '» (2/3)');
+  if (repo === null) return;
+  repo = repo.trim();
+  if (!repo) { showToast('⚠️ Нужно указать репозиторий'); return; }
+
+  var token = await customPrompt(
+    'Введите GitHub Personal Access Token, который получит «' + p.name + '».\n\n' +
+    'Рекомендуется создать для него отдельный fine-grained токен с доступом только к этому репозиторию —' +
+    ' так его можно будет отозвать отдельно, не трогая остальных администраторов.',
+    '', '🔑 Ключ для «' + p.name + '» (3/3)', 'password'
+  );
+  if (token === null) return;
+  token = token.trim();
+  if (!token) { showToast('⚠️ Нужно ввести ключ'); return; }
+
+  var branch = (cfg.branch || 'main').trim() || 'main';
+
+  var message =
+    '🔑 Доступ администратора «Книги рецептов Route 20» для ' + p.name + '\n\n' +
+    'Откройте сайт → нажмите значок входа (замок) в шапке → «Войти в режим администратора» и по очереди введите:\n\n' +
+    '1) Владелец: ' + owner + '\n' +
+    '2) Репозиторий: ' + repo + '\n' +
+    '3) Ключ (token): ' + token + '\n\n' +
+    '⚠️ Это личный ключ доступа к репозиторию — никому больше его не пересылайте.';
+
+  copyTextToClipboard(message, '📋 Сообщение с ключом скопировано — отправьте его лично, например в Telegram');
 }
 
 async function addParticipantManually() {
@@ -1671,7 +1850,7 @@ async function addParticipantManually() {
     return;
   }
 
-  participants.push({ id: id, fingerprint: fingerprint, name: name.trim(), addedAt: Date.now(), blocked: false });
+  participants.push({ id: id, fingerprint: fingerprint, name: name.trim(), addedAt: Date.now(), blocked: false, role: 'viewer' });
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var ok = await syncParticipantsToGithub();
@@ -1699,7 +1878,7 @@ async function toggleParticipantBlock(id) {
 }
 
 async function removeParticipant(id) {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Удалять участников может только разработчик (вход по GitHub-ключу)'); return; }
   var ok = await customConfirm('Удалить эту запись из списка участников?');
   if (!ok) return;
   participants = participants.filter(function(x) { return x.id !== id; });
@@ -1726,8 +1905,59 @@ async function removeParticipant(id) {
    ================================================================ */
 const ADMIN_KEY = 'r20_admin_mode';
 
+/* Кроме входа по GitHub-ключу, права администратора можно выдать
+   конкретному участнику из списка "Участники" (кнопка "Сделать
+   админом") — тогда его устройство само распознаёт себя как админа
+   по коду/отпечатку, без ввода какого-либо ключа. Такой админ может
+   редактировать рецепты и работать со списком участников; но если
+   ему нужна синхронизация с GitHub — он настраивает её отдельно,
+   как и любой другой администратор. */
 function isAdmin() {
+  if (localStorage.getItem(ADMIN_KEY) === '1') return true;
+  var me = getMyParticipantRecord();
+  return !!(me && !me.blocked && me.role === 'admin');
+}
+
+function isAdminByParticipantRole() {
+  if (localStorage.getItem(ADMIN_KEY) === '1') return false; // это уже вход по ключу
+  var me = getMyParticipantRecord();
+  return !!(me && !me.blocked && me.role === 'admin');
+}
+
+/* "Разработчик" — это именно вход по настоящему GitHub-ключу (как у вас),
+   в отличие от "админа", которому права выданы через список участников
+   без ввода ключа. Некоторые самые чувствительные действия (назначение
+   и снятие админов, удаление участников) доступны только разработчику —
+   и даже разработчику каждый раз нужно заново подтвердить их ключом,
+   на случай если устройство осталось разблокированным без присмотра. */
+function isDeveloper() {
   return localStorage.getItem(ADMIN_KEY) === '1';
+}
+
+/* Просит заново ввести GitHub-ключ, чтобы подтвердить одно конкретное
+   опасное действие — по той же логике, что и обычный вход. Ключ нигде
+   не сохраняется и не показывается: используется один раз для живой
+   проверки на GitHub и сразу забывается. Возвращает true, если ключ
+   верный, иначе показывает причину отказа и возвращает false. */
+async function confirmWithDeveloperKey(title) {
+  var cfg = getGithubConfig() || {};
+  if (!cfg.owner || !cfg.repo) {
+    showToast('⚠️ Сначала настройте владельца и репозиторий (⚙️ в разделе "Добавить")');
+    return false;
+  }
+  var token = await customPrompt(
+    'Подтвердите действие своим GitHub-ключом (тем же, каким входите как разработчик).\n' +
+    'Ключ используется только для проверки и нигде не сохраняется.',
+    '', title || '🔑 Подтверждение', 'password'
+  );
+  if (token === null) return false;
+  token = token.trim();
+  if (!token) { showToast('⚠️ Нужно ввести ключ'); return false; }
+
+  showToast('⏳ Проверяю ключ на GitHub...');
+  var check = await verifyGithubToken(cfg.owner, cfg.repo, token);
+  if (!check.ok) { showToast('⛔ ' + check.error); return false; }
+  return true;
 }
 
 function updateAddGate() {
@@ -1766,6 +1996,10 @@ function applyAdminUI() {
 
 async function toggleAdmin() {
   if (isAdmin()) {
+    if (isAdminByParticipantRole()) {
+      showToast('👑 Вам выданы права администратора участником списка — снять их может только другой администратор в разделе «Участники».');
+      return;
+    }
     var ok = await customConfirm('Выключить режим редактирования на этом устройстве?\n\nGitHub-ключ будет удалён из этого браузера — для следующего входа его нужно будет ввести заново.');
     if (ok) {
       localStorage.removeItem(ADMIN_KEY);
@@ -2272,8 +2506,12 @@ function switchTab(name) {
   currentTab = name;
 
   if (name === 'categories') renderCategoriesList();
-  if (name === 'admin') { renderAdminPanel(); renderParticipantsList(); updateTelegramConfigField(); }
+  if (name === 'admin') {
+    renderAdminPanel(); renderParticipantsList(); updateTelegramConfigField();
+    syncParticipantsFromGithub().then(function() { renderParticipantsList(); });
+  }
   if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
+  if (name === 'purchase') renderPurchaseList();
 }
 
 /* ================================================================
@@ -3065,6 +3303,251 @@ function resetIngrCalc() {
 }
 
 /* ================================================================
+   ЗАКУПКА (калькулятор недельной закупки: Пицца бар / Горячий цех)
+   ================================================================
+   Логика: для каждой позиции вводится "Норма" (сколько должно быть
+   на неделю по стандарту) и "Остаток" (что реально взвесили на месте).
+   Докупить = Норма − Остаток, округлённое до ближайшего целого числа
+   (например 12,1 → 12; 12,6 → 13) — так, как выгоднее по факту,
+   без завышения закупки на лишние доли кг/шт.
+   Данные хранятся в localStorage, отдельно для каждой из двух
+   категорий: "pizza" (Пицца бар) и "hot" (Горячий цех).
+   ================================================================ */
+var PURCHASE_STORAGE_KEY = 'route20_purchase_v1';
+var purchaseData = { pizza: [], hot: [] };
+var currentPurchaseCategory = 'pizza';
+
+function loadPurchaseData() {
+  try {
+    var stored = localStorage.getItem(PURCHASE_STORAGE_KEY);
+    purchaseData = stored ? JSON.parse(stored) : { pizza: [], hot: [] };
+  } catch (e) { purchaseData = { pizza: [], hot: [] }; }
+  if (!purchaseData || typeof purchaseData !== 'object') purchaseData = { pizza: [], hot: [] };
+  if (!Array.isArray(purchaseData.pizza)) purchaseData.pizza = [];
+  if (!Array.isArray(purchaseData.hot)) purchaseData.hot = [];
+}
+
+function savePurchaseData() {
+  try { localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify(purchaseData)); } catch (e) {}
+}
+
+function purchaseRowsFor(cat) {
+  if (!purchaseData[cat]) purchaseData[cat] = [];
+  return purchaseData[cat];
+}
+
+function purchaseCategoryLabel(cat) {
+  return cat === 'hot' ? 'Горячий цех' : 'Пицца бар';
+}
+
+function selectPurchaseCategory(cat) {
+  currentPurchaseCategory = cat;
+  document.querySelectorAll('#purchase-subtabs .chip').forEach(function(c) {
+    c.classList.toggle('active', c.dataset.cat === cat);
+  });
+  renderPurchaseList();
+}
+
+function addPurchaseRow(cat) {
+  cat = cat || currentPurchaseCategory;
+  var rows = purchaseRowsFor(cat);
+  var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '' };
+  rows.push(row);
+  savePurchaseData();
+  renderPurchaseList();
+  setTimeout(function() {
+    var el = document.querySelector('.purchase-row[data-id="' + row.id + '"] .purchase-name');
+    if (el) el.focus();
+  }, 30);
+}
+
+function removePurchaseRow(cat, id) {
+  purchaseData[cat] = purchaseRowsFor(cat).filter(function(r) { return r.id !== id; });
+  savePurchaseData();
+  renderPurchaseList();
+}
+
+function updatePurchaseField(cat, id, field, value) {
+  var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
+  if (!row) return;
+  row[field] = value;
+  savePurchaseData();
+}
+
+// Округление "в выгодную сторону" = до ближайшего целого числа:
+// 12,1 → 12 (округление вниз), 12,6 → 13 (округление вверх).
+function roundToBuy(value) {
+  if (!isFinite(value) || value <= 0) return 0;
+  return Math.round(value);
+}
+
+function computeToBuy(row) {
+  var norm = parseFloat(String(row.norm == null ? '' : row.norm).replace(',', '.'));
+  if (!isFinite(norm)) return null;
+  var residual = parseFloat(String(row.residual == null ? '' : row.residual).replace(',', '.'));
+  if (!isFinite(residual)) residual = 0;
+  var diff = norm - residual;
+  if (diff <= 0) return 0;
+  return roundToBuy(diff);
+}
+
+function purchaseResultDisplay(row) {
+  var toBuy = computeToBuy(row);
+  if (toBuy === null) return { text: '—', cls: '' };
+  if (toBuy <= 0) return { text: '✅ хватает', cls: 'purchase-result-ok' };
+  return { text: toBuy + ' ' + row.unit, cls: 'purchase-result-need' };
+}
+
+function renderPurchaseList() {
+  var holder = $('purchase-list');
+  if (!holder) return;
+  var rows = purchaseRowsFor(currentPurchaseCategory);
+
+  if (!rows.length) {
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">' +
+      'Пока нет ни одного ингредиента. Нажмите «+ Добавить ингредиент», чтобы начать закупку на неделю.</p>';
+    updatePurchaseSummary();
+    return;
+  }
+
+  var cat = currentPurchaseCategory;
+  holder.innerHTML = rows.map(function(row) {
+    var res = purchaseResultDisplay(row);
+    return '<div class="purchase-row" data-id="' + row.id + '">' +
+      '<div class="purchase-row-top">' +
+        '<input type="text" class="purchase-name" placeholder="Название, например: Салями" value="' + escAttr(row.name) + '" ' +
+          'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'name\',this.value)">' +
+        '<button type="button" class="purchase-remove" title="Удалить" onclick="removePurchaseRow(\'' + cat + '\',\'' + row.id + '\')">✕</button>' +
+      '</div>' +
+      '<div class="purchase-row-fields">' +
+        '<label class="purchase-field purchase-field-unit"><span>Ед.</span>' +
+          '<select class="purchase-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+            '<option value="кг"' + (row.unit === 'кг' ? ' selected' : '') + '>кг</option>' +
+            '<option value="шт"' + (row.unit === 'шт' ? ' selected' : '') + '>шт</option>' +
+          '</select>' +
+        '</label>' +
+        '<label class="purchase-field"><span>Норма (неделя)</span>' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-norm" placeholder="14" value="' + escAttr(row.norm) + '" ' +
+            'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'norm\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+        '</label>' +
+        '<label class="purchase-field"><span>Остаток</span>' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
+            'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+        '</label>' +
+        '<div class="purchase-field"><span>Докупить</span>' +
+          '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  updatePurchaseSummary();
+}
+
+function recomputePurchaseRow(id) {
+  var row = purchaseRowsFor(currentPurchaseCategory).find(function(r) { return r.id === id; });
+  if (!row) return;
+  var el = document.querySelector('.purchase-result[data-result-for="' + id + '"]');
+  if (el) {
+    var res = purchaseResultDisplay(row);
+    el.textContent = res.text;
+    el.className = 'purchase-result ' + res.cls;
+  }
+  updatePurchaseSummary();
+}
+
+function updatePurchaseSummary() {
+  var el = $('purchase-summary');
+  if (!el) return;
+  var rows = purchaseRowsFor(currentPurchaseCategory);
+  var withName = rows.filter(function(r) { return (r.name || '').trim(); });
+  var needCount = 0;
+  withName.forEach(function(r) { var t = computeToBuy(r); if (t !== null && t > 0) needCount++; });
+  el.textContent = withName.length ? ('Нужно докупить: ' + needCount + ' из ' + withName.length + ' позиций') : '';
+}
+
+function buildPurchaseReportLines(cat) {
+  return purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); }).map(function(row) {
+    var res = purchaseResultDisplay(row);
+    return row.name.trim() + ' — ' + (res.cls === 'purchase-result-need' ? res.text : (res.text === '—' ? 'норма не указана' : res.text));
+  });
+}
+
+function buildPurchaseReportText(cat) {
+  var today = new Date().toLocaleDateString('ru-RU');
+  var lines = buildPurchaseReportLines(cat);
+  var header = '📦 Закупка на неделю — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
+  if (!lines.length) return header + '\n\nНет позиций.';
+  return header + '\n\n' + lines.join('\n');
+}
+
+function fallbackCopyText(text, successMsg) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast(successMsg || '📋 Скопировано в буфер обмена');
+  } catch (e) {
+    showToast('⚠️ Не удалось скопировать автоматически');
+  }
+  document.body.removeChild(ta);
+}
+
+function copyTextToClipboard(text, successMsg) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast(successMsg || '📋 Скопировано в буфер обмена');
+    }).catch(function() { fallbackCopyText(text, successMsg); });
+  } else {
+    fallbackCopyText(text, successMsg);
+  }
+}
+
+function copyPurchaseResult(cat) {
+  cat = cat || currentPurchaseCategory;
+  var text = buildPurchaseReportText(cat);
+  copyTextToClipboard(text, '📋 Скопировано в буфер обмена');
+}
+
+function downloadPurchaseText(cat) {
+  cat = cat || currentPurchaseCategory;
+  var text = buildPurchaseReportText(cat);
+  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Закупка - ' + purchaseCategoryLabel(cat) + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function downloadPurchaseExcel(cat) {
+  cat = cat || currentPurchaseCategory;
+  if (typeof XLSX === 'undefined') {
+    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
+    return;
+  }
+  var rows = purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); });
+  var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить']];
+  rows.forEach(function(row) {
+    var toBuy = computeToBuy(row);
+    data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy]);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, purchaseCategoryLabel(cat).substring(0, 31));
+  XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(cat) + '.xlsx');
+}
+
+/* ================================================================
    DETAIL VIEW
    ================================================================ */
 function openDetail(id, autoplayVideo) {
@@ -3341,6 +3824,7 @@ async function initApp() {
   applyAdminUI();
   loadRecipes();
   loadCustomSitePhotos();
+  loadPurchaseData();
 
   var hasDeepLink = /^#recipe=/.test(location.hash);
 
