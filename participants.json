@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "35D1-1B2D",
+    "fingerprint": "35d11b2d",
+    "name": "Влад",
+    "addedAt": 1787440276877,
+    "blocked": false,
+    "role": "viewer"
+  }
+]
