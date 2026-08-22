@@ -861,14 +861,14 @@
     <span class="chip" data-cat="hot" onclick="selectPurchaseCategory('hot')">🔥 Закупка на неделю — Горячий цех</span>
   </div>
 
-  <div class="ingr-calc-hint" style="margin-bottom:14px">
+  <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
     🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить,
     округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
   </div>
 
   <div id="purchase-list"></div>
 
-  <button type="button" class="btn btn-ghost btn-sm" onclick="addPurchaseRow()" style="margin:4px 0 18px;width:100%">+ Добавить ингредиент</button>
+  <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="margin:4px 0 18px;width:100%">+ Добавить ингредиент</button>
 
   <div style="margin-bottom:14px">
     <span id="purchase-summary" style="font-size:13px;color:var(--text-muted)"></span>
@@ -1287,13 +1287,42 @@ const PARTICIPANTS_PATH = 'participants.json';
 
 var participants = [];
 
+/* Ключ устройства ("код") теперь ВСЕГДА выводится из отпечатка
+   браузера, а не генерируется случайно. Раньше при первом заходе
+   создавался случайный код и сохранялся в localStorage — если
+   человек очищал данные сайта (или заходил в приватном режиме),
+   он получал НОВЫЙ случайный код и мог заново отправить заявку в
+   Telegram, как будто это другое устройство, и так спамить разными
+   кодами, пытаясь обойти ожидание одобрения или блокировку.
+   Теперь код детерминированно строится из отпечатка: один и тот же
+   браузер/устройство — всегда один и тот же код, сколько угодно раз
+   ни очищай localStorage. Значение всё равно кэшируется в
+   localStorage — просто чтобы не пересчитывать его на каждый чих —
+   но при расхождении с отпечатком кэш переписывается актуальным. */
 function getDeviceId() {
+  var derived = deriveDeviceIdFromFingerprint();
+  if (derived) {
+    if (localStorage.getItem(DEVICE_ID_KEY) !== derived) {
+      localStorage.setItem(DEVICE_ID_KEY, derived);
+    }
+    return derived;
+  }
+  // Фолбэк на случай, если отпечаток недоступен (например canvas
+  // заблокирован расширением) — тогда остаётся старое поведение:
+  // код на этот браузер, сохранённый в localStorage.
   var id = localStorage.getItem(DEVICE_ID_KEY);
   if (!id) {
     id = Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
     localStorage.setItem(DEVICE_ID_KEY, id);
   }
   return id;
+}
+
+function deriveDeviceIdFromFingerprint() {
+  var fp = getDeviceFingerprint();
+  if (!fp) return '';
+  var padded = ('00000000' + fp).slice(-8).toUpperCase();
+  return padded.slice(0, 4) + '-' + padded.slice(4, 8);
 }
 
 /* ================================================================
@@ -1517,6 +1546,69 @@ function syncSiteConfigToGithub() {
 function updateTelegramConfigField() {
   var input = $('admin-telegram-username');
   if (input && document.activeElement !== input) input.value = siteConfig.adminTelegram || '';
+}
+
+/* ================================================================
+   СИНХРОНИЗАЦИЯ ШАБЛОНА ЗАКУПКИ (purchase.json)
+   ================================================================
+   Список позиций (название/ед./норма на неделю) — это общий шаблон
+   для всей команды: его составляют и сохраняют только владелец и
+   администраторы (через уже настроенный GitHub-токен), остальные
+   посетители видят его готовым и не могут менять. Поле "Остаток" —
+   наоборот, вводит на месте любой сотрудник, который считает
+   продукты прямо сейчас; оно НЕ синхронизируется и не сохраняется
+   на GitHub — это разовый расчёт для конкретного похода "докупить",
+   после которого результат копируют/скачивают кнопками ниже.
+   ================================================================ */
+const PURCHASE_PATH = 'purchase.json';
+
+async function syncPurchaseFromGithub() {
+  try {
+    var res = await fetch('./' + PURCHASE_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return; // файла ещё нет (шаблон не настраивали) или открыто локально — тихий фолбэк
+    var data = await res.json();
+    if (data && typeof data === 'object') {
+      var incoming = { pizza: Array.isArray(data.pizza) ? data.pizza : [], hot: Array.isArray(data.hot) ? data.hot : [] };
+      // Остатки, введённые прямо сейчас на этом устройстве, — локальные и
+      // временные, поэтому при обновлении шаблона с GitHub переносим их
+      // на новые данные по id строки, а не затираем.
+      ['pizza', 'hot'].forEach(function(cat) {
+        var localById = {};
+        purchaseRowsFor(cat).forEach(function(r) { localById[r.id] = r.residual; });
+        incoming[cat].forEach(function(r) { if (r.id in localById) r.residual = localById[r.id]; });
+      });
+      purchaseData = incoming;
+      savePurchaseData();
+    }
+  } catch (e) {
+    console.warn('syncPurchaseFromGithub: используются локальные данные', e);
+  }
+}
+
+function syncPurchaseToGithub() {
+  return queueGithubWrite('purchase', async function() {
+    var cfg = getGithubConfig();
+    if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) {
+      showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
+      return false;
+    }
+    // Остатки — личный черновик устройства, в общий шаблон их не публикуем.
+    var toSave = {
+      pizza: purchaseRowsFor('pizza').map(function(r) { return { id: r.id, name: r.name, unit: r.unit, norm: r.norm }; }),
+      hot: purchaseRowsFor('hot').map(function(r) { return { id: r.id, name: r.name, unit: r.unit, norm: r.norm }; })
+    };
+    var res = await putJsonToGithub(PURCHASE_PATH, toSave, 'Обновление шаблона закупки (' + new Date().toLocaleString('ru-RU') + ')');
+    if (res.ok) return true;
+    console.error('syncPurchaseToGithub error:', res.error);
+    showToast('⚠️ Не удалось сохранить шаблон закупки: ' + res.error);
+    return false;
+  });
+}
+
+var purchaseSyncDebounceTimer = null;
+function schedulePurchaseSync() {
+  clearTimeout(purchaseSyncDebounceTimer);
+  purchaseSyncDebounceTimer = setTimeout(function() { syncPurchaseToGithub(); }, 900);
 }
 
 async function saveAdminTelegramUsername() {
@@ -1871,6 +1963,7 @@ async function toggleParticipantBlock(id) {
 
   p.blocked = willBlock;
   p.blockedAt = willBlock ? Date.now() : null;
+  if (willBlock) participantsFilter = 'blocked'; // заблокированный сразу "переезжает" во вкладку "Заблокированные"
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
@@ -2511,7 +2604,10 @@ function switchTab(name) {
     syncParticipantsFromGithub().then(function() { renderParticipantsList(); });
   }
   if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
-  if (name === 'purchase') renderPurchaseList();
+  if (name === 'purchase') {
+    renderPurchaseList();
+    syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseList(); });
+  }
 }
 
 /* ================================================================
@@ -3349,12 +3445,14 @@ function selectPurchaseCategory(cat) {
 }
 
 function addPurchaseRow(cat) {
+  if (!isAdmin()) { showToast('🔒 Список позиций может составлять только владелец или администратор'); return; }
   cat = cat || currentPurchaseCategory;
   var rows = purchaseRowsFor(cat);
   var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '' };
   rows.push(row);
   savePurchaseData();
   renderPurchaseList();
+  schedulePurchaseSync();
   setTimeout(function() {
     var el = document.querySelector('.purchase-row[data-id="' + row.id + '"] .purchase-name');
     if (el) el.focus();
@@ -3362,16 +3460,29 @@ function addPurchaseRow(cat) {
 }
 
 function removePurchaseRow(cat, id) {
+  if (!isAdmin()) { showToast('🔒 Список позиций может составлять только владелец или администратор'); return; }
   purchaseData[cat] = purchaseRowsFor(cat).filter(function(r) { return r.id !== id; });
   savePurchaseData();
   renderPurchaseList();
+  schedulePurchaseSync();
 }
 
+// Поля "name"/"unit"/"norm" — это общий шаблон, их правят только
+// владелец/администраторы, и правка уходит в GitHub (с debounce, чтобы
+// не слать запрос на каждую нажатую клавишу). Поле "residual" (остаток)
+// доступно всем и никуда, кроме этого браузера, не сохраняется.
+var PURCHASE_TEMPLATE_FIELDS = { name: true, unit: true, norm: true };
 function updatePurchaseField(cat, id, field, value) {
+  if (PURCHASE_TEMPLATE_FIELDS[field] && !isAdmin()) {
+    showToast('🔒 Список и норму может менять только владелец или администратор');
+    renderPurchaseList(); // откатываем поле в UI к сохранённому значению
+    return;
+  }
   var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
   if (!row) return;
   row[field] = value;
   savePurchaseData();
+  if (PURCHASE_TEMPLATE_FIELDS[field]) schedulePurchaseSync();
 }
 
 // Округление "в выгодную сторону" = до ближайшего целого числа:
@@ -3402,10 +3513,20 @@ function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
   var rows = purchaseRowsFor(currentPurchaseCategory);
+  var canEditTemplate = isAdmin();
+
+  var addBtn = $('purchase-add-btn');
+  if (addBtn) addBtn.style.display = canEditTemplate ? '' : 'none';
+  var hint = $('purchase-hint');
+  if (hint) {
+    hint.textContent = canEditTemplate
+      ? '🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13). Список позиций и норму видят и сохраняют для всех только владелец и администраторы.'
+      : '🧮 Список составлен администратором. Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).';
+  }
 
   if (!rows.length) {
     holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">' +
-      'Пока нет ни одного ингредиента. Нажмите «+ Добавить ингредиент», чтобы начать закупку на неделю.</p>';
+      (canEditTemplate ? 'Пока нет ни одного ингредиента. Нажмите «+ Добавить ингредиент», чтобы начать закупку на неделю.' : 'Список пока пуст — дождитесь, пока администратор его составит.') + '</p>';
     updatePurchaseSummary();
     return;
   }
@@ -3413,21 +3534,23 @@ function renderPurchaseList() {
   var cat = currentPurchaseCategory;
   holder.innerHTML = rows.map(function(row) {
     var res = purchaseResultDisplay(row);
+    var ro = canEditTemplate ? '' : ' readonly';
+    var dis = canEditTemplate ? '' : ' disabled';
     return '<div class="purchase-row" data-id="' + row.id + '">' +
       '<div class="purchase-row-top">' +
-        '<input type="text" class="purchase-name" placeholder="Название, например: Салями" value="' + escAttr(row.name) + '" ' +
+        '<input type="text" class="purchase-name" placeholder="Название, например: Салями" value="' + escAttr(row.name) + '"' + ro + ' ' +
           'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'name\',this.value)">' +
-        '<button type="button" class="purchase-remove" title="Удалить" onclick="removePurchaseRow(\'' + cat + '\',\'' + row.id + '\')">✕</button>' +
+        (canEditTemplate ? '<button type="button" class="purchase-remove" title="Удалить" onclick="removePurchaseRow(\'' + cat + '\',\'' + row.id + '\')">✕</button>' : '') +
       '</div>' +
       '<div class="purchase-row-fields">' +
         '<label class="purchase-field purchase-field-unit"><span>Ед.</span>' +
-          '<select class="purchase-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+          '<select class="purchase-unit"' + dis + ' onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
             '<option value="кг"' + (row.unit === 'кг' ? ' selected' : '') + '>кг</option>' +
             '<option value="шт"' + (row.unit === 'шт' ? ' selected' : '') + '>шт</option>' +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
-          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-norm" placeholder="14" value="' + escAttr(row.norm) + '" ' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-norm" placeholder="14" value="' + escAttr(row.norm) + '"' + ro + ' ' +
             'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'norm\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
         '</label>' +
         '<label class="purchase-field"><span>Остаток</span>' +
@@ -3825,6 +3948,7 @@ async function initApp() {
   loadRecipes();
   loadCustomSitePhotos();
   loadPurchaseData();
+  syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseList(); });
 
   var hasDeepLink = /^#recipe=/.test(location.hash);
 
