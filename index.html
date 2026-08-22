@@ -1448,7 +1448,10 @@ async function putJsonToGithub(path, dataObj, commitMessage, isRetry) {
     var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
 
     var sha = null;
-    var getRes = await fetchWithTimeout(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers }, 20000);
+    // no-store + метка времени в URL — иначе браузер может отдать закэшированный
+    // (устаревший) ответ на этот GET, и тогда даже повтор после 409 получит
+    // тот же самый устаревший sha и снова упадёт с той же ошибкой.
+    var getRes = await fetchWithTimeout(apiUrl + '?ref=' + encodeURIComponent(cfg.branch) + '&_=' + Date.now(), { headers: headers, cache: 'no-store' }, 20000);
     if (getRes.status === 200) {
       var getData = await getRes.json();
       sha = getData.sha;
@@ -2638,7 +2641,10 @@ async function doSyncToGithub(manual, isRetry) {
     var headers = { 'Authorization': 'Bearer ' + cfg.token, 'Accept': 'application/vnd.github+json' };
 
     var sha = null;
-    var getRes = await fetchWithTimeout(apiUrl + '?ref=' + encodeURIComponent(cfg.branch), { headers: headers }, 20000);
+    // no-store + метка времени в URL — иначе браузер может отдать закэшированный
+    // (устаревший) ответ на этот GET, и тогда даже повтор после 409 получит
+    // тот же самый устаревший sha и снова упадёт с той же ошибкой.
+    var getRes = await fetchWithTimeout(apiUrl + '?ref=' + encodeURIComponent(cfg.branch) + '&_=' + Date.now(), { headers: headers, cache: 'no-store' }, 20000);
     if (getRes.status === 200) {
       var getData = await getRes.json();
       sha = getData.sha;
