@@ -1645,7 +1645,8 @@ async function saveAdminTelegramUsername() {
   siteConfig.adminTelegram = val;
   showToast('⏳ Сохраняю...');
   var ok = await syncSiteConfigToGithub();
-  showToast(ok ? '✅ Telegram-юзернейм сохранён' : '⚠️ Сохранено только на этом устройстве');
+  if (ok) showToast('✅ Telegram-юзернейм сохранён');
+  // при ok===false внутри syncSiteConfigToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 /* Ссылка-приглашение в Telegram-группу администратора. Если заполнено —
@@ -1660,7 +1661,8 @@ async function saveAdminTelegramGroupLink() {
   siteConfig.adminTelegramGroup = val;
   showToast('⏳ Сохраняю...');
   var ok = await syncSiteConfigToGithub();
-  showToast(ok ? '✅ Ссылка на группу сохранена' : '⚠️ Сохранено только на этом устройстве');
+  if (ok) showToast('✅ Ссылка на группу сохранена');
+  // при ok===false внутри syncSiteConfigToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 /* Предлагаем гостю после ввода имени отправить его имя и код устройства
@@ -1944,7 +1946,7 @@ function renderParticipantsList() {
   var filterRow = $('participants-filter-row');
   if (filterRow) {
     filterRow.innerHTML =
-      '<button class="btn btn-sm ' + (participantsFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'all\')">Все (' + total + ')</button>' +
+      '<button class="btn btn-sm ' + (participantsFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'all\')">Все (' + (total - blockedCount) + ')</button>' +
       '<button class="btn btn-sm ' + (participantsFilter === 'active' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'active\')">Активные (' + (total - blockedCount) + ')</button>' +
       '<button class="btn btn-sm ' + (participantsFilter === 'blocked' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'blocked\')">🚫 Заблокированные (' + blockedCount + ')</button>';
   }
@@ -1955,9 +1957,8 @@ function renderParticipantsList() {
   }
 
   var shown = participants.filter(function(p) {
-    if (participantsFilter === 'active') return !p.blocked;
     if (participantsFilter === 'blocked') return !!p.blocked;
-    return true;
+    return !p.blocked; // и «Все», и «Активные» показывают только незаблокированных — заблокированные видны исключительно во вкладке «Заблокированные»
   });
 
   if (!shown.length) {
@@ -2019,7 +2020,8 @@ async function toggleParticipantAdmin(id) {
   applyAdminUI();
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
-  showToast(saved ? (willGrant ? '👑 Права администратора выданы' : '👤 Права администратора сняты') : '⚠️ Сохранено только на этом устройстве');
+  if (saved) showToast(willGrant ? '👑 Права администратора выданы' : '👤 Права администратора сняты');
+  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 
   if (willGrant) {
     var wantsFull = await customConfirm(
@@ -2113,7 +2115,8 @@ async function addParticipantManually() {
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var ok = await syncParticipantsToGithub();
-  showToast(ok ? '✅ Участник добавлен' : '⚠️ Сохранено только на этом устройстве');
+  if (ok) showToast('✅ Участник добавлен');
+  // при ok===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 async function toggleParticipantBlock(id) {
@@ -2134,7 +2137,8 @@ async function toggleParticipantBlock(id) {
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
-  showToast(saved ? (willBlock ? '🚫 Доступ закрыт' : '🔓 Доступ открыт') : '⚠️ Сохранено только на этом устройстве');
+  if (saved) showToast(willBlock ? '🚫 Доступ закрыт' : '🔓 Доступ открыт');
+  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 async function removeParticipant(id) {
@@ -2145,7 +2149,8 @@ async function removeParticipant(id) {
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
-  showToast(saved ? '🗑 Удалено' : '⚠️ Сохранено только на этом устройстве');
+  if (saved) showToast('🗑 Удалено');
+  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 /* ================================================================
