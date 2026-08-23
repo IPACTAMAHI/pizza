@@ -508,6 +508,18 @@
   }
   .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
   .purchase-result-ok { background: rgba(63,181,121,.14); color: var(--success); }
+  /* Кратковременная подсветка только что добавленной строки — чтобы
+     после нажатия "+ Добавить ингредиент" было явно видно, что строка
+     появилась (особенно когда она пустая и визуально мало отличается
+     от остальных). */
+  .purchase-row.is-new {
+    border-color: var(--accent);
+    animation: purchaseRowNew 1.6s ease;
+  }
+  @keyframes purchaseRowNew {
+    0% { background: rgba(226,86,75,.22); }
+    100% { background: var(--card); }
+  }
   @media (max-width: 480px) {
     .purchase-row-fields { grid-template-columns: 1fr 1fr; }
     .purchase-field-unit { order: -1; }
@@ -3776,8 +3788,14 @@ function addPurchaseRow(cat) {
   savePurchaseData();
   renderPurchaseList();
   schedulePurchaseSync();
+  showToast('➕ Ингредиент добавлен — впишите название');
   setTimeout(function() {
-    var el = document.querySelector('.purchase-row[data-id="' + row.id + '"] .purchase-name');
+    var rowEl = document.querySelector('.purchase-row[data-id="' + row.id + '"]');
+    var el = rowEl ? rowEl.querySelector('.purchase-name') : null;
+    if (rowEl) {
+      rowEl.classList.add('is-new');
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     if (el) el.focus();
   }, 30);
 }
