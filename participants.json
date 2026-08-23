@@ -12,8 +12,8 @@
     "fingerprint": "596470f5",
     "name": "Саня",
     "addedAt": 1787469428320,
-    "blocked": true,
+    "blocked": false,
     "role": "viewer",
-    "blockedAt": 1787469606192
+    "blockedAt": null
   }
 ]
