@@ -561,6 +561,42 @@
 
   /* ===== DETAIL VIEW ===== */
   .detail-back { margin-bottom: 16px; }
+
+  /* Плавающая компактная кнопка "Назад" — дублирует обычную "← Назад"
+     наверху рецепта, но остаётся доступной при прокрутке вниз. Не
+     занимает место в потоке (position:fixed), маленькая и полупрозрачная,
+     чтобы не перекрывать контент; появляется плавно через opacity/transform,
+     а не display:none/block, чтобы переход был мягким. pointer-events
+     выключены, пока кнопка скрыта, — иначе invisible-кнопка мешала бы
+     кликам по контенту под ней. */
+  .detail-back-floating {
+    position: fixed;
+    left: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    z-index: 80;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    box-shadow: var(--shadow-soft);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(10px) scale(.9);
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .detail-back-floating svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .detail-back-floating.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .detail-back-floating:active { transform: scale(.92); }
+
   .detail-photo {
     width: 100%; max-height: 320px; object-fit: cover;
     border-radius: var(--radius-lg); margin-bottom: 18px;
@@ -1183,6 +1219,15 @@
   <button class="btn btn-ghost btn-sm detail-back" onclick="closeDetail('categories')">← Назад</button>
   <div id="detail-body"></div>
 </div>
+
+<!-- Плавающая компактная кнопка "Назад" для экрана рецепта — появляется,
+     когда обычная кнопка "← Назад" в начале рецепта уходит за пределы
+     видимой области при прокрутке (см. IntersectionObserver в JS),
+     чтобы не нужно было прокручивать наверх, чтобы вернуться к списку.
+     Скрыта по умолчанию (класс .show добавляется/убирается из JS). -->
+<button class="detail-back-floating" id="detail-back-floating" onclick="closeDetail('categories')" title="Назад" aria-label="Назад к списку рецептов">
+  <svg viewBox="0 0 24 24" width="20" height="20"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+</button>
 
 <!-- TOAST -->
 <!-- FOOTER -->
@@ -4061,6 +4106,8 @@ function openDetail(id, autoplayVideo) {
 
   var backBtn = document.querySelector('.detail-back');
   if (backBtn) backBtn.setAttribute('onclick', "closeDetail('" + originTab + "')");
+  var floatingBackBtn = $('detail-back-floating');
+  if (floatingBackBtn) floatingBackBtn.setAttribute('onclick', "closeDetail('" + originTab + "')");
 
   var body = $('detail-body');
   body.innerHTML =
@@ -4155,6 +4202,8 @@ function shareRecipeLink(id) {
 function closeDetail(originTab) {
   // Убираем #recipe=... из адреса при выходе из детального просмотра
   history.pushState(null, '', location.pathname + location.search);
+  var floatingBackBtn = $('detail-back-floating');
+  if (floatingBackBtn) floatingBackBtn.classList.remove('show'); // не ждём IntersectionObserver — прячем сразу
   switchTab(originTab);
 }
 
@@ -4244,10 +4293,34 @@ function escAttr(str) {
   return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/* Плавающая компактная кнопка "Назад" на экране рецепта: показывается,
+   когда обычная кнопка "← Назад" в начале рецепта прокручена за пределы
+   видимой области, и прячется обратно, как только она снова видна —
+   так гостю не нужно прокручивать длинный рецепт наверх, чтобы вернуться
+   к списку. Один IntersectionObserver на всё приложение: сам элемент
+   .detail-back не пересоздаётся при открытии рецептов (openDetail
+   переписывает только #detail-body), поэтому достаточно настроить
+   слежение один раз при загрузке страницы. */
+function initDetailBackFloatingButton() {
+  var staticBtn = document.querySelector('.detail-back');
+  var floatingBtn = $('detail-back-floating');
+  if (!staticBtn || !floatingBtn || typeof IntersectionObserver === 'undefined') return;
+  var observer = new IntersectionObserver(function(entries) {
+    var entry = entries[entries.length - 1];
+    var detailTab = $('tab-detail');
+    var isDetailActive = !!(detailTab && detailTab.classList.contains('active'));
+    floatingBtn.classList.toggle('show', isDetailActive && !entry.isIntersecting);
+  }, { threshold: 0 });
+  observer.observe(staticBtn);
+}
+
 /* ================================================================
    INIT — all event listeners bound after DOM is ready
    ================================================================ */
-document.addEventListener('DOMContentLoaded', function() { initApp(); });
+document.addEventListener('DOMContentLoaded', function() {
+  initApp();
+  initDetailBackFloatingButton();
+});
 
 async function initApp() {
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
