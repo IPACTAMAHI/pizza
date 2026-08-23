@@ -2393,7 +2393,23 @@ function applyAdminUI() {
 async function toggleAdmin() {
   if (isAdmin()) {
     if (isAdminByParticipantRole()) {
-      showToast('👑 Вам выданы права администратора участником списка — снять их может только другой администратор в разделе «Участники».');
+      // Права выданы через список участников (без GitHub-ключа) — по кнопке
+      // "Выход" такой админ должен именно выйти: потерять права И полностью
+      // удалиться из списка участников (а не остаться там простым viewer'ом).
+      // Если понадобится доступ снова — администратор добавит его заново.
+      var okLeave = await customConfirm('Выйти из режима администратора?\n\nВаши права администратора будут сняты, а запись об этом устройстве удалена из списка участников. Чтобы снова получить доступ, администратору нужно будет добавить вас заново.');
+      if (!okLeave) return;
+      var myRecord = getMyParticipantRecord();
+      if (myRecord) {
+        participants = participants.filter(function(x) { return x.id !== myRecord.id; });
+        saveParticipantsLocal();
+      }
+      applyAdminUI();
+      if (currentTab === 'add' || currentTab === 'admin' || currentTab === 'purchase') switchTab('categories');
+      showToast('⏳ Сохраняю...');
+      var savedLeave = await syncParticipantsToGithub();
+      if (savedLeave) showToast('🔒 Вы вышли — права сняты, запись удалена из списка участников');
+      // при savedLeave===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
       return;
     }
     var ok = await customConfirm('Выключить режим редактирования на этом устройстве?\n\nGitHub-ключ будет удалён из этого браузера — для следующего входа его нужно будет ввести заново.');
