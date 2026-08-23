@@ -2001,6 +2001,25 @@ async function checkParticipantStatus() {
   return me.blocked ? 'blocked' : 'approved';
 }
 
+/* Ссылка "Я разработчик (владелец) — войти", которая должна быть
+   доступна на ЛЮБОМ из этих неавторизованных экранов (ожидание,
+   блокировка), а не только на самом первом экране знакомства —
+   иначе владелец, открывший сайт с нового устройства/браузера, может
+   застрять на экране ожидания без единого способа попасть в свой же
+   режим администратора. Вход не зависит от статуса участника: как
+   только ключ подходит, isAdmin() становится true и весь этот экран
+   больше не показывается (см. вызов reload() после успеха). */
+function ownerLoginLinkHtml() {
+  return '<p style="margin-top:18px;padding-top:14px;border-top:1px solid var(--glass-border)">' +
+    '<span onclick="ownerLoginFromGateScreen()" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔑 Я разработчик (владелец) — войти</span>' +
+    '</p>';
+}
+
+async function ownerLoginFromGateScreen() {
+  var loggedIn = await loginWithGithubKey();
+  if (loggedIn) location.reload(); // вошли как владелец — дальше initApp откроет обычный интерфейс
+}
+
 function showBlockedScreen() {
   document.body.innerHTML =
     '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
@@ -2008,6 +2027,7 @@ function showBlockedScreen() {
         '<div style="font-size:56px;margin-bottom:16px">🔒</div>' +
         '<h2 style="font-family:var(--font-display);margin-bottom:10px">Доступ закрыт</h2>' +
         '<p style="color:var(--text-muted);max-width:320px;margin:0 auto">Если считаете, что это ошибка — обратитесь к администратору.</p>' +
+        ownerLoginLinkHtml() +
       '</div>' +
     '</div>';
 }
@@ -2040,6 +2060,7 @@ function showPendingScreen() {
         '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 10 секунд…</p>' +
         actionsHtml +
         '<p style="color:var(--text-muted);font-size:11px;margin-top:10px;max-width:320px;margin-left:auto;margin-right:auto">Сообщение не дошло, закрыли Telegram раньше времени или администратор сменил ссылку? Эти кнопки доступны без входа — ссылка проверяется заново перед каждым нажатием.</p>' +
+        ownerLoginLinkHtml() +
       '</div>' +
     '</div>';
   schedulePendingPoll();
