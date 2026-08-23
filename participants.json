@@ -15,5 +15,13 @@
     "blocked": false,
     "role": "viewer",
     "blockedAt": null
+  },
+  {
+    "id": "A6B7-E60A",
+    "fingerprint": "a6b7e60a",
+    "name": "Вита",
+    "addedAt": 1787476188384,
+    "blocked": false,
+    "role": "viewer"
   }
 ]
