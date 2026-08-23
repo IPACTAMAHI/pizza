@@ -15,5 +15,13 @@
     "addedAt": 1787476188384,
     "blocked": false,
     "role": "viewer"
+  },
+  {
+    "id": "6FFF-642F",
+    "fingerprint": "6fff642f",
+    "name": "123",
+    "addedAt": 1787526451030,
+    "blocked": false,
+    "role": "viewer"
   }
 ]
