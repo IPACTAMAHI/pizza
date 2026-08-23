@@ -1288,7 +1288,38 @@ function showToast(msg) {
    код (ensureParticipantName) может однозначно распознать этот случай. */
 var DEV_LOGIN_SENTINEL = { __devLoginRequested: true };
 
+/* Экраны ожидания/блокировки (showPendingScreen, showBlockedScreen) делают
+   document.body.innerHTML = '...' и тем самым удаляют модалку (#app-modal-overlay
+   и всё внутри неё) из DOM вместе со всем остальным содержимым body — после
+   этого $('app-modal-title') и т.п. возвращают null, и showModal() падает
+   с "Cannot set properties of null" при клике на "Я разработчик — войти".
+   Поэтому перед использованием модалки всегда проверяем, что она на месте,
+   и, если нет, восстанавливаем её разметку в body. */
+function ensureModalDom() {
+  if ($('app-modal-overlay')) return;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="photo-lightbox" id="photo-lightbox" onclick="closePhotoLightbox()">' +
+      '<img id="photo-lightbox-img" src="" alt="">' +
+    '</div>' +
+    '<div class="modal-overlay" id="app-modal-overlay">' +
+      '<div class="modal-box">' +
+        '<h3 id="app-modal-title"></h3>' +
+        '<p id="app-modal-message"></p>' +
+        '<input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>' +
+          '<button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>' +
+        '</div>' +
+        '<div id="app-modal-dev-login-wrap" style="display:none;text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--glass-border)">' +
+          '<span id="app-modal-dev-login" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔑 Я разработчик (владелец) — войти</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
 function showModal(opts) {
+  ensureModalDom();
   return new Promise(function(resolve) {
     var overlay = $('app-modal-overlay');
     var titleEl = $('app-modal-title');
