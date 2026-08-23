@@ -799,9 +799,10 @@
   }
   @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-  /* Яркая плашка-предупреждение на шаге "вступите в группу" — чтобы гость
-     не пропустил, что без вступления в группу доступ к книге рецептов
-     невозможен (см. buildGroupJoinWarningHtml). */
+  /* Раньше использовалось для плашки-предупреждения на шаге "вступите
+     в группу" в многошаговом сценарии отправки заявки — сейчас этот
+     шаг убран (см. requireTelegramSend), класс оставлен неиспользуемым
+     на случай, если понадобится похожая плашка где-то ещё. */
   .group-join-warning {
     display: flex;
     align-items: flex-start;
@@ -1806,9 +1807,9 @@ async function saveAdminTelegramUsername() {
 }
 
 /* Ссылка-приглашение в Telegram-группу администратора. Если заполнено —
-   используется ВМЕСТО личного юзернейма выше: гость сначала вступает
-   в группу по этой ссылке, а затем отправляет туда сообщение с именем
-   и кодом устройства (см. requireGroupJoinAndSend). */
+   используется ВМЕСТО личного юзернейма выше: гость открывает эту
+   ссылку и сам пишет туда сообщение с именем и кодом устройства
+   (см. requireTelegramSend). */
 async function saveAdminTelegramGroupLink() {
   if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var input = $('admin-telegram-group');
@@ -1825,39 +1826,32 @@ async function saveAdminTelegramGroupLink() {
    администратору в Telegram одним нажатием — чтобы не диктовать код
    голосом. Работает только если администратор один раз указал свой
    Telegram-юзернейм в админ-панели. */
-/* Открыть Telegram напрямую в приложении (минуя браузерную страницу
-   t.me с кнопкой "Открыть в приложении"), с сообщением уже готовым
-   к отправке. Если приложение не установлено (или это десктоп без
-   Telegram) — через короткую паузу тихо откроется веб-версия. */
-function openTelegramDeepLink(username, text) {
-  var appUrl = 'tg://resolve?domain=' + encodeURIComponent(username) + '&text=' + encodeURIComponent(text);
-  var webUrl = 'https://t.me/' + encodeURIComponent(username) + '?text=' + encodeURIComponent(text);
-
-  var fellBack = false;
-  function toWeb() {
-    if (fellBack) return;
-    fellBack = true;
-    window.open(webUrl, '_blank', 'noopener');
+/* Ссылка на Telegram для отправки заявки — обычная https://t.me/...
+   ссылка, без кастомных tg:// протоколов и таймеров-фолбэков (раньше
+   именно эта логика иногда вместо Telegram открывала пустую
+   telegram.org: если сообщение не успевало уйти по tg://, код через
+   1200мс тихо открывал веб-фолбэк, и при пустом/некорректном
+   юзернейме t.me/?text=... редиректил на главную telegram.org).
+   Обычная ссылка t.me сама по себе работает как нужно в любом
+   браузере и на любом устройстве: на телефоне её подхватывает
+   установленное приложение Telegram, иначе открывается веб-версия —
+   никаких скрытых шагов.
+   Для группы используем ссылку-приглашение как есть (Telegram не
+   поддерживает предзаполнение текста для групп по инвайт-ссылке —
+   гость откроет группу и напишет сообщение сам). Для личного
+   юзернейма — ссылка с уже готовым текстом. */
+function getTelegramSendUrl(name) {
+  if (siteConfig.adminTelegramGroup) return siteConfig.adminTelegramGroup;
+  if (siteConfig.adminTelegram) {
+    var text = buildAccessRequestText(name);
+    return 'https://t.me/' + encodeURIComponent(siteConfig.adminTelegram) + '?text=' + encodeURIComponent(text);
   }
-  document.addEventListener('visibilitychange', function onVis() {
-    if (document.visibilityState === 'hidden') {
-      fellBack = true; // страница спряталась — значит приложение открылось, веб-фолбэк не нужен
-      document.removeEventListener('visibilitychange', onVis);
-    }
-  }, { once: true });
-
-  window.location.href = appUrl;
-  setTimeout(toWeb, 1200);
+  return null;
 }
 
-/* Открывает стандартный диалог Telegram "Отправить" с готовым текстом —
-   в отличие от tg://resolve?domain=..., этот способ не привязан к
-   конкретному чату/юзернейму: гость сам выбирает получателя из своих
-   чатов, что и нужно для группы (личной ссылки-приглашения на "чат
-   группы" с префиллом сообщения технически не существует — группа
-   не является юзернеймом, в который можно продеплинкать текст). */
-function openTelegramShareDialog(text) {
-  var url = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
+function openTelegramSend(name) {
+  var url = getTelegramSendUrl(name);
+  if (!url) { showToast('⚠️ Администратор пока не указал Telegram для приёма заявок'); return; }
   window.open(url, '_blank', 'noopener');
 }
 
@@ -1867,10 +1861,13 @@ function buildAccessRequestText(name) {
 }
 
 /* Обязательный шаг перед просмотром: гость должен отправить
-   администратору своё имя и код устройства в Telegram. Честно: с
-   этой страницы нельзя технически подтвердить, что сообщение реально
-   дошло — мы просто просим подтвердить это нажатием кнопки и даём
-   возможность открыть Telegram ещё раз, если оно не отправилось.
+   администратору своё имя и код устройства в Telegram. Один экран,
+   одна кнопка: показываем имя+код для копирования и сразу открываем
+   Telegram по клику той же кнопки — без промежуточных "вступите в
+   группу"/"отправили?"-шагов и без ожидания технического
+   подтверждения доставки (это и так невозможно проверить со
+   страницы). Дальше гость просто попадает на экран ожидания, который
+   сам следит за одобрением.
 
    ВАЖНО: перед показом каждый раз заново тянем site-config.json с
    GitHub (а не берём то, что было закэшировано при загрузке страницы) —
@@ -1880,128 +1877,36 @@ async function requireTelegramSend(name) {
   await syncSiteConfigFromGithub();
   if (!siteConfig.adminTelegram && !siteConfig.adminTelegramGroup) return; // администратор ничего не указал — этот шаг попросту недоступен, пропускаем
 
-  if (siteConfig.adminTelegramGroup) {
-    await requireGroupJoinAndSend(name);
-    return;
-  }
-
-  var confirmed = false;
-  while (!confirmed) {
-    await syncSiteConfigFromGithub(); // на случай, если ссылка сменилась, пока гость думал/повторял попытку
-    if (!siteConfig.adminTelegram) { await requireGroupJoinAndSend(name); return; } // администратор успел переключиться на групповой режим
-
-    var text = buildAccessRequestText(name);
-    var messagePreview = 'Прежде чем открыть книгу рецептов, отправьте администратору это сообщение в Telegram — так он сможет одобрить вам доступ. Если Telegram не откроется сам, имя и код ниже можно скопировать по отдельности и отправить любым другим способом.';
-
-    await showModal({
-      title: '📤 Один короткий шаг',
-      message: messagePreview,
-      messageHtml: buildNameCodeCopyHtml(name, getCombinedAccessCode()),
-      withInput: false,
-      hideCancel: true,
-      okText: '📤 Открыть Telegram и отправить'
-    });
-    openTelegramDeepLink(siteConfig.adminTelegram, text);
-
-    confirmed = await showModal({
-      title: 'Сообщение отправлено?',
-      message: 'Нажмите «Да, отправил(а)», когда сообщение ушло администратору — тогда откроется книга рецептов.',
-      withInput: false,
-      okText: '✅ Да, отправил(а)',
-      cancelText: '↩️ Открыть Telegram ещё раз'
-    });
-  }
+  var isGroup = !!siteConfig.adminTelegramGroup;
+  await showModal({
+    title: '📤 Один короткий шаг',
+    message: isGroup
+      ? 'Отправьте администратору своё имя и код устройства в Telegram-группе — так он сможет одобрить вам доступ. Имя и код ниже также можно скопировать по отдельности.'
+      : 'Отправьте администратору это сообщение в Telegram — так он сможет одобрить вам доступ. Сообщение уже готово, останется нажать «Отправить» в Telegram. Если он не откроется сам, имя и код ниже можно скопировать и отправить любым другим способом.',
+    messageHtml: buildNameCodeCopyHtml(name, getCombinedAccessCode()),
+    withInput: false,
+    hideCancel: true,
+    okText: '📤 Открыть Telegram'
+  });
+  openTelegramSend(name);
 }
 
-/* Групповой режим: сначала гость вступает в Telegram-группу
-   администратора по ссылке-приглашению, а вернувшись на сайт — одним
-   нажатием открывает диалог "Отправить" с готовым текстом и выбирает
-   свежевступленную группу из списка чатов. */
-async function requireGroupJoinAndSend(name) {
-  var confirmed = false;
-  while (!confirmed) {
-    await syncSiteConfigFromGithub(); // вдруг администратор сменил ссылку на группу, пока гость вступал/повторял
-    if (!siteConfig.adminTelegramGroup) { await requireTelegramSend(name); return; } // администратор успел переключиться на личный юзернейм
-
-    await showModal({
-      title: '👥 Шаг 1 из 2 — вступите в группу',
-      message: 'Сначала вступите в Telegram-группу администратора по ссылке — там вы сможете отправить заявку на доступ.',
-      messageHtml: buildGroupJoinWarningHtml(),
-      withInput: false,
-      hideCancel: true,
-      okText: '👥 Открыть группу и вступить'
-    });
-    window.open(siteConfig.adminTelegramGroup, '_blank', 'noopener');
-
-    var text = buildAccessRequestText(name);
-    await showModal({
-      title: '📤 Шаг 2 из 2 — отправьте сообщение',
-      message: 'Вернувшись сюда уже участником группы, нажмите ниже — откроется Telegram с готовым сообщением: останется выбрать вашу новую группу из списка чатов. Имя и код ниже также можно скопировать по отдельности.',
-      messageHtml: buildNameCodeCopyHtml(name, getCombinedAccessCode()),
-      withInput: false,
-      hideCancel: true,
-      okText: '📤 Отправить сообщение в группу'
-    });
-    openTelegramShareDialog(text);
-
-    confirmed = await showModal({
-      title: 'Сообщение отправлено?',
-      message: 'Нажмите «Да, отправил(а)», когда сообщение ушло в группу — тогда откроется книга рецептов.',
-      withInput: false,
-      okText: '✅ Да, отправил(а)',
-      cancelText: '↩️ Повторить шаги'
-    });
-  }
-}
-
-/* Кнопка "Отправить снова" на экране ожидания одобрения (см.
-   showPendingScreen). Решает ровно ту проблему, из-за которой гость
-   мог застрять в вечном ожидании: сообщение не дошло (или
-   администратор успел поменять юзернейм/ссылку на группу), а
-   повторить отправку было неоткуда — оставалось только ждать. Всегда
-   сначала тянет свежий site-config.json, поэтому работает по
-   актуальным данным, даже если администратор что-то поменял уже
-   после первой попытки. */
-/* Кнопка "Открыть группу" на экране ожидания (только в групповом
-   режиме) — на случай, если гость закрыл вкладку/приложение раньше,
-   чем успел вступить в группу на шаге 1, и теперь видит только экран
-   ожидания. Доступна без входа, как и resendTelegramRequest ниже. */
-async function openAdminGroupLinkAgain() {
-  var btn = $('pending-join-btn');
+/* Кнопка "Отправить сообщение"/"Отправить снова" на экране ожидания
+   одобрения (см. showPendingScreen) — на случай, если сообщение не
+   дошло или администратор успел поменять юзернейм/ссылку на группу.
+   Всегда сначала тянет свежий site-config.json, поэтому работает по
+   актуальным данным. Открывает Telegram сразу, одним нажатием. */
+async function resendTelegramRequest() {
+  var btn = $('pending-resend-btn');
   if (btn) { btn.disabled = true; }
+
   await syncSiteConfigFromGithub();
-  if (!siteConfig.adminTelegramGroup) {
-    showToast('⚠️ Администратор сейчас принимает заявки в личный чат, а не в группу — используйте «Отправить сообщение»');
-  } else {
-    window.open(siteConfig.adminTelegramGroup, '_blank', 'noopener');
-  }
+  var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
+  openTelegramSend(name);
+
   if (btn) { btn.disabled = false; }
 }
 
-async function resendTelegramRequest() {
-  var btn = $('pending-resend-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Проверяю ссылку...'; }
-
-  await syncSiteConfigFromGithub();
-
-  if (!siteConfig.adminTelegram && !siteConfig.adminTelegramGroup) {
-    showToast('⚠️ Администратор пока не указал Telegram для приёма заявок');
-    if (btn) { btn.disabled = false; btn.textContent = '📤 Отправить снова'; }
-    return;
-  }
-
-  var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
-  var text = buildAccessRequestText(name);
-
-  if (siteConfig.adminTelegramGroup) {
-    openTelegramShareDialog(text); // группа — выбираем чат из списка
-  } else {
-    openTelegramDeepLink(siteConfig.adminTelegram, text); // личный чат — открываем напрямую
-  }
-
-  showToast('📤 Открываю Telegram...');
-  if (btn) { btn.disabled = false; btn.textContent = '📤 Отправить снова'; }
-}
 
 /* Находит запись об ЭТОМ устройстве в списке участников — по коду
    устройства или (если код изменился, например из-за инкогнито) по
@@ -2067,17 +1972,13 @@ function showBlockedScreen() {
    Telegram, отправил заявку) — теперь остаётся ждать, пока
    администратор добавит его код в список участников. Пока это не
    произошло, страница сама, без участия гостя, проверяет список
-   каждые 10 секунд и открывает доступ, как только он появится. */
+   каждые 3 секунды и открывает доступ, как только он появится. */
 var pendingPollTimer = null;
 function showPendingScreen() {
   var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
   var isGroupMode = !!siteConfig.adminTelegramGroup;
-  var actionsHtml = isGroupMode
-    ? '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">' +
-        '<button class="btn btn-ghost btn-sm" id="pending-join-btn" onclick="openAdminGroupLinkAgain()">👥 Открыть группу</button>' +
-        '<button class="btn btn-primary btn-sm" id="pending-resend-btn" onclick="resendTelegramRequest()">📤 Отправить сообщение</button>' +
-      '</div>'
-    : '<button class="btn btn-primary btn-sm" id="pending-resend-btn" onclick="resendTelegramRequest()">📤 Отправить снова</button>';
+  var actionsHtml = '<button class="btn btn-primary btn-sm" id="pending-resend-btn" onclick="resendTelegramRequest()">' +
+    (isGroupMode ? '👥 Открыть группу' : '📤 Отправить снова') + '</button>';
   document.body.innerHTML =
     '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
       '<div>' +
@@ -2088,7 +1989,7 @@ function showPendingScreen() {
           'Как только администратор добавит вас в список участников — эта страница сама откроет книгу рецептов, ничего обновлять не нужно.' +
         '</p>' +
         (name ? buildNameCodeCopyHtml(name, getCombinedAccessCode()) : '<p style="color:var(--text-muted);font-size:13px">Код устройства: ' + esc(getCombinedAccessCode()) + '</p>') +
-        '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 10 секунд…</p>' +
+        '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 3 секунды…</p>' +
         actionsHtml +
         '<p style="color:var(--text-muted);font-size:11px;margin-top:10px;max-width:320px;margin-left:auto;margin-right:auto">Сообщение не дошло, закрыли Telegram раньше времени или администратор сменил ссылку? Эти кнопки доступны без входа — ссылка проверяется заново перед каждым нажатием.</p>' +
         ownerLoginLinkHtml() +
@@ -2105,9 +2006,9 @@ function schedulePendingPoll() {
     if (me && me.blocked) { showBlockedScreen(); return; }
     if (me && !me.blocked) { location.reload(); return; } // одобрили — перезагружаем, дальше initApp пройдёт как обычно
     var line = $('pending-status-line');
-    if (line) line.textContent = 'Проверено ' + new Date().toLocaleTimeString('ru-RU') + ' — пока ждём. Проверяю каждые 10 секунд…';
+    if (line) line.textContent = 'Проверено ' + new Date().toLocaleTimeString('ru-RU') + ' — пока ждём. Проверяю каждые 3 секунды…';
     schedulePendingPoll();
-  }, 10000);
+  }, 3000);
 }
 
 var participantsFilter = 'all'; // 'all' | 'active' | 'blocked'
@@ -4090,18 +3991,6 @@ function buildNameCodeCopyHtml(name, code) {
     copyChipHtml('🔑', 'Код', code, '📋 Код устройства скопирован') +
     '</div>' +
     '<p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:0">Нажмите на имя или код, чтобы скопировать по отдельности</p>';
-}
-
-/* Яркая плашка-напоминание для шага "вступите в группу" (requireGroupJoinAndSend):
-   без вступления в группу гость не сможет отправить сообщение для авторизации
-   и не получит доступ к книге рецептов — это должно бросаться в глаза. */
-function buildGroupJoinWarningHtml() {
-  return '<div class="group-join-warning"><span class="gjw-icon">⚠️</span>' +
-    '<span><strong>Это важно!</strong> Если вы не вступите в группу — вы не сможете ' +
-    'отправить сообщение для авторизации и не сможете пользоваться книгой рецептов.</span></div>' +
-    '<p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.5">' +
-    '👉 Вступив в группу, не закрывайте эту страницу — просто вернитесь на неё ' +
-    '(переключитесь обратно с Telegram сюда) и продолжите здесь.</p>';
 }
 
 function copyPurchaseResult(cat) {
