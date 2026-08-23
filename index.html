@@ -205,6 +205,31 @@
   }
   .admin-panel-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
 
+  /* Карточка участника в списке — раньше это была просто строка с
+     нижней границей и всё сливалось в один серый список; теперь у
+     каждой записи свой фон + скруглённая обводка, чтобы участники
+     визуально отделялись друг от друга и от фона панели. Админы и
+     заблокированные дополнительно подсвечены своим цветом. */
+  .participant-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .participant-item:last-child { margin-bottom: 0; }
+  .participant-item.is-admin {
+    border-color: rgba(217, 165, 78, .55);
+    background: rgba(217, 165, 78, .08);
+  }
+  .participant-item.is-blocked {
+    border-color: rgba(226, 86, 75, .55);
+    background: rgba(226, 86, 75, .08);
+  }
+
   /* Цветные бейджи типа/категории на карточках */
   .type-badge { color: #fff; font-weight: 600; }
   .type-pizza { background: #b23a45; }
@@ -293,12 +318,12 @@
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-lg);
-    padding: 14px;
-    margin-bottom: 12px;
+    padding: 11px 12px;
+    margin-bottom: 9px;
     cursor: pointer;
     transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
     display: flex;
-    gap: 14px;
+    gap: 12px;
     align-items: center;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -316,19 +341,19 @@
   }
 
   .card-thumb {
-    width: 92px; height: 92px; border-radius: 14px;
+    width: 76px; height: 76px; border-radius: 12px;
     object-fit: cover; flex-shrink: 0;
     background: var(--surface);
     box-shadow: 0 4px 14px rgba(0,0,0,.18);
     border: 1px solid rgba(255,255,255,.08);
   }
   .card-info { flex: 1; min-width: 0; }
-  .card-info h3 { font-family: var(--font-display); font-weight: 600; font-size: 18px; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 20px; padding-left: 4px; }
+  .card-info h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; line-height: 1.25; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 18px; padding-left: 4px; }
   .card-share-btn {
     flex-shrink: 0;
-    width: 34px; height: 34px;
+    width: 30px; height: 30px;
     border-radius: 50%;
     border: none;
     background: rgba(255,255,255,.05);
@@ -338,14 +363,14 @@
     -webkit-tap-highlight-color: transparent;
   }
   .card-share-btn svg {
-    width: 17px; height: 17px;
+    width: 16px; height: 16px;
     stroke: var(--text-muted); fill: none;
     stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
   }
   .card-share-btn:hover { background: rgba(226,86,75,.16); }
   .card-share-btn:hover svg { stroke: var(--accent); }
   .badge {
-    font-size: 12px; padding: 3px 10px;
+    font-size: 11px; padding: 3px 9px;
     border-radius: 20px; background: rgba(255,255,255,.09);
     color: var(--text);
   }
@@ -456,29 +481,29 @@
     background: var(--card);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
-    padding: 12px;
-    margin-bottom: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
   }
-  .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .purchase-row-top .purchase-name { flex: 1; }
   .purchase-remove {
-    flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; border: none;
-    background: rgba(231,76,60,.14); color: #e2564b; font-size: 15px; cursor: pointer;
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; border: none;
+    background: rgba(231,76,60,.14); color: #e2564b; font-size: 14px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
   .purchase-remove:active { transform: scale(.92); }
   .purchase-row-fields {
-    display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 8px;
+    display: grid; grid-template-columns: 60px 1fr 1fr 1fr; gap: 6px;
   }
-  .purchase-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
-    padding: 9px 8px; font-size: 14px; width: 100%;
+    padding: 8px 6px; font-size: 14px; width: 100%;
   }
   .purchase-result {
-    padding: 9px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
-    text-align: center; min-height: 38px; display: flex; align-items: center; justify-content: center;
+    padding: 8px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    text-align: center; min-height: 34px; display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,.05); color: var(--text-muted);
   }
   .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
@@ -761,6 +786,31 @@
     animation: modalIn .2s ease;
   }
   @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  /* Яркая плашка-предупреждение на шаге "вступите в группу" — чтобы гость
+     не пропустил, что без вступления в группу доступ к книге рецептов
+     невозможен (см. buildGroupJoinWarningHtml). */
+  .group-join-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(217, 165, 78, .14);
+    border: 1.5px solid var(--warning);
+    color: var(--warning);
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    animation: pulseWarn 1.8s ease-in-out infinite;
+  }
+  .group-join-warning .gjw-icon { font-size: 18px; line-height: 1.3; flex: none; }
+  .group-join-warning strong { color: #fff; }
+  @keyframes pulseWarn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 165, 78, .38); }
+    50% { box-shadow: 0 0 0 7px rgba(217, 165, 78, 0); }
+  }
   .modal-box h3 { margin-bottom: 8px; font-size: 18px; }
   .modal-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 14px; white-space: pre-line; line-height: 1.5; }
   .modal-box input {
@@ -859,6 +909,11 @@
   <div class="chip-row" id="purchase-subtabs" style="margin-bottom:12px">
     <span class="chip active" data-cat="pizza" onclick="selectPurchaseCategory('pizza')">🍕 Закупка на неделю — Пицца бар</span>
     <span class="chip" data-cat="hot" onclick="selectPurchaseCategory('hot')">🔥 Закупка на неделю — Горячий цех</span>
+  </div>
+
+  <div class="admin-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
+    <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
   </div>
 
   <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
@@ -1137,6 +1192,9 @@
       <button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>
       <button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>
     </div>
+    <div id="app-modal-dev-login-wrap" style="display:none;text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--glass-border)">
+      <span id="app-modal-dev-login" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔑 Я разработчик (владелец) — войти</span>
+    </div>
   </div>
 </div>
 
@@ -1212,6 +1270,12 @@ function showToast(msg) {
    появляется. Поэтому здесь свой HTML-диалог, который работает
    одинаково в обычной вкладке и в standalone-режиме.
    ================================================================ */
+/* Специальное значение, которым resolve()-ится showModal(), когда гость
+   на экране "Как вас зовут?" нажимает ссылку "Я разработчик — войти".
+   Отличимо от любого введённого имени (обычная строка), поэтому вызывающий
+   код (ensureParticipantName) может однозначно распознать этот случай. */
+var DEV_LOGIN_SENTINEL = { __devLoginRequested: true };
+
 function showModal(opts) {
   return new Promise(function(resolve) {
     var overlay = $('app-modal-overlay');
@@ -1220,9 +1284,18 @@ function showModal(opts) {
     var inputEl = $('app-modal-input');
     var okBtn = $('app-modal-ok');
     var cancelBtn = $('app-modal-cancel');
+    var devWrap = $('app-modal-dev-login-wrap');
+    var devLink = $('app-modal-dev-login');
 
     titleEl.textContent = opts.title || '';
-    msgEl.textContent = opts.message || '';
+    if (opts.messageHtml) {
+      // esc() сохраняет переносы строк (white-space:pre-line на .modal-box p),
+      // а messageHtml (уже готовый безопасный HTML — см. copyChipHtml/buildNameCodeCopyHtml,
+      // значения экранированы через escAttr/esc) добавляется следом.
+      msgEl.innerHTML = esc(opts.message || '') + opts.messageHtml;
+    } else {
+      msgEl.textContent = opts.message || '';
+    }
     okBtn.textContent = opts.okText || 'ОК';
     cancelBtn.textContent = opts.cancelText || 'Отмена';
     cancelBtn.style.display = opts.hideCancel ? 'none' : '';
@@ -1237,6 +1310,8 @@ function showModal(opts) {
       inputEl.type = 'text';
     }
 
+    if (devWrap) devWrap.style.display = opts.devLogin ? '' : 'none';
+
     overlay.classList.add('show');
     if (opts.withInput) setTimeout(function() { inputEl.focus(); }, 60);
 
@@ -1245,6 +1320,7 @@ function showModal(opts) {
       okBtn.onclick = null;
       cancelBtn.onclick = null;
       inputEl.onkeydown = null;
+      if (devLink) devLink.onclick = null;
       resolve(result);
     }
 
@@ -1257,6 +1333,11 @@ function showModal(opts) {
     inputEl.onkeydown = function(e) {
       if (e.key === 'Enter') { e.preventDefault(); okBtn.onclick(); }
     };
+    if (devLink) {
+      devLink.onclick = function() {
+        cleanup(DEV_LOGIN_SENTINEL);
+      };
+    }
   });
 }
 
@@ -1389,22 +1470,38 @@ function showDeviceCodeInFooter() {
 
 async function ensureParticipantName() {
   if (isAdmin()) return; // администратора эта система не касается — у него доступ через GitHub-ключ
+
+  // Разработчик/владелец может войти прямо с этого экрана, минуя
+  // представление именем — по ссылке "Я разработчик" ниже поля ввода.
+  // Как только вход по ключу пройдёт успешно, isAdmin() станет true и
+  // весь экран знакомства с сайтом (включая заявку в Telegram) пропускается.
   var name = localStorage.getItem(DEVICE_NAME_KEY);
   if (name) return; // уже представлялись раньше в этом браузере
 
-  var entered = '';
-  while (!entered || !entered.trim()) {
-    entered = await showModal({
+  while (true) {
+    var entered = await showModal({
       title: '👋 Добро пожаловать в Route 20',
       message: 'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом. Продолжить можно только после того, как вы представитесь.',
       withInput: true,
       hideCancel: true,
-      okText: 'Продолжить'
+      okText: 'Продолжить',
+      devLogin: true
     });
+
+    if (entered === DEV_LOGIN_SENTINEL) {
+      var loggedIn = await loginWithGithubKey();
+      if (loggedIn) return; // вошли как разработчик — экран знакомства больше не нужен
+      continue; // ключ не ввели/не подошёл — снова показываем экран знакомства
+    }
+
+    if (entered && entered.trim()) {
+      var finalName = entered.trim();
+      localStorage.setItem(DEVICE_NAME_KEY, finalName);
+      await requireTelegramSend(finalName);
+      return;
+    }
+    // имя пустое — показываем экран знакомства ещё раз
   }
-  var finalName = entered.trim();
-  localStorage.setItem(DEVICE_NAME_KEY, finalName);
-  await requireTelegramSend(finalName);
 }
 
 function loadParticipantsLocal() {
@@ -1738,11 +1835,12 @@ async function requireTelegramSend(name) {
     if (!siteConfig.adminTelegram) { await requireGroupJoinAndSend(name); return; } // администратор успел переключиться на групповой режим
 
     var text = buildAccessRequestText(name);
-    var messagePreview = 'Прежде чем открыть книгу рецептов, отправьте администратору это сообщение в Telegram — так он сможет одобрить вам доступ.\n\nИмя: ' + name + '\nКод устройства: ' + getCombinedAccessCode();
+    var messagePreview = 'Прежде чем открыть книгу рецептов, отправьте администратору это сообщение в Telegram — так он сможет одобрить вам доступ. Если Telegram не откроется сам, имя и код ниже можно скопировать по отдельности и отправить любым другим способом.';
 
     await showModal({
       title: '📤 Один короткий шаг',
       message: messagePreview,
+      messageHtml: buildNameCodeCopyHtml(name, getCombinedAccessCode()),
       withInput: false,
       hideCancel: true,
       okText: '📤 Открыть Telegram и отправить'
@@ -1772,6 +1870,7 @@ async function requireGroupJoinAndSend(name) {
     await showModal({
       title: '👥 Шаг 1 из 2 — вступите в группу',
       message: 'Сначала вступите в Telegram-группу администратора по ссылке — там вы сможете отправить заявку на доступ.',
+      messageHtml: buildGroupJoinWarningHtml(),
       withInput: false,
       hideCancel: true,
       okText: '👥 Открыть группу и вступить'
@@ -1781,7 +1880,8 @@ async function requireGroupJoinAndSend(name) {
     var text = buildAccessRequestText(name);
     await showModal({
       title: '📤 Шаг 2 из 2 — отправьте сообщение',
-      message: 'Вернувшись сюда уже участником группы, нажмите ниже — откроется Telegram с готовым сообщением: останется выбрать вашу новую группу из списка чатов.\n\nИмя: ' + name + '\nКод устройства: ' + getCombinedAccessCode(),
+      message: 'Вернувшись сюда уже участником группы, нажмите ниже — откроется Telegram с готовым сообщением: останется выбрать вашу новую группу из списка чатов. Имя и код ниже также можно скопировать по отдельности.',
+      messageHtml: buildNameCodeCopyHtml(name, getCombinedAccessCode()),
       withInput: false,
       hideCancel: true,
       okText: '📤 Отправить сообщение в группу'
@@ -1911,8 +2011,8 @@ function showPendingScreen() {
           (name ? esc(name) + ', вашу заявку ещё не одобрили. ' : 'Вашу заявку ещё не одобрили. ') +
           'Как только администратор добавит вас в список участников — эта страница сама откроет книгу рецептов, ничего обновлять не нужно.' +
         '</p>' +
-        '<p style="color:var(--text-muted);font-size:13px;margin-bottom:4px">Код устройства: ' + esc(getCombinedAccessCode()) + '</p>' +
-        '<p style="color:var(--text-muted);font-size:12px;margin-bottom:16px" id="pending-status-line">Проверяю каждые 10 секунд…</p>' +
+        (name ? buildNameCodeCopyHtml(name, getCombinedAccessCode()) : '<p style="color:var(--text-muted);font-size:13px">Код устройства: ' + esc(getCombinedAccessCode()) + '</p>') +
+        '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 10 секунд…</p>' +
         actionsHtml +
         '<p style="color:var(--text-muted);font-size:11px;margin-top:10px;max-width:320px;margin-left:auto;margin-right:auto">Сообщение не дошло, закрыли Telegram раньше времени или администратор сменил ссылку? Эти кнопки доступны без входа — ссылка проверяется заново перед каждым нажатием.</p>' +
       '</div>' +
@@ -1973,7 +2073,8 @@ function renderParticipantsList() {
   holder.innerHTML = shown.map(function(p) {
     var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
     var isRoleAdmin = p.role === 'admin';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--glass-border);flex-wrap:wrap">' +
+    var itemClass = 'participant-item' + (isRoleAdmin ? ' is-admin' : '') + (p.blocked ? ' is-blocked' : '');
+    return '<div class="' + itemClass + '">' +
       '<div style="min-width:0">' +
         '<strong>' + esc(p.name) + '</strong>' +
         (isRoleAdmin ? ' <span style="color:var(--accent-2);font-size:12px">· 👑 админ</span>' : '') +
@@ -2251,6 +2352,7 @@ const UNLOCK_ICON_SVG = '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" 
 
 function applyAdminUI() {
   document.body.classList.toggle('is-admin', isAdmin());
+  if (!isAdmin()) purchaseTemplateEditMode = false; // выход из режима — сбрасываем и режим редактирования шаблона закупки
   var btn = $('admin-toggle-btn');
   if (btn) {
     var iconEl = btn.querySelector('.icon');
@@ -2259,6 +2361,7 @@ function applyAdminUI() {
     if (labelEl) labelEl.textContent = isAdmin() ? 'Выход' : 'Вход';
   }
   updateAddGate();
+  if (currentTab === 'purchase') renderPurchaseList();
   if (currentTab === 'admin') renderAdminPanel();
 }
 
@@ -2295,15 +2398,15 @@ async function loginWithGithubKey() {
 
   if (!owner) {
     var ownerInput = await customPrompt('GitHub — имя пользователя или организации:', '', '🔑 Вход в режим администратора (1/3)');
-    if (ownerInput === null) return;
+    if (ownerInput === null) return false;
     owner = ownerInput.trim();
-    if (!owner) { showToast('⚠️ Нужно указать владельца репозитория'); return; }
+    if (!owner) { showToast('⚠️ Нужно указать владельца репозитория'); return false; }
   }
   if (!repo) {
     var repoInput = await customPrompt('Название репозитория (например pizza):', '', '🔑 Вход в режим администратора (2/3)');
-    if (repoInput === null) return;
+    if (repoInput === null) return false;
     repo = repoInput.trim();
-    if (!repo) { showToast('⚠️ Нужно указать репозиторий'); return; }
+    if (!repo) { showToast('⚠️ Нужно указать репозиторий'); return false; }
   }
 
   var token = await customPrompt(
@@ -2311,21 +2414,22 @@ async function loginWithGithubKey() {
     'Ключ нигде не хранится в коде сайта и не сохраняется у Anthropic — только в этом браузере, и он проверяется напрямую в GitHub.',
     '', '🔑 Вход в режим администратора (3/3)', 'password'
   );
-  if (token === null) return;
+  if (token === null) return false;
   token = token.trim();
-  if (!token) { showToast('⚠️ Нужно ввести ключ'); return; }
+  if (!token) { showToast('⚠️ Нужно ввести ключ'); return false; }
 
   showToast('⏳ Проверяю ключ на GitHub...');
   var check = await verifyGithubToken(owner, repo, token);
   if (!check.ok) {
     showToast('⛔ ' + check.error);
-    return;
+    return false;
   }
 
   localStorage.setItem(GH_CONFIG_KEY, JSON.stringify({ owner: owner, repo: repo, branch: branch, token: token }));
   localStorage.setItem(ADMIN_KEY, '1');
   applyAdminUI();
   showToast('🔓 Ключ подтверждён, режим администратора включён');
+  return true;
 }
 
 async function verifyGithubToken(owner, repo, token) {
@@ -3591,6 +3695,47 @@ var PURCHASE_STORAGE_KEY = 'route20_purchase_v1';
 var purchaseData = { pizza: [], hot: [] };
 var currentPurchaseCategory = 'pizza';
 
+/* Режим редактирования шаблона закупки — по умолчанию ВЫКЛЮЧЕН, даже для
+   администраторов и разработчика: как и с карточками рецептов, сначала
+   нужно явно нажать "✏️ Редактировать шаблон", и только тогда поля
+   название/ед./норма становятся редактируемыми. Пока режим выключен,
+   админ видит шаблон так же, как обычный гость — может вписать только
+   свой остаток. Это защищает от случайной правки шаблона на лету. */
+var purchaseTemplateEditMode = false;
+
+function togglePurchaseTemplateEdit() {
+  if (!isAdmin()) { showToast('🔒 Редактировать шаблон может только владелец или администратор'); return; }
+  purchaseTemplateEditMode = !purchaseTemplateEditMode;
+  renderPurchaseList();
+  updatePurchaseTemplateControls();
+  if (!purchaseTemplateEditMode) {
+    // Выходя из режима редактирования, сразу сохраняем то, что успели
+    // поправить, — чтобы никакая правка не потерялась из-за debounce.
+    savePurchaseTemplateNow(true);
+  }
+}
+
+function updatePurchaseTemplateControls() {
+  var toggleBtn = $('purchase-edit-toggle-btn');
+  var saveBtn = $('purchase-save-template-btn');
+  if (toggleBtn) toggleBtn.textContent = purchaseTemplateEditMode ? '🔒 Завершить редактирование' : '✏️ Редактировать шаблон';
+  if (saveBtn) saveBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
+}
+
+/* Ручное сохранение шаблона в GitHub сразу, минуя обычную задержку
+   (debounce) автосохранения — на случай медленного интернета или чтобы
+   быть уверенным, что правки точно ушли, прежде чем закрыть вкладку.
+   silent=true — не показывать лишний тост, если сохранять по сути нечего
+   (используется при автоматическом выходе из режима редактирования). */
+async function savePurchaseTemplateNow(silent) {
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  clearTimeout(purchaseSyncDebounceTimer);
+  if (!silent) showToast('⏳ Сохраняю шаблон...');
+  var ok = await syncPurchaseToGithub();
+  if (ok && !silent) showToast('✅ Шаблон закупки сохранён в GitHub');
+  // при ok===false внутри syncPurchaseToGithub уже показан тост с точной причиной — не перезаписываем его
+}
+
 function loadPurchaseData() {
   try {
     var stored = localStorage.getItem(PURCHASE_STORAGE_KEY);
@@ -3623,7 +3768,7 @@ function selectPurchaseCategory(cat) {
 }
 
 function addPurchaseRow(cat) {
-  if (!isAdmin()) { showToast('🔒 Список позиций может составлять только владелец или администратор'); return; }
+  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы добавлять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   cat = cat || currentPurchaseCategory;
   var rows = purchaseRowsFor(cat);
   var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '' };
@@ -3638,7 +3783,7 @@ function addPurchaseRow(cat) {
 }
 
 function removePurchaseRow(cat, id) {
-  if (!isAdmin()) { showToast('🔒 Список позиций может составлять только владелец или администратор'); return; }
+  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы удалять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   purchaseData[cat] = purchaseRowsFor(cat).filter(function(r) { return r.id !== id; });
   savePurchaseData();
   renderPurchaseList();
@@ -3651,8 +3796,8 @@ function removePurchaseRow(cat, id) {
 // доступно всем и никуда, кроме этого браузера, не сохраняется.
 var PURCHASE_TEMPLATE_FIELDS = { name: true, unit: true, norm: true };
 function updatePurchaseField(cat, id, field, value) {
-  if (PURCHASE_TEMPLATE_FIELDS[field] && !isAdmin()) {
-    showToast('🔒 Список и норму может менять только владелец или администратор');
+  if (PURCHASE_TEMPLATE_FIELDS[field] && !(isAdmin() && purchaseTemplateEditMode)) {
+    showToast('🔒 Чтобы менять список и норму, сначала нажмите «✏️ Редактировать шаблон»');
     renderPurchaseList(); // откатываем поле в UI к сохранённому значению
     return;
   }
@@ -3691,15 +3836,19 @@ function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
   var rows = purchaseRowsFor(currentPurchaseCategory);
-  var canEditTemplate = isAdmin();
+  var canEditTemplate = isAdmin() && purchaseTemplateEditMode;
+
+  updatePurchaseTemplateControls();
 
   var addBtn = $('purchase-add-btn');
   if (addBtn) addBtn.style.display = canEditTemplate ? '' : 'none';
   var hint = $('purchase-hint');
   if (hint) {
     hint.textContent = canEditTemplate
-      ? '🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13). Список позиций и норму видят и сохраняют для всех только владелец и администраторы.'
-      : '🧮 Список составлен администратором. Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).';
+      ? '🧮 Режим редактирования включён: правьте название/ед./норму — изменения сохранятся автоматически, а кнопка «💾 Сохранить шаблон» отправит их в GitHub сразу. Впишите также норму на неделю, чтобы калькулятор посчитал, сколько докупить.'
+      : (isAdmin()
+        ? '🧮 Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить. Чтобы поменять список позиций или норму, нажмите «✏️ Редактировать шаблон» выше.'
+        : '🧮 Список составлен администратором. Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).');
   }
 
   if (!rows.length) {
@@ -3807,6 +3956,53 @@ function copyTextToClipboard(text, successMsg) {
   } else {
     fallbackCopyText(text, successMsg);
   }
+}
+
+/* ================================================================
+   ОТДЕЛЬНОЕ КОПИРОВАНИЕ ИМЕНИ И КОДА ОДНИМ НАЖАТИЕМ
+   ================================================================
+   Везде, где гостю показывают его имя и код устройства (заявка на
+   доступ, экран ожидания одобрения), оба значения выводятся
+   отдельными "чипами": нажатие на имя копирует только имя, нажатие
+   на код — только код. Это удобнее, чем копировать всё сообщение
+   целиком и вручную вырезать нужный кусок.
+   Слушатель один на весь документ (делегирование), поэтому работает
+   одинаково и в модальном окне, и на экране ожидания. ================================================================ */
+document.addEventListener('click', function(e) {
+  var chip = e.target.closest ? e.target.closest('.copy-chip') : null;
+  if (!chip) return;
+  var val = chip.getAttribute('data-copy-value') || '';
+  var msg = chip.getAttribute('data-copy-msg') || '📋 Скопировано в буфер обмена';
+  copyTextToClipboard(val, msg);
+});
+
+function copyChipHtml(icon, label, value, copiedMsg) {
+  return '<span class="copy-chip" data-copy-value="' + escAttr(String(value)) + '" data-copy-msg="' + escAttr(copiedMsg) + '" ' +
+    'style="display:inline-flex;align-items:center;gap:6px;margin:3px;padding:8px 14px;border-radius:10px;' +
+    'background:var(--surface);border:1px solid var(--glass-border);cursor:pointer;font-weight:600;font-size:14px">' +
+    icon + ' ' + esc(String(value)) + ' <span style="opacity:.6;font-size:12px">📋</span></span>';
+}
+
+/* Готовый блок "имя + код" с отдельным копированием каждого — используется
+   и в приглашении отправить заявку в Telegram, и на экране ожидания. */
+function buildNameCodeCopyHtml(name, code) {
+  return '<div style="display:flex;flex-wrap:wrap;justify-content:center;margin:10px 0 4px">' +
+    copyChipHtml('👤', 'Имя', name, '📋 Имя скопировано') +
+    copyChipHtml('🔑', 'Код', code, '📋 Код устройства скопирован') +
+    '</div>' +
+    '<p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:0">Нажмите на имя или код, чтобы скопировать по отдельности</p>';
+}
+
+/* Яркая плашка-напоминание для шага "вступите в группу" (requireGroupJoinAndSend):
+   без вступления в группу гость не сможет отправить сообщение для авторизации
+   и не получит доступ к книге рецептов — это должно бросаться в глаза. */
+function buildGroupJoinWarningHtml() {
+  return '<div class="group-join-warning"><span class="gjw-icon">⚠️</span>' +
+    '<span><strong>Это важно!</strong> Если вы не вступите в группу — вы не сможете ' +
+    'отправить сообщение для авторизации и не сможете пользоваться книгой рецептов.</span></div>' +
+    '<p style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.5">' +
+    '👉 Вступив в группу, не закрывайте эту страницу — просто вернитесь на неё ' +
+    '(переключитесь обратно с Telegram сюда) и продолжите здесь.</p>';
 }
 
 function copyPurchaseResult(cat) {
@@ -3965,37 +4161,7 @@ function renderRecipeQR(id, name) {
 
 function shareRecipeLink(id) {
   var url = getRecipeShareUrl(id);
-  copyTextToClipboard(url);
-}
-
-function copyTextToClipboard(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(function() {
-      showToast('🔗 Ссылка скопирована');
-    }).catch(function() {
-      legacyCopy(text);
-    });
-  } else {
-    legacyCopy(text);
-  }
-}
-
-function legacyCopy(text) {
-  // Фолбэк для старых браузеров без Clipboard API (например старый Safari/Android WebView)
-  try {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    var ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast(ok ? '🔗 Ссылка скопирована' : text);
-  } catch (e) {
-    showToast(text);
-  }
+  copyTextToClipboard(url, '🔗 Ссылка скопирована');
 }
 
 function closeDetail(originTab) {
