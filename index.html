@@ -1701,10 +1701,23 @@ function updateTelegramConfigField() {
 const PURCHASE_PATH = 'purchase.json';
 
 async function syncPurchaseFromGithub() {
+  // Пока админ активно редактирует шаблон (режим включён кнопкой
+  // "✏️ Редактировать шаблон"), фоновое обновление с GitHub НЕ должно
+  // подменять список: раньше строка, только что добавленная кнопкой
+  // "+ Добавить ингредиент", могла исчезнуть буквально через долю
+  // секунды — потому что параллельный фоновый fetch этой функции успевал
+  // прийти со старой версией с GitHub (ещё без новой строки) и полностью
+  // затирал purchaseData. Снаружи режима редактирования — синхронизация
+  // как обычно.
+  if (isAdmin() && purchaseTemplateEditMode) return;
   try {
     var res = await fetch('./' + PURCHASE_PATH + '?_=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return; // файла ещё нет (шаблон не настраивали) или открыто локально — тихий фолбэк
     var data = await res.json();
+    // Ещё одна проверка после await fetch()/await res.json(): пока мы
+    // ждали ответ сети, админ мог успеть нажать "Редактировать шаблон"
+    // и добавить строки — не затираем их результатом, который уже устарел.
+    if (isAdmin() && purchaseTemplateEditMode) return;
     if (data && typeof data === 'object') {
       var incoming = { pizza: Array.isArray(data.pizza) ? data.pizza : [], hot: Array.isArray(data.hot) ? data.hot : [] };
       // Остатки, введённые прямо сейчас на этом устройстве, — локальные и
