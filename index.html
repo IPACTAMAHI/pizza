@@ -1726,7 +1726,7 @@ async function syncPurchaseFromGithub() {
       ['pizza', 'hot'].forEach(function(cat) {
         var localById = {};
         purchaseRowsFor(cat).forEach(function(r) { localById[r.id] = r.residual; });
-        incoming[cat].forEach(function(r) { if (r.id in localById) r.residual = localById[r.id]; });
+        incoming[cat].forEach(function(r) { r.residual = (r.id in localById) ? localById[r.id] : ''; });
       });
       purchaseData = incoming;
       savePurchaseData();
@@ -4283,7 +4283,8 @@ function esc(str) {
 
 // For use in HTML attribute values (like src="...")
 function escAttr(str) {
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (str === undefined || str === null) str = '';
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /* ================================================================
