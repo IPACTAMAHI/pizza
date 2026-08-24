@@ -15,5 +15,13 @@
     "addedAt": 1787476188384,
     "blocked": false,
     "role": "viewer"
+  },
+  {
+    "id": "3C14-95E3",
+    "fingerprint": "3c1495e3",
+    "name": "Вова",
+    "addedAt": 1787571064635,
+    "blocked": false,
+    "role": "viewer"
   }
 ]
