@@ -1579,6 +1579,7 @@ const DEVICE_NAME_KEY = 'r20_device_name';
 const PARTICIPANTS_KEY = 'r20_participants_cache';
 const PARTICIPANTS_PATH = 'participants.json';
 const MANUAL_CODE_KEY = 'r20_manual_code';
+const KEY_FAIL_STATE_KEY = 'r20_key_fail_state';
 
 var participants = [];
 
@@ -1799,8 +1800,80 @@ async function ensureParticipantName() {
    ключ). Блокировка ключа администратором мгновенно закрывает доступ
    везде, где этот ключ используется — потому что личность определяется
    ключом, а не отпечатком конкретного браузера. */
+
+/* ================================================================
+   ЗАЩИТА ОТ ПОДБОРА КЛЮЧА
+   ================================================================
+   Ключ — 8 символов (XXXX-XXXX), но без ограничения на попытки его
+   реально можно перебирать вручную раз за разом. Считаем только
+   попытки с "ключ не найден" (именно они означают подбор, а не
+   опечатку в уже правильном ключе) — после 5 подряд неудачных попыток
+   ввод блокируется на 5 минут на этом устройстве, и вместо поля ввода
+   показывается прямая ссылка "запросить ключ у администратора".
+   Это не защита от того, кто чистит localStorage/меняет отпечаток —
+   но останавливает обычный перебор в одном браузере и создаёт
+   администратору понятный сигнал (см. также сообщение в заявке). */
+function getKeyFailState() {
+  try {
+    var raw = localStorage.getItem(KEY_FAIL_STATE_KEY);
+    var s = raw ? JSON.parse(raw) : null;
+    return (s && typeof s.count === 'number') ? s : { count: 0, lockUntil: 0 };
+  } catch (e) {
+    return { count: 0, lockUntil: 0 };
+  }
+}
+
+function saveKeyFailState(s) {
+  try { localStorage.setItem(KEY_FAIL_STATE_KEY, JSON.stringify(s)); } catch (e) {}
+}
+
+var KEY_FAIL_LIMIT = 5;
+var KEY_FAIL_LOCK_MS = 5 * 60 * 1000;
+
+function registerFailedKeyAttempt() {
+  var s = getKeyFailState();
+  s.count = (s.count || 0) + 1;
+  if (s.count >= KEY_FAIL_LIMIT) {
+    s.lockUntil = Date.now() + KEY_FAIL_LOCK_MS;
+    s.count = 0; // счётчик до следующей блокировки — заново
+  }
+  saveKeyFailState(s);
+}
+
+function clearKeyFailState() {
+  saveKeyFailState({ count: 0, lockUntil: 0 });
+}
+
+function keyEntryLockedMsRemaining() {
+  var s = getKeyFailState();
+  var left = (s.lockUntil || 0) - Date.now();
+  return left > 0 ? left : 0;
+}
+
 async function requireAccessKey(name) {
   while (true) {
+    var lockedMs = keyEntryLockedMsRemaining();
+    if (lockedMs > 0) {
+      var lockedMin = Math.ceil(lockedMs / 60000);
+      var requestHtml = '<p style="text-align:center;font-size:12px;margin-top:12px">' +
+        '<span onclick="requestAccessFromLockedScreen(\'' + escAttr(name) + '\')" style="color:var(--accent);text-decoration:underline;cursor:pointer">📤 Запросить ключ у администратора →</span>' +
+        '</p>';
+      await showModal({
+        title: '⏳ Слишком много попыток',
+        message: 'Ключ несколько раз подряд не подошёл — ввод временно недоступен (ещё ' + lockedMin + ' мин.) на этом устройстве. Если ключа нет — запросите его у администратора.',
+        messageHtml: requestHtml,
+        withInput: false,
+        hideCancel: true,
+        okText: 'Понятно',
+        devLogin: true
+      }).then(function(res) {
+        if (res === DEV_LOGIN_SENTINEL) return loginWithGithubKey();
+      });
+      if (isAdmin()) return; // вошли как разработчик, пока ждали
+      await new Promise(function(r) { setTimeout(r, 1000); }); // не даём мгновенно крутить цикл заново
+      continue;
+    }
+
     var contactHtml = '';
     var url = getTelegramSendUrl(name);
     if (url) {
@@ -1836,9 +1909,12 @@ async function requireAccessKey(name) {
     var p = participants.filter(function(x) { return x.id === normalized; })[0];
 
     if (!p) {
+      registerFailedKeyAttempt();
       await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок, либо получите новый у администратора.', '⚠️ Ключ не найден');
       continue;
     }
+
+    clearKeyFailState();
 
     // Ключ найден — привязываем к нему это устройство независимо от
     // статуса (в том числе если он уже занят другим браузером того же
@@ -2530,6 +2606,44 @@ function buildAccessRequestText(name) {
   return 'Здравствуйте! Хочу получить доступ к книге рецептов Route 20 🍕\nИмя: ' + (name || '—') + '\nКод устройства: ' + code;
 }
 
+/* Сообщение для случая "ключ несколько раз подряд не подошёл" —
+   отдельный текст от обычной первой заявки, чтобы администратор сразу
+   видел контекст (это не первое обращение, а результат неудачного
+   подбора) и мог решить, выдавать ли новый ключ. */
+function buildKeyLockedRequestText(name) {
+  var code = getCombinedAccessCode();
+  return '⚠️ Не подошёл ключ доступа к книге рецептов Route 20 (несколько попыток подряд).\nИмя: ' + (name || '—') + '\nКод устройства: ' + code + '\nПрошу выдать/уточнить ключ.';
+}
+
+/* Сообщение с экрана "Доступ закрыт" — гость просит пересмотреть
+   блокировку или выдать новый ключ. Тоже отдельный текст, чтобы
+   администратор сразу видел, что пишет именно заблокированный. */
+function buildBlockedRequestText(name) {
+  var code = getCombinedAccessCode();
+  return '🔒 Мне закрыли доступ к книге рецептов Route 20, прошу пересмотреть или выдать новый ключ.\nИмя: ' + (name || '—') + '\nКод устройства: ' + code;
+}
+
+async function requestAccessFromLockedScreen(name) {
+  await syncSiteConfigFromGithub();
+  var url = siteConfig.adminTelegramGroup || (siteConfig.adminTelegram ? ('https://t.me/' + encodeURIComponent(siteConfig.adminTelegram) + '?text=' + encodeURIComponent(buildKeyLockedRequestText(name))) : null);
+  if (!url) { showToast('⚠️ Администратор пока не указал Telegram для приёма заявок'); return; }
+  window.open(url, '_blank', 'noopener');
+}
+
+/* Кнопка "Запросить новый ключ" на экране "Доступ закрыт" (см.
+   showBlockedScreen). Всегда тянет свежий site-config.json — вдруг
+   администратор поменял юзернейм/ссылку уже после блокировки. */
+async function requestAccessFromBlockedScreen() {
+  var btn = $('blocked-request-btn');
+  if (btn) btn.disabled = true;
+  await syncSiteConfigFromGithub();
+  var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
+  var url = siteConfig.adminTelegramGroup || (siteConfig.adminTelegram ? ('https://t.me/' + encodeURIComponent(siteConfig.adminTelegram) + '?text=' + encodeURIComponent(buildBlockedRequestText(name))) : null);
+  if (btn) btn.disabled = false;
+  if (!url) { showToast('⚠️ Администратор пока не указал Telegram для приёма заявок'); return; }
+  window.open(url, '_blank', 'noopener');
+}
+
 /* Обязательный шаг перед просмотром: гость должен отправить
    администратору своё имя и код устройства в Telegram. Один экран,
    одна кнопка: показываем имя+код для копирования и сразу открываем
@@ -2627,12 +2741,15 @@ async function ownerLoginFromGateScreen() {
 }
 
 function showBlockedScreen() {
+  var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
   document.body.innerHTML =
     '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
       '<div>' +
         '<div style="font-size:56px;margin-bottom:16px">🔒</div>' +
         '<h2 style="font-family:var(--font-display);margin-bottom:10px">Доступ закрыт</h2>' +
         '<p style="color:var(--text-muted);max-width:320px;margin:0 auto">Если считаете, что это ошибка — обратитесь к администратору.</p>' +
+        (name ? buildNameCodeCopyHtml(name, getCombinedAccessCode()) : '<p style="color:var(--text-muted);font-size:13px;margin-top:10px">Код устройства: ' + esc(getCombinedAccessCode()) + '</p>') +
+        '<p style="margin-top:14px"><button type="button" class="btn btn-primary btn-sm" id="blocked-request-btn" onclick="requestAccessFromBlockedScreen()">📤 Запросить ключ у администратора</button></p>' +
         ownerLoginLinkHtml() +
       '</div>' +
     '</div>';
