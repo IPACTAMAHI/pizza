@@ -524,8 +524,9 @@
   }
   .purchase-remove:active { transform: scale(.92); }
   .purchase-row-fields {
-    display: grid; grid-template-columns: 60px 1fr 1fr 1fr; gap: 6px;
+    display: grid; grid-template-columns: 60px 1fr 1fr 1fr 1fr; gap: 6px;
   }
+  .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
   .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
@@ -553,17 +554,12 @@
   @media (max-width: 480px) {
     .purchase-row-fields { grid-template-columns: 1fr 1fr; }
     .purchase-field-unit { order: -1; }
+    .purchase-field-reorder { grid-column: span 2; }
   }
   /* Общий список закупки (все поставщики сразу, для обхода цеха) —
      та же карточка .purchase-row, только имя/ед./норма — просто текст
      (шаблон правится в разделе поставщика выше), редактируется только
-     остаток. */
-  .purchase-combined-group-title {
-    display: flex; align-items: center; gap: 8px;
-    font-family: var(--font-display); font-weight: 700; font-size: 15px;
-    margin: 18px 0 8px;
-  }
-  .purchase-combined-group-title:first-child { margin-top: 0; }
+     остаток. Список сплошной, без разбивки по поставщику. */
   .purchase-row-readonly-name { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
   .purchase-row-readonly-name .purchase-row-meta { font-weight: 500; font-size: 12px; color: var(--text-muted); margin-left: 6px; }
 
@@ -1024,6 +1020,7 @@
     <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="copyPurchaseReorder()">🔁 Скопировать дозаказ</button>
   </div>
 
   <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
@@ -1043,6 +1040,7 @@
       <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (все поставщики)</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
     </div>
   </div>
 </div>
@@ -2494,13 +2492,17 @@ async function syncPurchaseFromGithub() {
     });
     incomingCategories.forEach(function(c) { if (!Array.isArray(incomingData[c.id])) incomingData[c.id] = []; });
 
-    // Остатки, введённые прямо сейчас на этом устройстве, — локальные и
-    // временные, поэтому при обновлении шаблона с GitHub переносим их
-    // на новые данные по id строки, а не затираем.
+    // Остатки и дозаказ, введённые прямо сейчас на этом устройстве, —
+    // локальные и временные, поэтому при обновлении шаблона с GitHub
+    // переносим их на новые данные по id строки, а не затираем.
     incomingCategories.forEach(function(c) {
-      var localById = {};
-      purchaseRowsFor(c.id).forEach(function(r) { localById[r.id] = r.residual; });
-      incomingData[c.id].forEach(function(r) { r.residual = (r.id in localById) ? localById[r.id] : ''; });
+      var localResidualById = {};
+      var localReorderById = {};
+      purchaseRowsFor(c.id).forEach(function(r) { localResidualById[r.id] = r.residual; localReorderById[r.id] = r.reorder; });
+      incomingData[c.id].forEach(function(r) {
+        r.residual = (r.id in localResidualById) ? localResidualById[r.id] : '';
+        r.reorder = (r.id in localReorderById) ? localReorderById[r.id] : '';
+      });
     });
 
     purchaseCategories = incomingCategories;
@@ -4671,6 +4673,10 @@ function savePurchaseData() {
 
 function purchaseRowsFor(cat) {
   if (!Array.isArray(purchaseData[cat])) purchaseData[cat] = [];
+  // На старых сохранённых данных (до появления колонки "Дозаказ") поля
+  // reorder ещё нет — подставляем пустую строку, чтобы поле было и
+  // сразу редактировалось, не ломая старые записи.
+  purchaseData[cat].forEach(function(r) { if (r.reorder === undefined) r.reorder = ''; });
   return purchaseData[cat];
 }
 
@@ -4770,7 +4776,7 @@ function addPurchaseRow(cat) {
   if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы добавлять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   cat = cat || currentPurchaseCategory;
   var rows = purchaseRowsFor(cat);
-  var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '' };
+  var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '', reorder: '' };
   rows.push(row);
   savePurchaseData();
   renderPurchaseList();
@@ -4894,6 +4900,10 @@ function renderPurchaseList() {
         '<div class="purchase-field"><span>Докупить</span>' +
           '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
         '</div>' +
+        '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="0" value="' + escAttr(row.reorder) + '" ' +
+            'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+        '</label>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -4907,49 +4917,55 @@ function renderPurchaseList() {
    ================================================================
    Раньше, чтобы вписать остатки у всех поставщиков, приходилось по
    очереди переключаться между вкладками-чипами наверху. Этот блок
-   показывает ВСЕ позиции от ВСЕХ поставщиков одним списком, сгруппированным
-   по поставщику — с любого места можно пройтись сверху вниз и вписать
-   остаток. Название/ед./норма тут только для чтения (шаблон правится
-   в разделе конкретного поставщика выше) — редактируется только
-   остаток, и это доступно всем, не только администратору. Позиция,
-   добавленная поставщику выше, попадает сюда автоматически при
-   следующей перерисовке (см. вызов renderPurchaseCombinedList() в
-   конце renderPurchaseList()).
-   ================================================================ */
+   показывает ВСЕ позиции от ВСЕХ поставщиков одним сплошным списком,
+   БЕЗ разбивки по поставщику — при обходе цеха не важно, чей это
+   поставщик, важно пройтись по всем позициям подряд сверху вниз.
+   Если нужно посмотреть именно позиции одного поставщика — для этого
+   есть его отдельная вкладка-чип выше. Название/ед./норма тут только
+   для чтения (шаблон правится в разделе конкретного поставщика) —
+   редактируется только остаток, и это доступно всем, не только
+   администратору. Позиция, добавленная поставщику выше, попадает
+   сюда автоматически при следующей перерисовке (см. вызов
+   renderPurchaseCombinedList() в конце renderPurchaseList()). */
 function renderPurchaseCombinedList() {
   var holder = $('purchase-combined-list');
   if (!holder) return;
 
-  var groups = purchaseCategories.map(function(c) {
-    return { cat: c, rows: purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim(); }) };
-  }).filter(function(g) { return g.rows.length; });
+  var allRows = [];
+  purchaseCategories.forEach(function(c) {
+    purchaseRowsFor(c.id).forEach(function(row) {
+      if ((row.name || '').trim()) allRows.push({ catId: c.id, row: row });
+    });
+  });
 
-  if (!groups.length) {
+  if (!allRows.length) {
     holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у одного поставщика — добавьте позиции в разделах поставщиков выше.</p>';
     updatePurchaseCombinedSummary();
     return;
   }
 
-  holder.innerHTML = groups.map(function(g) {
-    var catId = g.cat.id;
-    var rowsHtml = g.rows.map(function(row) {
-      var res = purchaseResultDisplay(row);
-      return '<div class="purchase-row" data-id="' + row.id + '">' +
-        '<div class="purchase-row-readonly-name">' + esc(row.name) +
-          '<span class="purchase-row-meta">норма: ' + (row.norm === '' || row.norm == null ? '—' : esc(String(row.norm))) + ' ' + esc(row.unit) + '</span>' +
+  holder.innerHTML = allRows.map(function(entry) {
+    var catId = entry.catId;
+    var row = entry.row;
+    var res = purchaseResultDisplay(row);
+    return '<div class="purchase-row" data-id="' + row.id + '">' +
+      '<div class="purchase-row-readonly-name">' + esc(row.name) +
+        '<span class="purchase-row-meta">норма: ' + (row.norm === '' || row.norm == null ? '—' : esc(String(row.norm))) + ' ' + esc(row.unit) + '</span>' +
+      '</div>' +
+      '<div class="purchase-row-fields" style="grid-template-columns:1fr 1fr 1fr">' +
+        '<label class="purchase-field"><span>Остаток</span>' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
+            'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+        '</label>' +
+        '<div class="purchase-field"><span>Докупить</span>' +
+          '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
         '</div>' +
-        '<div class="purchase-row-fields" style="grid-template-columns:1fr 1fr">' +
-          '<label class="purchase-field"><span>Остаток</span>' +
-            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
-              'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
-          '</label>' +
-          '<div class="purchase-field"><span>Докупить</span>' +
-            '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-    return '<div class="purchase-combined-group-title">' + esc(g.cat.icon || '📦') + ' ' + esc(g.cat.label) + '</div>' + rowsHtml;
+        '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="0" value="' + escAttr(row.reorder) + '" ' +
+            'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+        '</label>' +
+      '</div>' +
+    '</div>';
   }).join('');
 
   updatePurchaseCombinedSummary();
@@ -5007,7 +5023,10 @@ function updatePurchaseSummary() {
 function buildPurchaseReportLines(cat) {
   return purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); }).map(function(row) {
     var res = purchaseResultDisplay(row);
-    return row.name.trim() + ' — ' + (res.cls === 'purchase-result-need' ? res.text : (res.text === '—' ? 'норма не указана' : res.text));
+    var line = row.name.trim() + ' — ' + (res.cls === 'purchase-result-need' ? res.text : (res.text === '—' ? 'норма не указана' : res.text));
+    var reorder = String(row.reorder == null ? '' : row.reorder).trim();
+    if (reorder) line += ' (🔁 дозаказ: ' + reorder + ' ' + row.unit + ')';
+    return line;
   });
 }
 
@@ -5087,6 +5106,52 @@ function copyPurchaseResult(cat) {
   copyTextToClipboard(text, '📋 Скопировано в буфер обмена');
 }
 
+/* ================================================================
+   ДОЗАКАЗ — отдельный отчёт только по позициям, где вписано
+   количество в колонке "🔁 Дозаказ", без привязки к обычному расчёту
+   "норма минус остаток". Удобно, когда нужно докупить что-то сверх
+   обычной недельной нормы (например, ждём гостей или расход вырос) —
+   не нужно листать весь список, отчёт содержит только отмеченные позиции.
+   ================================================================ */
+function buildPurchaseReorderLines(cat) {
+  return purchaseRowsFor(cat).filter(function(r) {
+    return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim();
+  }).map(function(row) {
+    return row.name.trim() + ' — ' + String(row.reorder).trim() + ' ' + row.unit;
+  });
+}
+
+function buildPurchaseReorderReportText(cat) {
+  var today = new Date().toLocaleDateString('ru-RU');
+  var lines = buildPurchaseReorderLines(cat);
+  var header = '🔁 Дозаказ — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
+  if (!lines.length) return header + '\n\nНет позиций с указанным дозаказом.';
+  return header + '\n\n' + lines.join('\n');
+}
+
+function copyPurchaseReorder(cat) {
+  cat = cat || currentPurchaseCategory;
+  var text = buildPurchaseReorderReportText(cat);
+  copyTextToClipboard(text, '🔁 Дозаказ скопирован в буфер обмена');
+}
+
+function buildAllPurchaseReorderReportText() {
+  var today = new Date().toLocaleDateString('ru-RU');
+  var sections = purchaseCategories.map(function(c) {
+    var lines = buildPurchaseReorderLines(c.id);
+    if (!lines.length) return null;
+    return (c.icon || '📦') + ' ' + c.label + ':\n' + lines.join('\n');
+  }).filter(function(s) { return s; });
+  var header = '🔁 Дозаказ по всем поставщикам (' + today + ')';
+  if (!sections.length) return header + '\n\nНет ни одной позиции с указанным дозаказом ни у одного поставщика.';
+  return header + '\n\n' + sections.join('\n\n');
+}
+
+function copyAllPurchaseReorder() {
+  var text = buildAllPurchaseReorderReportText();
+  copyTextToClipboard(text, '🔁 Дозаказ по всем поставщикам скопирован');
+}
+
 function downloadPurchaseText(cat) {
   cat = cat || currentPurchaseCategory;
   var text = buildPurchaseReportText(cat);
@@ -5108,13 +5173,13 @@ function downloadPurchaseExcel(cat) {
     return;
   }
   var rows = purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); });
-  var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить']];
+  var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить', 'Дозаказ']];
   rows.forEach(function(row) {
     var toBuy = computeToBuy(row);
-    data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy]);
+    data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, row.reorder === '' || row.reorder == null ? '' : parseFloat(String(row.reorder).replace(',', '.'))]);
   });
   var ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
+  ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(purchaseCategoryLabel(cat), {}));
   XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(cat) + '.xlsx');
@@ -5187,13 +5252,13 @@ function downloadAllPurchaseExcel() {
     var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim(); });
     if (!rows.length) return;
     any = true;
-    var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить']];
+    var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить', 'Дозаказ']];
     rows.forEach(function(row) {
       var toBuy = computeToBuy(row);
-      data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy]);
+      data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, row.reorder === '' || row.reorder == null ? '' : parseFloat(String(row.reorder).replace(',', '.'))]);
     });
     var ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
   });
   if (!any) {
