@@ -905,6 +905,11 @@
     background: var(--surface); border: 1px solid rgba(255,255,255,.14);
     border-radius: 10px; color: var(--text); margin-bottom: 4px;
   }
+  .modal-box select {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    background: var(--surface); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 10px; color: var(--text); margin-bottom: 4px;
+  }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
 
   /* ===== RESPONSIVE ===== */
@@ -998,6 +1003,7 @@
   <div class="admin-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-supplier-btn" onclick="addPurchaseSupplier()">➕ Добавить поставщика</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Привязать к цеху</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-remove-supplier-btn" onclick="removePurchaseSupplier()" style="display:none">🗑️ Удалить поставщика</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
     <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
@@ -1021,28 +1027,40 @@
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="copyPurchaseReorder()">🔁 Скопировать дозаказ</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderText()">📄 Дозаказ — текст</button>
+    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderExcel()">📊 Дозаказ — Excel</button>
   </div>
 
-  <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
-    <h2 style="margin-bottom:6px">📋 Общий список — все поставщики</h2>
-    <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
-      🧮 Здесь сразу все позиции от всех поставщиков, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
+  <!-- "Общий список" и "Общий отчёт" имеют смысл только для встроенных
+       цехов (Пицца бар / Горячий цех) — это ещё раз здесь все ингредиенты
+       от разных поставщиков, сгруппированные для конкретного цеха. Для
+       вкладки отдельного поставщика это дублирует его же список, поэтому
+       блок скрывается — см. updatePurchaseCombinedSectionVisibility(). -->
+  <div id="purchase-combined-section">
+    <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
+      <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — цех и его поставщики</h2>
+      <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
+        🧮 Здесь сразу все позиции этого цеха и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
+      </div>
+      <div id="purchase-combined-list"></div>
+      <div style="margin-bottom:14px">
+        <span id="purchase-combined-summary" style="font-size:13px;color:var(--text-muted)"></span>
+      </div>
     </div>
-    <div id="purchase-combined-list"></div>
-    <div style="margin-bottom:14px">
-      <span id="purchase-combined-summary" style="font-size:13px;color:var(--text-muted)"></span>
+
+    <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по цеху и его поставщикам — с уже указанным остатком по каждому:</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (цех + поставщики)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderText()">📄 Дозаказ — текст (все)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderExcel()">📊 Дозаказ — Excel (все)</button>
+      </div>
     </div>
   </div>
 
-  <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Общий отчёт сразу по всем поставщикам и категориям — с уже указанным остатком по каждому:</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (все поставщики)</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
-    </div>
-  </div>
 </div>
 
 <!-- TAB: ADMIN PANEL -->
@@ -1329,6 +1347,7 @@
     <h3 id="app-modal-title"></h3>
     <p id="app-modal-message"></p>
     <input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+    <select id="app-modal-select" style="display:none"></select>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>
       <button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>
@@ -1446,6 +1465,7 @@ function ensureModalDom() {
         '<h3 id="app-modal-title"></h3>' +
         '<p id="app-modal-message"></p>' +
         '<input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">' +
+        '<select id="app-modal-select" style="display:none"></select>' +
         '<div class="modal-actions">' +
           '<button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>' +
           '<button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>' +
@@ -1468,6 +1488,7 @@ function showModal(opts) {
     var titleEl = $('app-modal-title');
     var msgEl = $('app-modal-message');
     var inputEl = $('app-modal-input');
+    var selectEl = $('app-modal-select');
     var okBtn = $('app-modal-ok');
     var cancelBtn = $('app-modal-cancel');
     var devWrap = $('app-modal-dev-login-wrap');
@@ -1498,6 +1519,18 @@ function showModal(opts) {
       inputEl.type = 'text';
     }
 
+    if (selectEl) {
+      if (opts.withSelect && opts.selectOptions && opts.selectOptions.length) {
+        selectEl.style.display = '';
+        selectEl.innerHTML = opts.selectOptions.map(function(o) {
+          return '<option value="' + escAttr(o.value) + '"' + (o.value === opts.selectValue ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+        }).join('');
+      } else {
+        selectEl.style.display = 'none';
+        selectEl.innerHTML = '';
+      }
+    }
+
     if (devWrap) devWrap.style.display = opts.devLogin ? '' : 'none';
     if (codeWrap) codeWrap.style.display = opts.enterCode ? '' : 'none';
 
@@ -1515,10 +1548,11 @@ function showModal(opts) {
     }
 
     okBtn.onclick = function() {
-      cleanup(opts.withInput ? inputEl.value : true);
+      if (opts.withSelect) cleanup(selectEl.value);
+      else cleanup(opts.withInput ? inputEl.value : true);
     };
     cancelBtn.onclick = function() {
-      cleanup(opts.withInput ? null : false);
+      cleanup((opts.withInput || opts.withSelect) ? null : false);
     };
     inputEl.onkeydown = function(e) {
       if (e.key === 'Enter') { e.preventDefault(); okBtn.onclick(); }
@@ -1542,6 +1576,13 @@ function customPrompt(message, defaultValue, title, inputType) {
 
 function customConfirm(message, title) {
   return showModal({ title: title || 'Подтверждение', message: message, withInput: false });
+}
+
+/* Модалка-выпадающий список: возвращает выбранное value или null, если
+   нажали "Отмена". Используется, например, чтобы привязать поставщика
+   к конкретному цеху (Пицца бар / Горячий цех / без привязки). */
+function customSelect(message, options, selectedValue, title) {
+  return showModal({ title: title || 'Выберите значение', message: message, withSelect: true, selectOptions: options, selectValue: selectedValue || '' });
 }
 
 /* ================================================================
@@ -4615,12 +4656,14 @@ function updatePurchaseTemplateControls() {
   var saveBtn = $('purchase-save-template-btn');
   var renameBtn = $('purchase-rename-btn');
   var removeBtn = $('purchase-remove-supplier-btn');
+  var linkBtn = $('purchase-link-workshop-btn');
   if (toggleBtn) toggleBtn.textContent = purchaseTemplateEditMode ? '🔒 Завершить редактирование' : '✏️ Редактировать шаблон';
   if (saveBtn) saveBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
   var canManage = isAdmin() && purchaseTemplateEditMode;
   var c = purchaseCategoryById(currentPurchaseCategory);
   if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
   if (removeBtn) removeBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
+  if (linkBtn) linkBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
 }
 
 /* Ручное сохранение шаблона в GitHub сразу, минуя обычную задержку
@@ -4694,12 +4737,43 @@ function purchaseCategoryIcon(cat) {
   return (c && c.icon) || '📦';
 }
 
+/* Список встроенных цехов (Пицца бар / Горячий цех, и любые другие,
+   которые появятся в будущем) — варианты, к которым можно привязать
+   поставщика. "Без привязки" — тоже допустимый вариант: такой
+   поставщик просто не попадает ни в один общий список цеха. */
+function purchaseWorkshopOptions() {
+  var opts = purchaseCategories.filter(function(c) { return c.builtin; }).map(function(c) {
+    return { value: c.id, label: (c.icon || '📦') + ' ' + c.label };
+  });
+  opts.push({ value: '', label: '— без привязки к цеху —' });
+  return opts;
+}
+
+/* Категории, чьи позиции должны попадать в "Общий список"/"Общий отчёт"
+   конкретного цеха: сам цех плюс все поставщики, привязанные именно к
+   нему (c.workshop === workshopCat). Поставщики без привязки или
+   привязанные к другому цеху сюда не попадают. */
+function purchaseCategoriesForWorkshop(workshopCat) {
+  var list = [];
+  var self = purchaseCategoryById(workshopCat);
+  if (self) list.push(self);
+  purchaseCategories.forEach(function(c) {
+    if (!c.builtin && c.workshop === workshopCat) list.push(c);
+  });
+  return list;
+}
+
 function renderPurchaseCategoryChips() {
   var holder = $('purchase-subtabs');
   if (!holder) return;
   holder.innerHTML = purchaseCategories.map(function(c) {
+    var workshopMark = '';
+    if (!c.builtin && c.workshop) {
+      var w = purchaseCategoryById(c.workshop);
+      if (w) workshopMark = ' <span style="opacity:.65;font-weight:500">(' + esc(w.icon || '📦') + ' ' + esc(w.label) + ')</span>';
+    }
     return '<span class="chip' + (c.id === currentPurchaseCategory ? ' active' : '') + '" data-cat="' + escAttr(c.id) + '" ' +
-      'onclick="selectPurchaseCategory(\'' + c.id + '\')">' + esc(c.icon || '📦') + ' Закупка на неделю — ' + esc(c.label) + '</span>';
+      'onclick="selectPurchaseCategory(\'' + c.id + '\')">' + esc(c.icon || '📦') + ' Закупка на неделю + дозаказ — ' + esc(c.label) + workshopMark + '</span>';
   }).join('');
 }
 
@@ -4707,6 +4781,28 @@ function selectPurchaseCategory(cat) {
   currentPurchaseCategory = cat;
   renderPurchaseCategoryChips();
   renderPurchaseList();
+}
+
+/* "Общий список — все поставщики" и "Общий отчёт" по смыслу относятся
+   только к встроенным цехам (Пицца бар / Горячий цех) — там несколько
+   поставщиков вносят вклад в один и тот же цех, поэтому удобно свести
+   их позиции в одну сплошную ленту для обхода. У отдельного поставщика
+   свой список и так один, без разбивки — блок для него скрывается.
+   Проверяем именно флаг c.builtin, а не конкретный id, — поэтому если
+   в будущем добавится ещё один встроенный цех, логика продолжит
+   работать без правок кода. */
+function updatePurchaseCombinedSectionVisibility() {
+  var section = $('purchase-combined-section');
+  if (!section) return;
+  var c = purchaseCategoryById(currentPurchaseCategory);
+  var isBuiltin = !!(c && c.builtin);
+  section.style.display = isBuiltin ? '' : 'none';
+  if (isBuiltin) {
+    var titleEl = $('purchase-combined-title');
+    if (titleEl) titleEl.textContent = '📋 Общий список — ' + (c.icon || '📦') + ' ' + c.label + ' и его поставщики';
+    var reportHintEl = $('purchase-combined-report-hint');
+    if (reportHintEl) reportHintEl.textContent = 'Общий отчёт по «' + c.label + '» и привязанным к нему поставщикам — с уже указанным остатком по каждому:';
+  }
 }
 
 /* ===== Поставщики =====
@@ -4721,17 +4817,20 @@ function addPurchaseSupplier() {
   customPrompt('Название поставщика, например: ООО «Метро» или ФЛП Иванов', '', 'Новый поставщик').then(function(val) {
     val = (val || '').trim();
     if (!val) return;
-    var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
-    purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false });
-    purchaseData[id] = [];
-    currentPurchaseCategory = id;
-    purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
-    savePurchaseData();
-    renderPurchaseCategoryChips();
-    renderPurchaseList();
-    updatePurchaseTemplateControls();
-    schedulePurchaseSync();
-    showToast('✅ Поставщик «' + val + '» добавлен — теперь добавьте позиции для закупки');
+    customSelect('К какому цеху относится поставщик «' + val + '»? Его позиции появятся в общем списке и отчёте этого цеха.', purchaseWorkshopOptions(), '', 'Привязать к цеху').then(function(workshop) {
+      if (workshop === null) workshop = ''; // отменили выбор цеха — сам поставщик всё равно добавляем, просто без привязки
+      var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
+      purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false, workshop: workshop });
+      purchaseData[id] = [];
+      currentPurchaseCategory = id;
+      purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
+      savePurchaseData();
+      renderPurchaseCategoryChips();
+      renderPurchaseList();
+      updatePurchaseTemplateControls();
+      schedulePurchaseSync();
+      showToast('✅ Поставщик «' + val + '» добавлен — теперь добавьте позиции для закупки');
+    });
   });
 }
 
@@ -4769,6 +4868,28 @@ function removePurchaseSupplier(cat) {
     renderPurchaseList();
     schedulePurchaseSync();
     showToast('🗑️ Поставщик удалён');
+  });
+}
+
+/* Изменить (или снять) привязку уже существующего поставщика к цеху —
+   доступно в любой момент, не только при создании. От этой привязки
+   зависит, в общем списке и отчёте какого цеха («Пицца бар» /
+   «Горячий цех») появятся позиции этого поставщика — см.
+   purchaseCategoriesForWorkshop(). */
+function linkPurchaseSupplierWorkshop(cat) {
+  cat = cat || currentPurchaseCategory;
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  var c = purchaseCategoryById(cat);
+  if (!c) return;
+  if (c.builtin) { showToast('🔒 Цех уже сам является цехом — привязка не нужна'); return; }
+  customSelect('К какому цеху относится поставщик «' + c.label + '»?', purchaseWorkshopOptions(), c.workshop || '', 'Привязать к цеху').then(function(workshop) {
+    if (workshop === null) return; // отменили — ничего не меняем
+    c.workshop = workshop;
+    savePurchaseData();
+    renderPurchaseCategoryChips();
+    renderPurchaseList();
+    schedulePurchaseSync();
+    showToast(workshop ? '🔗 Поставщик привязан к цеху «' + purchaseCategoryLabel(workshop) + '»' : '🔗 Привязка к цеху снята');
   });
 }
 
@@ -4847,6 +4968,7 @@ function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
   renderPurchaseCategoryChips();
+  updatePurchaseCombinedSectionVisibility();
   var rows = purchaseRowsFor(currentPurchaseCategory);
   var canEditTemplate = isAdmin() && purchaseTemplateEditMode;
 
@@ -4913,33 +5035,36 @@ function renderPurchaseList() {
 }
 
 /* ================================================================
-   ОБЩИЙ СПИСОК (все поставщики сразу, для обхода цеха)
+   ОБЩИЙ СПИСОК (цех + все его поставщики, для обхода конкретного цеха)
    ================================================================
    Раньше, чтобы вписать остатки у всех поставщиков, приходилось по
    очереди переключаться между вкладками-чипами наверху. Этот блок
-   показывает ВСЕ позиции от ВСЕХ поставщиков одним сплошным списком,
-   БЕЗ разбивки по поставщику — при обходе цеха не важно, чей это
-   поставщик, важно пройтись по всем позициям подряд сверху вниз.
-   Если нужно посмотреть именно позиции одного поставщика — для этого
-   есть его отдельная вкладка-чип выше. Название/ед./норма тут только
-   для чтения (шаблон правится в разделе конкретного поставщика) —
-   редактируется только остаток, и это доступно всем, не только
-   администратору. Позиция, добавленная поставщику выше, попадает
-   сюда автоматически при следующей перерисовке (см. вызов
-   renderPurchaseCombinedList() в конце renderPurchaseList()). */
+   показывает позиции самого цеха и ВСЕХ поставщиков, привязанных
+   именно к нему (см. purchaseCategoriesForWorkshop), одним сплошным
+   списком, БЕЗ разбивки по поставщику — при обходе цеха не важно,
+   чей это поставщик, важно пройтись по всем позициям подряд сверху
+   вниз. Поставщики, привязанные к другому цеху или вообще без
+   привязки, сюда не попадают — у них есть своя отдельная вкладка-чип.
+   Название/ед./норма тут только для чтения (шаблон правится в разделе
+   конкретного поставщика) — редактируется только остаток, и это
+   доступно всем, не только администратору. Позиция, добавленная
+   поставщику выше, попадает сюда автоматически при следующей
+   перерисовке (см. вызов renderPurchaseCombinedList() в конце
+   renderPurchaseList()). */
 function renderPurchaseCombinedList() {
   var holder = $('purchase-combined-list');
   if (!holder) return;
 
+  var cats = purchaseCategoriesForWorkshop(currentPurchaseCategory);
   var allRows = [];
-  purchaseCategories.forEach(function(c) {
+  cats.forEach(function(c) {
     purchaseRowsFor(c.id).forEach(function(row) {
       if ((row.name || '').trim()) allRows.push({ catId: c.id, row: row });
     });
   });
 
   if (!allRows.length) {
-    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у одного поставщика — добавьте позиции в разделах поставщиков выше.</p>';
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у этого цеха, ни у привязанных к нему поставщиков — добавьте позиции выше или привяжите поставщика к этому цеху («🔗 Привязать к цеху» в режиме редактирования шаблона).</p>';
     updatePurchaseCombinedSummary();
     return;
   }
@@ -4974,13 +5099,14 @@ function renderPurchaseCombinedList() {
 function updatePurchaseCombinedSummary() {
   var el = $('purchase-combined-summary');
   if (!el) return;
+  var cats = purchaseCategoriesForWorkshop(currentPurchaseCategory);
   var all = [];
-  purchaseCategories.forEach(function(c) {
+  cats.forEach(function(c) {
     purchaseRowsFor(c.id).forEach(function(r) { if ((r.name || '').trim()) all.push(r); });
   });
   var needCount = 0;
   all.forEach(function(r) { var t = computeToBuy(r); if (t !== null && t > 0) needCount++; });
-  el.textContent = all.length ? ('Нужно докупить: ' + needCount + ' из ' + all.length + ' позиций (все поставщики)') : '';
+  el.textContent = all.length ? ('Нужно докупить: ' + needCount + ' из ' + all.length + ' позиций (цех + его поставщики)') : '';
 }
 
 /* Находит строку по её id независимо от того, в какой категории/у
@@ -5135,21 +5261,94 @@ function copyPurchaseReorder(cat) {
   copyTextToClipboard(text, '🔁 Дозаказ скопирован в буфер обмена');
 }
 
+function downloadPurchaseReorderText(cat) {
+  cat = cat || currentPurchaseCategory;
+  var text = buildPurchaseReorderReportText(cat);
+  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Дозаказ - ' + purchaseCategoryLabel(cat) + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function downloadPurchaseReorderExcel(cat) {
+  cat = cat || currentPurchaseCategory;
+  if (typeof XLSX === 'undefined') {
+    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
+    return;
+  }
+  var rows = purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim(); });
+  var data = [['Ингредиент', 'Ед.', 'Дозаказ']];
+  rows.forEach(function(row) {
+    data.push([row.name.trim(), row.unit, parseFloat(String(row.reorder).replace(',', '.'))]);
+  });
+  var ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 10 }];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(purchaseCategoryLabel(cat), {}));
+  XLSX.writeFile(wb, 'Дозаказ - ' + purchaseCategoryLabel(cat) + '.xlsx');
+}
+
 function buildAllPurchaseReorderReportText() {
   var today = new Date().toLocaleDateString('ru-RU');
-  var sections = purchaseCategories.map(function(c) {
+  var cats = purchaseCategoriesForWorkshop(currentPurchaseCategory);
+  var sections = cats.map(function(c) {
     var lines = buildPurchaseReorderLines(c.id);
     if (!lines.length) return null;
     return (c.icon || '📦') + ' ' + c.label + ':\n' + lines.join('\n');
   }).filter(function(s) { return s; });
-  var header = '🔁 Дозаказ по всем поставщикам (' + today + ')';
-  if (!sections.length) return header + '\n\nНет ни одной позиции с указанным дозаказом ни у одного поставщика.';
+  var header = '🔁 Дозаказ — ' + purchaseCategoryLabel(currentPurchaseCategory) + ' и его поставщики (' + today + ')';
+  if (!sections.length) return header + '\n\nНет ни одной позиции с указанным дозаказом ни у цеха, ни у его поставщиков.';
   return header + '\n\n' + sections.join('\n\n');
 }
 
 function copyAllPurchaseReorder() {
   var text = buildAllPurchaseReorderReportText();
-  copyTextToClipboard(text, '🔁 Дозаказ по всем поставщикам скопирован');
+  copyTextToClipboard(text, '🔁 Дозаказ по цеху и его поставщикам скопирован');
+}
+
+function downloadAllPurchaseReorderText() {
+  var text = buildAllPurchaseReorderReportText();
+  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Дозаказ - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function downloadAllPurchaseReorderExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
+    return;
+  }
+  var wb = XLSX.utils.book_new();
+  var usedNames = {};
+  var any = false;
+  purchaseCategoriesForWorkshop(currentPurchaseCategory).forEach(function(c) {
+    var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim(); });
+    if (!rows.length) return;
+    any = true;
+    var data = [['Ингредиент', 'Ед.', 'Дозаказ']];
+    rows.forEach(function(row) {
+      data.push([row.name.trim(), row.unit, parseFloat(String(row.reorder).replace(',', '.'))]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
+  });
+  if (!any) {
+    showToast('⚠️ Нет ни одной позиции с указанным дозаказом ни у цеха, ни у его поставщиков');
+    return;
+  }
+  XLSX.writeFile(wb, 'Дозаказ - все поставщики.xlsx');
 }
 
 function downloadPurchaseText(cat) {
@@ -5201,30 +5400,33 @@ function sanitizeSheetName(name, used) {
 }
 
 /* ================================================================
-   ОБЩИЙ ОТЧЁТ СРАЗУ ПО ВСЕМ ПОСТАВЩИКАМ/КАТЕГОРИЯМ
+   ОБЩИЙ ОТЧЁТ ПО ЦЕХУ И ЕГО ПОСТАВЩИКАМ
    ================================================================
    Когда остатки вписаны у нескольких поставщиков подряд, не нужно
    заходить в каждую вкладку по отдельности за своим результатом —
-   эти функции собирают всё в один отчёт: каждый поставщик отдельным
-   разделом (в тексте) или отдельным листом (в Excel), с уже готовым
-   "сколько докупить" по каждой позиции. Пустые категории (без единой
-   вписанной позиции) в общий отчёт не попадают.
+   эти функции собирают всё в один отчёт по цеху, который сейчас
+   выбран (Пицца бар / Горячий цех) и всем поставщикам, привязанным
+   именно к нему: каждая категория отдельным разделом (в тексте) или
+   отдельным листом (в Excel), с уже готовым "сколько докупить" по
+   каждой позиции. Пустые категории (без единой вписанной позиции) в
+   отчёт не попадают.
    ================================================================ */
 function buildAllPurchaseReportText() {
   var today = new Date().toLocaleDateString('ru-RU');
-  var sections = purchaseCategories.map(function(c) {
+  var cats = purchaseCategoriesForWorkshop(currentPurchaseCategory);
+  var sections = cats.map(function(c) {
     var lines = buildPurchaseReportLines(c.id);
     if (!lines.length) return null;
     return (c.icon || '📦') + ' ' + c.label + ':\n' + lines.join('\n');
   }).filter(function(s) { return s; });
-  var header = '📦 Общая закупка на неделю (' + today + ')';
-  if (!sections.length) return header + '\n\nНет ни одной позиции ни у одного поставщика.';
+  var header = '📦 Общая закупка на неделю — ' + purchaseCategoryLabel(currentPurchaseCategory) + ' и его поставщики (' + today + ')';
+  if (!sections.length) return header + '\n\nНет ни одной позиции ни у цеха, ни у его поставщиков.';
   return header + '\n\n' + sections.join('\n\n');
 }
 
 function copyAllPurchaseResults() {
   var text = buildAllPurchaseReportText();
-  copyTextToClipboard(text, '📋 Общий список по всем поставщикам скопирован');
+  copyTextToClipboard(text, '📋 Общий список по цеху и его поставщикам скопирован');
 }
 
 function downloadAllPurchaseText() {
@@ -5233,7 +5435,7 @@ function downloadAllPurchaseText() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'Закупка - все поставщики.txt';
+  a.download = 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).txt';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -5248,7 +5450,7 @@ function downloadAllPurchaseExcel() {
   var wb = XLSX.utils.book_new();
   var usedNames = {};
   var any = false;
-  purchaseCategories.forEach(function(c) {
+  purchaseCategoriesForWorkshop(currentPurchaseCategory).forEach(function(c) {
     var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim(); });
     if (!rows.length) return;
     any = true;
@@ -5262,10 +5464,10 @@ function downloadAllPurchaseExcel() {
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
   });
   if (!any) {
-    showToast('⚠️ Нет ни одной позиции ни у одного поставщика');
+    showToast('⚠️ Нет ни одной позиции ни у цеха, ни у его поставщиков');
     return;
   }
-  XLSX.writeFile(wb, 'Закупка - все поставщики.xlsx');
+  XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).xlsx');
 }
 
 /* ================================================================
