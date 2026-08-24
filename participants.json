@@ -29,17 +29,9 @@
     "fingerprint": "",
     "name": "",
     "addedAt": 1787610656798,
-    "blocked": true,
+    "blocked": false,
     "role": "viewer",
-    "claimed": true
-  },
-  {
-    "id": "ECEF-4D6A",
-    "fingerprint": "",
-    "name": "",
-    "addedAt": 1787611039575,
-    "blocked": true,
-    "role": "viewer",
-    "claimed": true
+    "claimed": true,
+    "blockedAt": null
   }
 ]
