@@ -278,12 +278,14 @@
   /* "developer-only" — как и .admin-only, но видно ТОЛЬКО настоящему
      разработчику (вход по GitHub-ключу), а не обычному админу,
      которому права выданы через список участников. Обычному админу
-     доступны только редактирование карточек и раздел "Участники" —
-     всё остальное в админ-панели (экспорт, настройка GitHub-синка,
-     фото шапки/фона, счётчик рецептов, Telegram-настройки) скрыто
-     этим классом. */
+     доступно ТОЛЬКО редактирование карточек рецептов (вкладки
+     "Категории"/"Добавить") — вкладка "⚙️ Админ-панель" (включая
+     раздел "Участники"), управление шаблоном закупки (цеха/поставщики
+     во вкладке "Закупка") и кнопка экспорта в шапке скрыты этим
+     классом и видны только настоящему разработчику. */
   .developer-only { display: none !important; }
   body.is-developer .developer-only { display: revert !important; }
+  body.is-developer .nav-tab.developer-only { display: block !important; }
   body.is-developer button.developer-only,
   body.is-developer .btn.developer-only { display: inline-flex !important; }
   .admin-login-hint {
@@ -935,7 +937,7 @@
 
 <!-- HEADER -->
 <div class="header">
-  <button class="header-corner-btn export-toggle admin-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Опубликовать текущий список">
+  <button class="header-corner-btn export-toggle developer-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Опубликовать текущий список">
     <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
     <span class="label">Экспорт</span>
   </button>
@@ -949,7 +951,7 @@
 
 <!-- NAV TABS -->
 <div class="nav-tabs">
-  <div class="nav-tab admin-only" data-tab="add">
+  <div class="nav-tab developer-only" data-tab="add">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 21h12"></path><path d="M8 21v-5"></path><path d="M16 21v-5"></path><path d="M6.5 11.5c-1.6-.9-2.3-2.8-1.3-4.4C6 5.8 7.6 5.4 9 6.1 9.1 4.4 10.4 3 12 3s2.9 1.4 3 3.1c1.4-.7 3-.3 3.8 1 1 1.6.3 3.5-1.3 4.4 1 1 1.4 2.3.9 3.4-.8 1.5-2.7 2-4.1 1.5-.9.7-2 1-2.3 1s-1.4-.3-2.3-1c-1.4.5-3.3 0-4.1-1.5-.5-1.1-.1-2.4.9-3.4z"></path></svg></span>
     <span class="nav-label">Добавить рецепт</span>
   </div>
@@ -961,7 +963,7 @@
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 2-1.58l1.65-7.42H5.12"></path></svg></span>
     <span class="nav-label">Закупка</span>
   </div>
-  <div class="nav-tab admin-only" data-tab="admin">
+  <div class="nav-tab developer-only" data-tab="admin">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
     <span class="nav-label">Админ-панель / Настройки</span>
   </div>
@@ -1000,11 +1002,12 @@
 
   <div class="chip-row" id="purchase-subtabs" style="margin-bottom:12px"></div>
 
-  <div class="admin-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+  <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-workshop-btn" onclick="addPurchaseWorkshop()">🏭 Добавить цех</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-supplier-btn" onclick="addPurchaseSupplier()">➕ Добавить поставщика</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Привязать к цеху</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-remove-supplier-btn" onclick="removePurchaseSupplier()" style="display:none">🗑️ Удалить поставщика</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-remove-supplier-btn" onclick="removePurchaseCategory()" style="display:none">🗑️ Удалить</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
     <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
   </div>
@@ -1168,7 +1171,7 @@
     <div id="online-list" style="margin-top:10px"></div>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>👥 Участники (доступ по ключу)</span>
       <button class="btn btn-primary btn-sm developer-only" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
@@ -2483,18 +2486,27 @@ function updateTelegramConfigField() {
 const PURCHASE_PATH = 'purchase.json';
 
 /* Список категорий закупки хранится ВМЕСТЕ с позициями в одном файле
-   purchase.json: { categories: [{id,label,icon,builtin}], data: { id: [строки] } }.
-   Две встроенные категории (Пицца бар / Горячий цех) существуют всегда,
-   их нельзя удалить. Поверх них администратор может добавлять сколько
-   угодно "поставщиков" — по сути такие же категории, только удаляемые
-   и переименовываемые, — под каждую свой список позиций с нормой на
-   неделю и тем же расчётом "сколько докупить". Старый формат файла
-   ({pizza:[...], hot:[...]} без categories) распознаётся и на лету
-   преобразуется в новый — старые сайты не ломаются при обновлении. */
+   purchase.json: { categories: [{id,label,icon,builtin,protected,workshop}],
+   data: { id: [строки] } }.
+   Флаг builtin помечает "цех" (в отличие от поставщика): у цеха есть
+   свой общий список/отчёт, объединяющий его самого и всех привязанных
+   к нему поставщиков (см. purchaseCategoriesForWorkshop). Изначально
+   есть два цеха — Пицца бар и Горячий цех, — они помечены ещё и флагом
+   protected: их нельзя удалить или "потерять", даже если файл шаблона
+   повреждён (см. ниже принудительное восстановление). Администратор
+   может добавлять сколько угодно новых цехов кнопкой "🏭 Добавить цех"
+   — они полноценные (со своим общим списком/отчётом и возможностью
+   привязывать поставщиков), но НЕ protected — их можно переименовывать
+   и удалять. Поверх цехов администратор также может добавлять сколько
+   угодно "поставщиков" — категории с builtin:false, привязываемые к
+   любому цеху через workshop, — под каждую свой список позиций с
+   нормой на неделю и тем же расчётом "сколько докупить". Старый формат
+   файла ({pizza:[...], hot:[...]} без categories) распознаётся и на
+   лету преобразуется в новый — старые сайты не ломаются при обновлении. */
 function defaultPurchaseCategories() {
   return [
-    { id: 'pizza', label: 'Пицца бар', icon: '🍕', builtin: true },
-    { id: 'hot', label: 'Горячий цех', icon: '🔥', builtin: true }
+    { id: 'pizza', label: 'Пицца бар', icon: '🍕', builtin: true, protected: true },
+    { id: 'hot', label: 'Горячий цех', icon: '🔥', builtin: true, protected: true }
   ];
 }
 
@@ -3798,6 +3810,16 @@ let currentTab = 'categories';
 
 function switchTab(name) {
   if (name === currentTab) return;
+  // Создавать НОВЫЙ рецепт "с нуля" может только настоящий разработчик
+  // (вход по GitHub-ключу). Обычный админ (права выданы через список
+  // "Участники") может только редактировать уже существующие карточки —
+  // попасть на вкладку "add" в чистом (не редактируемом) состоянии ему
+  // нельзя. Заход в режиме редактирования (editingRecipe уже установлен
+  // из editFromDetail ДО вызова switchTab) этим правилом не затрагивается.
+  if (name === 'add' && isAdmin() && !isDeveloper() && !editingRecipe) {
+    showToast('🔒 Добавлять новые рецепты может только разработчик — обычный админ может редактировать уже существующие карточки');
+    return;
+  }
   if (location.hash.indexOf('#recipe=') === 0) {
     history.replaceState(null, '', location.pathname + location.search);
   }
@@ -3820,7 +3842,11 @@ function switchTab(name) {
     subscribeOnlineUsers();
     renderOnlineUsersList();
   }
-  if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
+  // resetForm() очищает форму И editingRecipe — вызываем её только когда
+  // НЕ идёт редактирование существующего рецепта (editingRecipe ещё не
+  // установлен), иначе она стёрла бы то, что editFromDetail только что
+  // выставил ДО вызова switchTab('add').
+  if (name === 'add') { updateAddGate(); if (isAdmin() && !editingRecipe) resetForm(); }
   if (name === 'purchase') {
     renderPurchaseList();
     syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseList(); });
@@ -4233,6 +4259,7 @@ function resetForm() {
 
 async function saveRecipe() {
   if (!isAdmin()) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
+  if (!editingRecipe && !isDeveloper()) { showToast('🔒 Создавать новые рецепты может только разработчик'); return; }
   var name = $('f-name').value.trim();
   if (!name) { showToast('⚠️ Укажите название рецепта'); return; }
 
@@ -4662,7 +4689,10 @@ function updatePurchaseTemplateControls() {
   var canManage = isAdmin() && purchaseTemplateEditMode;
   var c = purchaseCategoryById(currentPurchaseCategory);
   if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
-  if (removeBtn) removeBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
+  if (removeBtn) {
+    removeBtn.style.display = (canManage && c && !c.protected) ? '' : 'none';
+    removeBtn.textContent = (c && c.builtin) ? '🗑️ Удалить цех' : '🗑️ Удалить поставщика';
+  }
   if (linkBtn) linkBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
 }
 
@@ -4805,6 +4835,34 @@ function updatePurchaseCombinedSectionVisibility() {
   }
 }
 
+/* ===== Цеха =====
+   Помимо двух изначальных цехов (Пицца бар / Горячий цех) администратор
+   может добавить сколько угодно своих — например "Кондитерский цех"
+   или "Цех заготовок". Новый цех работает точно так же, как и
+   изначальные: у него свой список позиций с нормой на неделю, свой
+   общий список/отчёт (цех + все привязанные к нему поставщики), к нему
+   можно привязывать поставщиков через "🔗 Привязать к цеху". В отличие
+   от Пицца бар/Горячего цеха, новый цех не помечен protected — его
+   можно переименовать и удалить (см. removePurchaseCategory). */
+function addPurchaseWorkshop() {
+  if (!isAdmin()) { showToast('🔒 Добавлять цеха может только владелец или администратор'); return; }
+  customPrompt('Название нового цеха, например: Кондитерский цех', '', 'Новый цех').then(function(val) {
+    val = (val || '').trim();
+    if (!val) return;
+    var id = 'ws' + Date.now() + Math.random().toString(36).slice(2, 7);
+    purchaseCategories.push({ id: id, label: val, icon: '🏭', builtin: true });
+    purchaseData[id] = [];
+    currentPurchaseCategory = id;
+    purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
+    savePurchaseData();
+    renderPurchaseCategoryChips();
+    renderPurchaseList();
+    updatePurchaseTemplateControls();
+    schedulePurchaseSync();
+    showToast('✅ Цех «' + val + '» добавлен — теперь добавьте позиции или привяжите к нему поставщиков');
+  });
+}
+
 /* ===== Поставщики =====
    Поставщик — это, по сути, ещё одна категория закупки (наравне со
    встроенными "Пицца бар"/"Горячий цех"), только её может добавить,
@@ -4852,22 +4910,35 @@ function renamePurchaseCategory(cat) {
   });
 }
 
-function removePurchaseSupplier(cat) {
+/* Удаляет либо цех (builtin:true, но не protected — то есть не исходные
+   Пицца бар/Горячий цех), либо поставщика (builtin:false). Исходные два
+   цеха защищены флагом protected и удалить их нельзя — они и так
+   принудительно восстанавливаются в loadPurchaseData/syncPurchaseFromGithub,
+   если вдруг пропадут из файла шаблона. При удалении цеха все
+   поставщики, которые были к нему привязаны, не удаляются — просто
+   теряют привязку (становятся "без привязки к цеху"). */
+function removePurchaseCategory(cat) {
   cat = cat || currentPurchaseCategory;
   if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
-  if (c.builtin) { showToast('🔒 Эту категорию удалить нельзя'); return; }
-  customConfirm('Удалить поставщика «' + c.label + '» вместе со всеми его позициями? Это действие нельзя отменить.', 'Удалить поставщика').then(function(ok) {
+  if (c.protected) { showToast('🔒 Эту категорию удалить нельзя'); return; }
+  var kind = c.builtin ? 'цех' : 'поставщика';
+  var kindTitle = c.builtin ? 'Удалить цех' : 'Удалить поставщика';
+  var extraWarning = c.builtin ? ' Все поставщики, привязанные к этому цеху, не удалятся — просто потеряют привязку.' : '';
+  customConfirm('Удалить ' + kind + ' «' + c.label + '» вместе со всеми его позициями?' + extraWarning + ' Это действие нельзя отменить.', kindTitle).then(function(ok) {
     if (!ok) return;
     purchaseCategories = purchaseCategories.filter(function(x) { return x.id !== cat; });
     delete purchaseData[cat];
+    if (c.builtin) {
+      purchaseCategories.forEach(function(x) { if (!x.builtin && x.workshop === cat) x.workshop = ''; });
+    }
     if (currentPurchaseCategory === cat) currentPurchaseCategory = purchaseCategories[0] ? purchaseCategories[0].id : 'pizza';
     savePurchaseData();
     renderPurchaseCategoryChips();
     renderPurchaseList();
     schedulePurchaseSync();
-    showToast('🗑️ Поставщик удалён');
+    showToast(c.builtin ? '🗑️ Цех удалён' : '🗑️ Поставщик удалён');
   });
 }
 
@@ -5541,7 +5612,7 @@ function openDetail(id, autoplayVideo) {
     + (isAdmin() ?
       '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">' +
         '<button class="btn btn-primary" onclick="editFromDetail(\'' + r.id + '\')">✏️ Редактировать</button>' +
-        '<button class="btn btn-danger" onclick="deleteRecipe(\'' + r.id + '\')">🗑 Удалить</button>' +
+        (isDeveloper() ? '<button class="btn btn-danger" onclick="deleteRecipe(\'' + r.id + '\')">🗑 Удалить</button>' : '') +
       '</div>' : '');
 
   renderRecipeQR(r.id, r.name);
@@ -5630,9 +5701,11 @@ function editFromDetail(id) {
 
   var recType = r.type || 'pizza';
   pendingAddType = recType;
-  switchTab('add'); // сбрасывает форму (и editingRecipe) в чистое состояние
-
-  editingRecipe = JSON.parse(JSON.stringify(r)); // деep copy — устанавливаем ПОСЛЕ сброса формы
+  // editingRecipe выставляем ДО switchTab('add') — так switchTab видит,
+  // что это редактирование уже существующей карточки (а не создание
+  // новой с нуля), и пропускает обычного (не-разработчика) админа.
+  editingRecipe = JSON.parse(JSON.stringify(r)); // деep copy
+  switchTab('add');
 
   $('f-type').value = recType;
   onTypeChange();
@@ -5662,7 +5735,7 @@ function editFromDetail(id) {
 }
 
 async function deleteRecipe(id) {
-  if (!isAdmin()) { showToast('🔒 Удаление доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Удалять рецепты может только разработчик'); return; }
   var ok = await customConfirm('Удалить этот рецепт?');
   if (!ok) return;
   recipes = recipes.filter(function(r) { return r.id !== id; });
