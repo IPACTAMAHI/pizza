@@ -32,5 +32,14 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "ECEF-4D6A",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787611039575,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
