@@ -2021,6 +2021,12 @@ function initFirebasePresence() {
       }
       localStorage.removeItem(DEVICE_NAME_KEY);
       localStorage.removeItem(MANUAL_CODE_KEY);
+      // Сбрасываем и режим администратора: без этого "kick" ничего не давал
+      // бы устройству, у которого флаг режима администратора был выставлен
+      // вручную (в обход настоящего GitHub-ключа) — после перезагрузки оно
+      // снова прошло бы мимо экрана входа. Реального администратора это не
+      // обижает: рабочий ключ никуда не делся, войти обратно — секундное дело.
+      localStorage.removeItem(ADMIN_KEY);
       location.reload();
     });
 
@@ -2093,13 +2099,22 @@ function formatTimeAgo(ts) {
   return new Date(ts).toLocaleString('ru-RU');
 }
 
-/* В списке "Онлайн" показываем ТОЛЬКО тех, кто прямо сейчас реально
-   может смотреть книгу рецептов — то есть у кого есть запись в
-   participants.json и она не заблокирована. Те, кто ещё не ввёл
-   ключ / застрял на экране ожидания одобрения, а также уже
-   заблокированные — доступа не имеют, поэтому в этот список не
-   попадают (даже если формально шлют presence-пинги, застряв на
-   экране входа). */
+/* Раньше в списке "Онлайн" показывались ТОЛЬКО те, у кого уже есть
+   одобренная запись в participants.json — то есть реально может
+   смотреть книгу рецептов. Проблема: presence-пинг устройство шлёт
+   ВСЕГДА, с самого открытия сайта, ещё до какого-либо одобрения (см.
+   initFirebasePresence) — а значит скрытыми оказывались не только
+   безобидные "застрявшие на экране входа" гости, но и любой, кто
+   получил доступ к функциям сайта в обход обычной проверки (например
+   вручную выставив флаг режима администратора в консоли браузера —
+   см. verifyStoredAdminSession). Такой человек был не виден в списке
+   и, соответственно, не блокируем из него.
+
+   Теперь список показывает ВСЕХ, кто прямо сейчас шлёт presence —
+   у тех, чьей записи в participants.json нет или кто заблокирован,
+   рядом с именем стоит предупреждение "⚠️ нет доступа", а кнопка
+   "🚫 Блок" по-прежнему работает (для незарегистрированных создаёт
+   сразу заблокированную запись). */
 function hasSiteAccess(participant) {
   return !!(participant && !participant.blocked);
 }
@@ -2120,9 +2135,10 @@ function renderOnlineUsersList() {
       name: e.name || (participant ? participant.name : '') || '',
       ua: e.ua || '',
       live: isOnlineLive(e),
-      participant: participant
+      participant: participant,
+      hasAccess: hasSiteAccess(participant)
     };
-  }).filter(function(x) { return hasSiteAccess(x.participant); });
+  });
   entries.sort(function(a, b) { return b.lastSeen - a.lastSeen; });
 
   var liveCount = entries.filter(function(x) { return x.live; }).length;
@@ -2146,15 +2162,16 @@ function renderOnlineUsersList() {
 
   holder.innerHTML = shown.map(function(x) {
     var roleBadge = (x.participant && x.participant.role === 'admin') ? '<span class="online-member-badge">👑 админ</span>' : '';
-    var itemClass = 'participant-item online-item' + (x.live ? ' is-live' : '');
+    var accessBadge = !x.hasAccess ? '<span class="online-member-badge" style="background:var(--warning);color:#1a1a1a" title="Нет одобренной записи участника или заблокирован, но при этом реально на сайте — стоит проверить">⚠️ нет доступа</span>' : '';
+    var itemClass = 'participant-item online-item' + (x.live ? ' is-live' : '') + (!x.hasAccess ? ' is-blocked' : '');
     return '<div class="' + itemClass + '">' +
       '<div>' +
-        '<span class="online-dot"></span><strong>' + esc(x.name || 'Без имени') + '</strong>' + roleBadge +
+        '<span class="online-dot"></span><strong>' + esc(x.name || 'Без имени') + '</strong>' + roleBadge + accessBadge +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(x.id) + ' · ' + (x.live ? '🟢 на сайте сейчас' : 'был(а) ' + formatTimeAgo(x.lastSeen)) + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
         '<button class="btn btn-sm btn-danger" onclick="toggleOnlineUserBlock(\'' + escAttr(x.id) + '\',\'' + escAttr(x.name || '') + '\')" title="Закрыть доступ этому устройству насовсем">🚫 Блок</button>' +
-        '<button class="btn btn-ghost btn-sm" onclick="removeOnlinePresence(\'' + escAttr(x.id) + '\')" title="Выкинуть на экран входа прямо сейчас (доступ/ключ не отзывается)">✕ Выйти</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="removeOnlinePresence(\'' + escAttr(x.id) + '\')" title="Закрыть доступ насовсем и немедленно выкинуть на экран входа, если устройство сейчас на связи">✕ Выйти</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -2189,21 +2206,40 @@ async function toggleOnlineUserBlock(id, name) {
   // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной
 }
 
-/* "✕" — принудительно выкидывает человека на экран входа на ЕГО
-   устройстве (если оно сейчас на связи) и убирает запись из списка
-   "Онлайн". Доступ при этом не закрывается навсегда: запись
-   участника/ключ не трогаются, поэтому введя тот же ключ ещё раз,
-   человек сразу попадёт обратно — без повторного одобрения. Если
-   нужно закрыть доступ насовсем — используйте кнопку "🚫 Блок". */
+/* "✕ Выйти" — закрывает доступ этому устройству НАСОВСЕМ (так же, как
+   "🚫 Блок": participants.json получает/обновляет запись с
+   blocked:true) И, если устройство сейчас на связи, немедленно
+   выкидывает его на экран входа — не дожидаясь, пока оно само зайдёт
+   на сайт в следующий раз. На той стороне при получении команды
+   "kick" полностью сбрасывается локальное состояние браузера,
+   включая флаг режима администратора (см. слушатель 'kicks/' + myId
+   в initFirebasePresence) — это важно для случая, когда флаг был
+   выставлен вручную (в обход настоящего GitHub-ключа): после сброса
+   и перезагрузки такое устройство пройдёт verifyStoredAdminSession и
+   ensureParticipantName заново, как обычный гость, и увидит "Доступ
+   закрыт" благодаря только что выставленной блокировке. */
 async function removeOnlinePresence(id) {
   if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   if (typeof firebase === 'undefined') { showToast('⚠️ Онлайн-список сейчас недоступен'); return; }
-  var ok = await customConfirm('Выкинуть это устройство на экран входа? Если человек сейчас на сайте — его перекинет на экран "Как вас зовут?" и ключ доступа, придётся войти заново. Доступ (ключ/одобрение) при этом не отзывается.');
+  var ok = await customConfirm('Закрыть доступ этому устройству насовсем и выкинуть его на экран входа прямо сейчас (если оно на связи)?');
   if (!ok) return;
 
-  // Как и с "🚫 Блок" — убираем из списка сразу, не дожидаясь ответа
-  // сервера, чтобы UI реагировал мгновенно; если что-то пойдёт не так,
-  // вернём запись обратно (см. catch ниже).
+  // Закрываем доступ так же, как кнопка "🚫 Блок" — блокируем
+  // существующую запись участника или создаём новую сразу
+  // заблокированной, если её раньше не было.
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+  if (p) {
+    p.blocked = true;
+  } else {
+    var entry = onlineUsers[id] || {};
+    participants.push({ id: id, fingerprint: '', name: entry.name || '', addedAt: Date.now(), blocked: true, role: 'viewer', claimed: true });
+  }
+  saveParticipantsLocal();
+  if (currentTab === 'admin') renderParticipantsList();
+
+  // Как и раньше — убираем из списка "Онлайн" сразу, не дожидаясь
+  // ответа сервера, чтобы UI реагировал мгновенно; если что-то пойдёт
+  // не так, вернём запись обратно (см. catch ниже).
   var previousEntry = onlineUsers[id];
   delete onlineUsers[id];
   renderOnlineUsersList();
@@ -2212,7 +2248,10 @@ async function removeOnlinePresence(id) {
     var db = firebase.database();
     await db.ref('kicks/' + id).set(firebase.database.ServerValue.TIMESTAMP); // сработает, только если устройство сейчас на связи
     await db.ref('presence/' + id).remove();
-    showToast('👋 Команда на выход отправлена, запись убрана из списка');
+    showToast('⏳ Сохраняю блокировку...');
+    var saved = await syncParticipantsToGithub();
+    if (saved) showToast('🚫 Доступ закрыт, команда на выход отправлена');
+    // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной
   } catch (e) {
     if (previousEntry) onlineUsers[id] = previousEntry; // не получилось — возвращаем запись обратно в список
     renderOnlineUsersList();
@@ -2946,6 +2985,52 @@ function isAdminByParticipantRole() {
    на случай если устройство осталось разблокированным без присмотра. */
 function isDeveloper() {
   return localStorage.getItem(ADMIN_KEY) === '1';
+}
+
+/* ================================================================
+   ПРОВЕРКА ФЛАГА АДМИНА ПРИ ЗАГРУЗКЕ
+   ================================================================
+   ADMIN_KEY — это просто флаг 'r20_admin_mode'='1' в localStorage.
+   Раньше он выставлялся ТОЛЬКО после успешной проверки настоящего
+   GitHub-ключа (loginWithGithubKey), но сам isAdmin() потом уже
+   никогда заново не проверял, что ключ всё ещё существует и рабочий —
+   он просто верил флагу. Это значит, что человек, посмотревший код
+   страницы, мог открыть консоль браузера и вручную выполнить
+   localStorage.setItem('r20_admin_mode','1'), ничего не зная о
+   настоящем ключе — и сразу увидеть весь админ-интерфейс (форму
+   редактирования рецептов, список участников и т.п.), просто без
+   возможности что-либо реально сохранить (сохранение отдельно бьётся
+   в GitHub API и там уже отваливается из-за отсутствия/невалидности
+   токена). Дополнительный побочный эффект: пока флаг стоит, человек
+   пропускает ensureParticipantName()/checkParticipantStatus() (они
+   оба сразу выходят при isAdmin()===true), поэтому у него никогда не
+   появляется запись в participants.json — и в списке "Онлайн" его не
+   видно, и заблокировать его как обычного участника нельзя.
+
+   Эта функция вызывается один раз при загрузке страницы, ДО того как
+   что-либо начинает полагаться на isAdmin(). Если флаг стоит, но
+   сохранённого токена нет или GitHub его не подтверждает — флаг
+   снимается, и дальше человек проходит как обычный гость: экран
+   "как вас зовут", ключ доступа, попадает в participants.json и
+   виден/блокируем в списке "Онлайн" как все остальные. Для настоящего
+   администратора (с рабочим токеном) это просто один лишний быстрый
+   запрос к GitHub при открытии страницы — доступ не меняется. */
+async function verifyStoredAdminSession() {
+  if (localStorage.getItem(ADMIN_KEY) !== '1') return;
+  var cfg = getGithubConfig() || {};
+  var valid = false;
+  if (cfg.owner && cfg.repo && cfg.token) {
+    try {
+      var check = await verifyGithubToken(cfg.owner, cfg.repo, cfg.token);
+      valid = !!(check && check.ok);
+    } catch (e) {
+      valid = false;
+    }
+  }
+  if (!valid) {
+    // Флаг стоял без рабочего ключа за ним — снимаем немедленно.
+    localStorage.removeItem(ADMIN_KEY);
+  }
 }
 
 /* Просит заново ввести GitHub-ключ, чтобы подтвердить одно конкретное
@@ -5141,6 +5226,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initApp() {
+  await verifyStoredAdminSession(); // снимает флаг админа, если за ним нет рабочего GitHub-ключа — ДО любых проверок isAdmin()
+
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
   loadSiteConfigLocal();
 
