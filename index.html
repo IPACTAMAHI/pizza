@@ -1118,12 +1118,11 @@
       <span id="online-count-badge" style="color:var(--text-muted);font-size:12px"></span>
     </div>
     <p class="admin-panel-hint">
-      Абсолютно все, кто открывал сайт (даже без ключа доступа), с отметкой, когда были в последний раз.
-      Зелёная точка — человек на сайте прямо сейчас. Значок «участник» — если этот код устройства уже
-      есть в списке ниже. «🚫 Блок» закрывает доступ к сайту насовсем (как и в списке участников) —
-      действует, даже если человек ещё не одобрен. «✕» выкидывает человека на экран входа прямо сейчас
-      (если он на сайте) — доступ (ключ/одобрение) при этом не отзывается, войти обратно можно тем же
-      ключом сразу.
+      Только те, у кого прямо сейчас есть доступ к книге рецептов (одобренные и не заблокированные
+      участники) — те, кто застрял на экране ожидания или входа, в этот список не попадают. Зелёная
+      точка — человек на сайте прямо сейчас. «🚫 Блок» закрывает доступ к сайту насовсем. «✕ Выйти»
+      выкидывает человека на экран входа прямо сейчас (если он на сайте) — доступ (ключ/одобрение) при
+      этом не отзывается, войти обратно можно тем же ключом сразу.
     </p>
     <div id="online-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="online-list" style="margin-top:10px"></div>
@@ -2013,6 +2012,13 @@ function initFirebasePresence() {
     db.ref('kicks/' + myId).on('value', function(snap) {
       if (!snap.val()) return;
       db.ref('kicks/' + myId).remove().catch(function() {});
+      // На отключение уже был запланирован "серверный" апдейт (см. выше) —
+      // отменяем его и стираем свою запись сами, чтобы в списке "Онлайн"
+      // не мелькнула запись "не в сети" в момент перед самой перезагрузкой.
+      if (fbPresenceRef) {
+        fbPresenceRef.onDisconnect().cancel().catch(function() {});
+        fbPresenceRef.remove().catch(function() {});
+      }
       localStorage.removeItem(DEVICE_NAME_KEY);
       localStorage.removeItem(MANUAL_CODE_KEY);
       location.reload();
@@ -2087,6 +2093,17 @@ function formatTimeAgo(ts) {
   return new Date(ts).toLocaleString('ru-RU');
 }
 
+/* В списке "Онлайн" показываем ТОЛЬКО тех, кто прямо сейчас реально
+   может смотреть книгу рецептов — то есть у кого есть запись в
+   participants.json и она не заблокирована. Те, кто ещё не ввёл
+   ключ / застрял на экране ожидания одобрения, а также уже
+   заблокированные — доступа не имеют, поэтому в этот список не
+   попадают (даже если формально шлют presence-пинги, застряв на
+   экране входа). */
+function hasSiteAccess(participant) {
+  return !!(participant && !participant.blocked);
+}
+
 function renderOnlineUsersList() {
   var holder = $('online-list');
   var filterRow = $('online-filter-row');
@@ -2105,53 +2122,49 @@ function renderOnlineUsersList() {
       live: isOnlineLive(e),
       participant: participant
     };
-  });
+  }).filter(function(x) { return hasSiteAccess(x.participant); });
   entries.sort(function(a, b) { return b.lastSeen - a.lastSeen; });
 
   var liveCount = entries.filter(function(x) { return x.live; }).length;
   if (badge) badge.textContent = entries.length ? (liveCount + ' сейчас · ' + entries.length + ' всего') : '';
 
   if (filterRow) {
-    var memberCount = entries.filter(function(x) { return !!x.participant; }).length;
     filterRow.innerHTML =
       '<button class="btn btn-sm ' + (onlineUsersFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'all\')">Все (' + entries.length + ')</button>' +
-      '<button class="btn btn-sm ' + (onlineUsersFilter === 'live' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'live\')">🟢 Сейчас на сайте (' + liveCount + ')</button>' +
-      '<button class="btn btn-sm ' + (onlineUsersFilter === 'members' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'members\')">👥 Участники (' + memberCount + ')</button>';
+      '<button class="btn btn-sm ' + (onlineUsersFilter === 'live' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'live\')">🟢 Сейчас на сайте (' + liveCount + ')</button>';
   }
 
   var shown = entries.filter(function(x) {
     if (onlineUsersFilter === 'live') return x.live;
-    if (onlineUsersFilter === 'members') return !!x.participant;
     return true;
   });
 
   if (!shown.length) {
-    holder.innerHTML = '<p class="admin-panel-hint">' + (entries.length ? 'Никого не найдено по этому фильтру.' : 'Пока никого не было — список появится, как только кто-то откроет сайт.') + '</p>';
+    holder.innerHTML = '<p class="admin-panel-hint">' + (entries.length ? 'Никого не найдено по этому фильтру.' : 'Пока никого с доступом не заходило — список появится, как только кто-то с одобренным доступом откроет сайт.') + '</p>';
     return;
   }
 
   holder.innerHTML = shown.map(function(x) {
-    var isBlocked = !!(x.participant && x.participant.blocked);
-    var itemClass = 'participant-item online-item' + (x.live ? ' is-live' : '') + (isBlocked ? ' is-blocked' : '');
-    var memberBadge = x.participant ? '<span class="online-member-badge">' + (isBlocked ? '🚫 участник (заблокирован)' : '👥 участник') + '</span>' : '';
+    var roleBadge = (x.participant && x.participant.role === 'admin') ? '<span class="online-member-badge">👑 админ</span>' : '';
+    var itemClass = 'participant-item online-item' + (x.live ? ' is-live' : '');
     return '<div class="' + itemClass + '">' +
       '<div>' +
-        '<span class="online-dot"></span><strong>' + esc(x.name || 'Без имени') + '</strong>' + memberBadge +
+        '<span class="online-dot"></span><strong>' + esc(x.name || 'Без имени') + '</strong>' + roleBadge +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(x.id) + ' · ' + (x.live ? '🟢 на сайте сейчас' : 'был(а) ' + formatTimeAgo(x.lastSeen)) + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-        '<button class="btn btn-sm ' + (isBlocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleOnlineUserBlock(\'' + escAttr(x.id) + '\',\'' + escAttr(x.name || '') + '\')" title="' + (isBlocked ? 'Вернуть доступ' : 'Закрыть доступ этому устройству насовсем') + '">' + (isBlocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="toggleOnlineUserBlock(\'' + escAttr(x.id) + '\',\'' + escAttr(x.name || '') + '\')" title="Закрыть доступ этому устройству насовсем">🚫 Блок</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="removeOnlinePresence(\'' + escAttr(x.id) + '\')" title="Выкинуть на экран входа прямо сейчас (доступ/ключ не отзывается)">✕ Выйти</button>' +
       '</div>' +
     '</div>';
   }).join('');
 }
 
-/* Блокировка/разблокировка прямо из списка "Онлайн" — если человека
-   ещё нет в participants.json (заходил без ключа/до одобрения),
-   создаёт для него запись сразу с blocked:true; если уже есть —
-   просто переключает существующий флаг blocked, как в обычном
-   списке участников. */
+/* Блокировка прямо из списка "Онлайн" — в этом списке показываются
+   только те, у кого сейчас есть доступ (см. hasSiteAccess), поэтому
+   кнопка всегда закрывает доступ существующему участнику. Ветка
+   "участника ещё нет" оставлена как подстраховка на случай гонки
+   (запись пропала из локального кэша между отрисовкой и нажатием). */
 async function toggleOnlineUserBlock(id, name) {
   if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var p = participants.filter(function(x) { return x.id === id; })[0];
@@ -2187,12 +2200,22 @@ async function removeOnlinePresence(id) {
   if (typeof firebase === 'undefined') { showToast('⚠️ Онлайн-список сейчас недоступен'); return; }
   var ok = await customConfirm('Выкинуть это устройство на экран входа? Если человек сейчас на сайте — его перекинет на экран "Как вас зовут?" и ключ доступа, придётся войти заново. Доступ (ключ/одобрение) при этом не отзывается.');
   if (!ok) return;
+
+  // Как и с "🚫 Блок" — убираем из списка сразу, не дожидаясь ответа
+  // сервера, чтобы UI реагировал мгновенно; если что-то пойдёт не так,
+  // вернём запись обратно (см. catch ниже).
+  var previousEntry = onlineUsers[id];
+  delete onlineUsers[id];
+  renderOnlineUsersList();
+
   try {
     var db = firebase.database();
     await db.ref('kicks/' + id).set(firebase.database.ServerValue.TIMESTAMP); // сработает, только если устройство сейчас на связи
     await db.ref('presence/' + id).remove();
     showToast('👋 Команда на выход отправлена, запись убрана из списка');
   } catch (e) {
+    if (previousEntry) onlineUsers[id] = previousEntry; // не получилось — возвращаем запись обратно в список
+    renderOnlineUsersList();
     showToast('⚠️ Не удалось выполнить: ' + (e.message || e));
   }
 }
