@@ -29,7 +29,7 @@
     "fingerprint": "",
     "name": "",
     "addedAt": 1787610656798,
-    "blocked": false,
+    "blocked": true,
     "role": "viewer",
     "claimed": true,
     "blockedAt": null
