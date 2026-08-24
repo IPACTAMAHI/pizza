@@ -256,6 +256,17 @@
   body.is-admin button.admin-only,
   body.is-admin .btn.admin-only { display: inline-flex !important; }
   body.is-admin .guest-only { display: none !important; }
+  /* "developer-only" — как и .admin-only, но видно ТОЛЬКО настоящему
+     разработчику (вход по GitHub-ключу), а не обычному админу,
+     которому права выданы через список участников. Обычному админу
+     доступны только редактирование карточек и раздел "Участники" —
+     всё остальное в админ-панели (экспорт, настройка GitHub-синка,
+     фото шапки/фона, счётчик рецептов, Telegram-настройки) скрыто
+     этим классом. */
+  .developer-only { display: none !important; }
+  body.is-developer .developer-only { display: revert !important; }
+  body.is-developer button.developer-only,
+  body.is-developer .btn.developer-only { display: inline-flex !important; }
   .admin-login-hint {
     margin: 0 16px 14px; padding: 12px 14px;
     background: var(--glass-bg); border: 1px solid var(--glass-border);
@@ -1005,7 +1016,7 @@
     </div>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>Экспорт файла</span>
       <button class="btn btn-ghost btn-sm" onclick="exportSnapshot()">⬇️ Экспорт</button>
@@ -1013,7 +1024,7 @@
     <p class="admin-panel-hint">Скачивает копию сайта с текущими рецептами внутри — на случай, если нужно перезалить вручную.</p>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>Синхронизация с GitHub</span>
       <button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Настроить</button>
@@ -1026,7 +1037,7 @@
     <p class="admin-panel-hint" id="gh-test-result" style="margin-top: 8px; color: rgb(143, 227, 172);">🟢 Всё в порядке: доступ к репозиторию "IPACTAMAHI/pizza" есть, права на запись есть.</p>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>Фото шапки</span>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('header-photo-input').click()">📷 Изменить</button>
@@ -1035,7 +1046,7 @@
     <p class="admin-panel-hint">Фото на самом верху сайта, за заголовком «Книга рецептов».</p>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>Фото заднего фона</span>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bg-photo-input').click()">🖼️ Изменить</button>
@@ -1044,14 +1055,14 @@
     <p class="admin-panel-hint">Фон под категориями и рецептами. Требует настроенной синхронизации с GitHub — иначе новое фото увидите только вы.</p>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>Всего рецептов</span>
       <span id="admin-total-count" style="color:var(--text-muted)">40 шт.</span>
     </div>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>📤 Telegram для приёма кодов</span>
     </div>
@@ -1066,7 +1077,7 @@
     </div>
   </div>
 
-  <div class="admin-panel-card admin-only">
+  <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
       <span>👥 Telegram-группа для приёма заявок</span>
     </div>
@@ -1085,16 +1096,16 @@
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
       <span>👥 Участники (доступ по ключу)</span>
-      <button class="btn btn-primary btn-sm" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
+      <button class="btn btn-primary btn-sm developer-only" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
     </div>
-    <p class="admin-panel-hint">
+    <p class="admin-panel-hint developer-only">
       Нажмите «🔑 Сгенерировать ключ» и передайте его человеку любым способом (голосом, в Telegram и т.п.).
       При первом заходе на сайт он введёт имя, затем этот ключ — и сразу попадёт в книгу рецептов, без
       ожидания и без ручного одобрения: ключ и есть одобрение. Этот же ключ можно использовать в любом
       количестве браузеров и устройств — доступ будет открыт всюду, где он введён. Заблокировать человека
       можно кнопкой «🚫 Блок» ниже — это закроет доступ сразу во всех браузерах с этим ключом.
     </p>
-    <p class="admin-panel-hint">
+    <p class="admin-panel-hint developer-only">
       Старый способ (человек сам присылает код устройства в Telegram, а вы вставляете его кнопкой ниже)
       по-прежнему работает как запасной вариант — но привязан к конкретному браузеру и не переносится
       сам собой на другие.
@@ -2066,7 +2077,7 @@ function schedulePurchaseSync() {
 }
 
 async function saveAdminTelegramUsername() {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
   var input = $('admin-telegram-username');
   if (!input) return;
   var val = input.value.trim().replace(/^@/, '');
@@ -2082,7 +2093,7 @@ async function saveAdminTelegramUsername() {
    ссылку и сам пишет туда сообщение с именем и кодом устройства
    (см. requireTelegramSend). */
 async function saveAdminTelegramGroupLink() {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
   var input = $('admin-telegram-group');
   if (!input) return;
   var val = input.value.trim();
@@ -2263,7 +2274,7 @@ function showPendingScreen() {
         '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 3 секунды…</p>' +
         actionsHtml +
         '<p style="color:var(--text-muted);font-size:11px;margin-top:10px;max-width:320px;margin-left:auto;margin-right:auto">Сообщение не дошло, закрыли Telegram раньше времени или администратор сменил ссылку? Эти кнопки доступны без входа — ссылка проверяется заново перед каждым нажатием.</p>' +
-        '<p style="margin-top:10px"><span onclick="promptEnterAccessCode()" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔗 Уже одобрили в другом браузере? Ввести код оттуда</span></p>' +
+        '<p style="margin-top:10px"><button type="button" class="btn btn-success btn-sm" onclick="promptEnterAccessCode()">🔗 Уже одобрили в другом браузере? Ввести код оттуда</button></p>' +
         ownerLoginLinkHtml() +
       '</div>' +
     '</div>';
@@ -2363,7 +2374,7 @@ function renderParticipantsList() {
       '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
         (devMode ? '<button class="btn btn-sm ' + (isRoleAdmin ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantAdmin(\'' + escAttr(p.id) + '\')" title="' + (isRoleAdmin ? 'Снять права администратора (нужно подтверждение ключом)' : 'Дать права администратора (нужно подтверждение ключом)') + '">' + (isRoleAdmin ? '👤 Снять админа' : '👑 Сделать админом') + '</button>' : '') +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
-        (devMode ? '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' : '') +
+        '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -2475,7 +2486,7 @@ async function prepareAdminHandoffMessage(p) {
    при первом заходе (см. requireAccessKey), после чего ключ
    привязывается к нему автоматически. */
 async function generateInviteKey() {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Генерировать ключи доступа может только разработчик (вход по GitHub-ключу)'); return; }
 
   var id;
   do {
@@ -2500,7 +2511,7 @@ async function generateInviteKey() {
 }
 
 async function addParticipantManually() {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Добавлять участников может только разработчик (вход по GitHub-ключу)'); return; }
   var name = await customPrompt('Как зовут участника?', '', '➕ Добавить участника (1/2)');
   if (name === null || !name.trim()) return;
   var pasted = await customPrompt(
@@ -2555,7 +2566,7 @@ async function toggleParticipantBlock(id) {
 }
 
 async function removeParticipant(id) {
-  if (!isDeveloper()) { showToast('🔒 Удалять участников может только разработчик (вход по GitHub-ключу)'); return; }
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var ok = await customConfirm('Удалить эту запись из списка участников?');
   if (!ok) return;
   participants = participants.filter(function(x) { return x.id !== id; });
@@ -2661,6 +2672,7 @@ const UNLOCK_ICON_SVG = '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" 
 
 function applyAdminUI() {
   document.body.classList.toggle('is-admin', isAdmin());
+  document.body.classList.toggle('is-developer', isDeveloper());
   if (!isAdmin()) purchaseTemplateEditMode = false; // выход из режима — сбрасываем и режим редактирования шаблона закупки
   var btn = $('admin-toggle-btn');
   if (btn) {
@@ -2895,7 +2907,7 @@ async function testGithubConnection() {
 }
 
 async function forceSyncNow() {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
   var cfg = getGithubConfig();
   if (!cfg || !cfg.owner || !cfg.repo || !cfg.token) {
     showToast('⚠️ Сначала настройте синхронизацию (⚙️ Настроить)');
@@ -2994,7 +3006,7 @@ function closePhotoLightbox() {
 async function changeSitePhoto(input, kind) {
   var file = input.files[0];
   if (!file) return;
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
 
   var cfg = getGithubConfig();
   if (!cfg || !cfg.token) {
@@ -3150,7 +3162,7 @@ async function syncFromGithub() {
    без зависимости от localStorage конкретного браузера.
    ================================================================ */
 function exportSnapshot() {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
   if (!recipes.length) { showToast('⚠️ Список пуст — нечего публиковать'); return; }
 
   var tabBeforeExport = currentTab;
@@ -4016,7 +4028,7 @@ function resetIngrCalc() {
    Данные хранятся в localStorage, отдельно для каждой из двух
    категорий: "pizza" (Пицца бар) и "hot" (Горячий цех).
    ================================================================ */
-var PURCHASE_STORAGE_KEY = 'route2002_purchase_v1';
+var PURCHASE_STORAGE_KEY = 'route20_purchase_v1';
 var purchaseCategories = defaultPurchaseCategories();
 var purchaseData = { pizza: [], hot: [] };
 var currentPurchaseCategory = 'pizza';
