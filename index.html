@@ -230,6 +230,25 @@
     background: rgba(226, 86, 75, .08);
   }
 
+  /* Карточка "живого" посетителя в блоке "Онлайн" — тот же стиль,
+     что у участников, плюс цветной индикатор (зелёный — онлайн
+     прямо сейчас, серый — просто был(а) недавно). */
+  .online-item.is-live {
+    border-color: rgba(63, 181, 121, .55);
+    background: rgba(63, 181, 121, .08);
+  }
+  .online-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted); margin-right: 6px; flex-shrink: 0;
+  }
+  .online-item.is-live .online-dot { background: var(--success); box-shadow: 0 0 0 3px rgba(63,181,121,.25); }
+  .online-member-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .3px;
+    padding: 2px 7px; border-radius: 20px;
+    background: rgba(217, 165, 78, .18); color: var(--accent-2);
+    margin-left: 6px; vertical-align: middle;
+  }
+
   /* Цветные бейджи типа/категории на карточках */
   .type-badge { color: #fff; font-weight: 600; }
   .type-pizza { background: #b23a45; }
@@ -1093,6 +1112,23 @@
     </div>
   </div>
 
+  <div class="admin-panel-card developer-only">
+    <div class="admin-panel-row">
+      <span>🟢 Онлайн — все посетители сайта</span>
+      <span id="online-count-badge" style="color:var(--text-muted);font-size:12px"></span>
+    </div>
+    <p class="admin-panel-hint">
+      Абсолютно все, кто открывал сайт (даже без ключа доступа), с отметкой, когда были в последний раз.
+      Зелёная точка — человек на сайте прямо сейчас. Значок «участник» — если этот код устройства уже
+      есть в списке ниже. «🚫 Блок» закрывает доступ к сайту насовсем (как и в списке участников) —
+      действует, даже если человек ещё не одобрен. «✕» выкидывает человека на экран входа прямо сейчас
+      (если он на сайте) — доступ (ключ/одобрение) при этом не отзывается, войти обратно можно тем же
+      ключом сразу.
+    </p>
+    <div id="online-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
+    <div id="online-list" style="margin-top:10px"></div>
+  </div>
+
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
       <span>👥 Участники (доступ по ключу)</span>
@@ -1285,6 +1321,12 @@
 <!-- Библиотека генерации QR-кодов (кэшируется браузером после первой загрузки) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<!-- Firebase Realtime Database — используется ТОЛЬКО для блока "Онлайн" в
+     админ-панели (кто сейчас на сайте / был в последний раз). Данные
+     рецептов, участников и настроек сайта по-прежнему хранятся в GitHub —
+     это отдельная, независимая система только для presence-трекинга. -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
 <script>
 /* ================================================================
@@ -1893,6 +1935,266 @@ function syncParticipantsToGithub() {
     showToast('⚠️ Не удалось сохранить список участников: ' + res.error);
     return false;
   });
+}
+
+/* ================================================================
+   "ОНЛАЙН" — все посетители сайта (не только участники)
+   ================================================================
+   Отдельная система от GitHub-хранилища выше: там пишет только
+   администратор (у него один есть токен), а здесь должен уметь
+   писать КАЖДЫЙ посетитель — "я тут" с меткой времени. Для этого
+   используется Firebase Realtime Database (бесплатно): её правила
+   доступа разрешают каждому браузеру писать ТОЛЬКО свою запись по
+   своему коду устройства (presence/<код>) и не позволяют читать,
+   менять или удалять чужие записи — то есть обычный посетитель не
+   может увидеть или тронуть список других людей, это доступно
+   только в самой админ-панели.
+
+   Каждый браузер шлёт "я тут" сразу при заходе (ещё до того, как
+   пройдена проверка ключа/одобрения — чтобы администратор видел
+   вообще всех, кто заглянул на сайт, даже неодобренных), затем
+   обновляет метку времени каждые ~25 секунд, пока вкладка открыта.
+   Firebase сама отмечает "не в сети", как только соединение
+   реально обрывается (закрыли вкладку, погас интернет) — это
+   называется onDisconnect и работает на стороне сервера Firebase,
+   а не браузера, поэтому срабатывает даже при обрыве связи.
+
+   Блокировка человека из этого списка — это не что-то отдельное:
+   она просто создаёт/обновляет ту же самую запись в participants.json
+   (с blocked:true), которую использует вся остальная система доступа
+   на сайте. Поэтому забаненный отсюда человек получит ровно тот же
+   "Доступ закрыт", что и обычный заблокированный участник — независимо
+   от того, состоял ли он раньше в списке участников.
+   ================================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCCSKyQ0s15zRI0RtgnE3ORNG60-ioZVtc",
+  authDomain: "route20-online.firebaseapp.com",
+  databaseURL: "https://route20-online-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "route20-online",
+  storageBucket: "route20-online.firebasestorage.app",
+  messagingSenderId: "864775899669",
+  appId: "1:864775899669:web:1aa2c73280003a9b171c1c"
+};
+
+var fbPresenceRef = null;
+var onlineUsers = {};          // код устройства -> { lastSeen, online, name, ua }
+var onlineUsersFilter = 'all'; // 'all' | 'live' | 'members'
+var onlineListenerAttached = false;
+var presenceHeartbeatTimer = null;
+
+function initFirebasePresence() {
+  if (typeof firebase === 'undefined') return; // сеть/CDN недоступны — блок "Онлайн" просто останется пустым, на остальной сайт это не влияет
+  try {
+    if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    var db = firebase.database();
+    var myId = getDeviceId();
+    fbPresenceRef = db.ref('presence/' + myId);
+
+    // Канонический рецепт presence для Realtime Database: как только
+    // реально устанавливается соединение, регистрируем на СЕРВЕРЕ
+    // действие "при обрыве связи — пометить не в сети", и только
+    // после этого пишем "я в сети". Так это работает даже если
+    // человек просто закрыл вкладку или отключился от интернета,
+    // без единого действия с его стороны.
+    db.ref('.info/connected').on('value', function(snap) {
+      if (snap.val() !== true) return;
+      fbPresenceRef.onDisconnect().update({ online: false, lastSeen: firebase.database.ServerValue.TIMESTAMP })
+        .then(function() { sendPresenceUpdate(); });
+    });
+
+    // "Выйти" — кнопка "✕" в списке "Онлайн" пишет сюда метку времени,
+    // это устройство слушает СВОЙ же путь и, увидев команду, сбрасывает
+    // локальное представление (имя + вручную привязанный код) и
+    // перезагружает страницу — человек снова увидит экран "Как вас
+    // зовут?" и запрос ключа доступа. Сама запись участника/ключ при
+    // этом не трогается: введя тот же ключ ещё раз, доступ вернётся
+    // сразу, без повторного одобрения — это не блокировка, а просто
+    // принудительный повторный вход.
+    db.ref('kicks/' + myId).on('value', function(snap) {
+      if (!snap.val()) return;
+      db.ref('kicks/' + myId).remove().catch(function() {});
+      localStorage.removeItem(DEVICE_NAME_KEY);
+      localStorage.removeItem(MANUAL_CODE_KEY);
+      location.reload();
+    });
+
+    clearInterval(presenceHeartbeatTimer);
+    presenceHeartbeatTimer = setInterval(sendPresenceUpdate, 25000);
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') sendPresenceUpdate();
+    });
+  } catch (e) {
+    console.warn('Firebase presence недоступен:', e);
+  }
+}
+
+function sendPresenceUpdate() {
+  if (!fbPresenceRef) return;
+  var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
+  fbPresenceRef.update({
+    online: true,
+    lastSeen: firebase.database.ServerValue.TIMESTAMP,
+    name: name,
+    ua: (navigator.userAgent || '').slice(0, 140)
+  }).catch(function(e) { console.warn('sendPresenceUpdate error:', e); });
+}
+
+/* Подписка на общий список "Онлайн" — включается, только пока открыта
+   вкладка "Админ-панель" (чтобы не тратить впустую канал у всех
+   остальных вкладок сайта), и отписывается при выходе с неё. */
+function subscribeOnlineUsers() {
+  if (typeof firebase === 'undefined' || onlineListenerAttached) return;
+  try {
+    firebase.database().ref('presence').on('value', function(snap) {
+      onlineUsers = snap.val() || {};
+      renderOnlineUsersList();
+    });
+    onlineListenerAttached = true;
+  } catch (e) {
+    console.warn('subscribeOnlineUsers error:', e);
+  }
+}
+
+function unsubscribeOnlineUsers() {
+  if (typeof firebase === 'undefined' || !onlineListenerAttached) return;
+  try { firebase.database().ref('presence').off(); } catch (e) {}
+  onlineListenerAttached = false;
+}
+
+function setOnlineUsersFilter(f) {
+  onlineUsersFilter = f;
+  renderOnlineUsersList();
+}
+
+/* "В сети прямо сейчас" — не полагаемся только на флаг online (он
+   может не успеть смениться на false, если Firebase ещё не заметил
+   обрыв), а дополнительно проверяем, что метка времени свежее ~40
+   секунд — это чуть больше периода "я тут" (25с), чтобы не мигало. */
+function isOnlineLive(entry) {
+  if (!entry || !entry.lastSeen) return false;
+  return (Date.now() - entry.lastSeen) < 40000;
+}
+
+function formatTimeAgo(ts) {
+  if (!ts) return 'неизвестно';
+  var diffSec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (diffSec < 15) return 'прямо сейчас';
+  if (diffSec < 60) return diffSec + ' сек. назад';
+  var diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return diffMin + ' мин. назад';
+  var diffHour = Math.round(diffMin / 60);
+  if (diffHour < 24) return diffHour + ' ч. назад';
+  return new Date(ts).toLocaleString('ru-RU');
+}
+
+function renderOnlineUsersList() {
+  var holder = $('online-list');
+  var filterRow = $('online-filter-row');
+  var badge = $('online-count-badge');
+  if (!holder) return;
+
+  var ids = Object.keys(onlineUsers);
+  var entries = ids.map(function(id) {
+    var e = onlineUsers[id] || {};
+    var participant = participants.filter(function(p) { return p.id === id; })[0] || null;
+    return {
+      id: id,
+      lastSeen: e.lastSeen || 0,
+      name: e.name || (participant ? participant.name : '') || '',
+      ua: e.ua || '',
+      live: isOnlineLive(e),
+      participant: participant
+    };
+  });
+  entries.sort(function(a, b) { return b.lastSeen - a.lastSeen; });
+
+  var liveCount = entries.filter(function(x) { return x.live; }).length;
+  if (badge) badge.textContent = entries.length ? (liveCount + ' сейчас · ' + entries.length + ' всего') : '';
+
+  if (filterRow) {
+    var memberCount = entries.filter(function(x) { return !!x.participant; }).length;
+    filterRow.innerHTML =
+      '<button class="btn btn-sm ' + (onlineUsersFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'all\')">Все (' + entries.length + ')</button>' +
+      '<button class="btn btn-sm ' + (onlineUsersFilter === 'live' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'live\')">🟢 Сейчас на сайте (' + liveCount + ')</button>' +
+      '<button class="btn btn-sm ' + (onlineUsersFilter === 'members' ? 'btn-primary' : 'btn-ghost') + '" onclick="setOnlineUsersFilter(\'members\')">👥 Участники (' + memberCount + ')</button>';
+  }
+
+  var shown = entries.filter(function(x) {
+    if (onlineUsersFilter === 'live') return x.live;
+    if (onlineUsersFilter === 'members') return !!x.participant;
+    return true;
+  });
+
+  if (!shown.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">' + (entries.length ? 'Никого не найдено по этому фильтру.' : 'Пока никого не было — список появится, как только кто-то откроет сайт.') + '</p>';
+    return;
+  }
+
+  holder.innerHTML = shown.map(function(x) {
+    var isBlocked = !!(x.participant && x.participant.blocked);
+    var itemClass = 'participant-item online-item' + (x.live ? ' is-live' : '') + (isBlocked ? ' is-blocked' : '');
+    var memberBadge = x.participant ? '<span class="online-member-badge">' + (isBlocked ? '🚫 участник (заблокирован)' : '👥 участник') + '</span>' : '';
+    return '<div class="' + itemClass + '">' +
+      '<div>' +
+        '<span class="online-dot"></span><strong>' + esc(x.name || 'Без имени') + '</strong>' + memberBadge +
+        '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(x.id) + ' · ' + (x.live ? '🟢 на сайте сейчас' : 'был(а) ' + formatTimeAgo(x.lastSeen)) + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button class="btn btn-sm ' + (isBlocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleOnlineUserBlock(\'' + escAttr(x.id) + '\',\'' + escAttr(x.name || '') + '\')" title="' + (isBlocked ? 'Вернуть доступ' : 'Закрыть доступ этому устройству насовсем') + '">' + (isBlocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="removeOnlinePresence(\'' + escAttr(x.id) + '\')" title="Выкинуть на экран входа прямо сейчас (доступ/ключ не отзывается)">✕ Выйти</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* Блокировка/разблокировка прямо из списка "Онлайн" — если человека
+   ещё нет в participants.json (заходил без ключа/до одобрения),
+   создаёт для него запись сразу с blocked:true; если уже есть —
+   просто переключает существующий флаг blocked, как в обычном
+   списке участников. */
+async function toggleOnlineUserBlock(id, name) {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+
+  if (p) {
+    var willBlock = !p.blocked;
+    var ok = await customConfirm(willBlock ? 'Закрыть доступ этому человеку?' : 'Вернуть доступ этому человеку?');
+    if (!ok) return;
+    p.blocked = willBlock;
+  } else {
+    var ok2 = await customConfirm('Заблокировать это устройство? Оно ещё не было одобрено — запись будет создана сразу заблокированной, и доступ на сайт этому устройству будет закрыт.');
+    if (!ok2) return;
+    participants.push({ id: id, fingerprint: '', name: name || '', addedAt: Date.now(), blocked: true, role: 'viewer', claimed: true });
+  }
+
+  saveParticipantsLocal();
+  renderOnlineUsersList();
+  if (currentTab === 'admin') renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var saved = await syncParticipantsToGithub();
+  if (saved) showToast(p && !p.blocked ? '🔓 Доступ открыт' : '🚫 Доступ закрыт');
+  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной
+}
+
+/* "✕" — принудительно выкидывает человека на экран входа на ЕГО
+   устройстве (если оно сейчас на связи) и убирает запись из списка
+   "Онлайн". Доступ при этом не закрывается навсегда: запись
+   участника/ключ не трогаются, поэтому введя тот же ключ ещё раз,
+   человек сразу попадёт обратно — без повторного одобрения. Если
+   нужно закрыть доступ насовсем — используйте кнопку "🚫 Блок". */
+async function removeOnlinePresence(id) {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (typeof firebase === 'undefined') { showToast('⚠️ Онлайн-список сейчас недоступен'); return; }
+  var ok = await customConfirm('Выкинуть это устройство на экран входа? Если человек сейчас на сайте — его перекинет на экран "Как вас зовут?" и ключ доступа, придётся войти заново. Доступ (ключ/одобрение) при этом не отзывается.');
+  if (!ok) return;
+  try {
+    var db = firebase.database();
+    await db.ref('kicks/' + id).set(firebase.database.ServerValue.TIMESTAMP); // сработает, только если устройство сейчас на связи
+    await db.ref('presence/' + id).remove();
+    showToast('👋 Команда на выход отправлена, запись убрана из списка');
+  } catch (e) {
+    showToast('⚠️ Не удалось выполнить: ' + (e.message || e));
+  }
 }
 
 /* ================================================================
@@ -3215,12 +3517,16 @@ function switchTab(name) {
   const contentEl = document.getElementById('tab-' + name);
   if (contentEl) contentEl.classList.add('active');
 
+  var leavingAdmin = (currentTab === 'admin' && name !== 'admin');
   currentTab = name;
+  if (leavingAdmin) unsubscribeOnlineUsers(); // не держим лишний канал открытым вне админ-панели
 
   if (name === 'categories') renderCategoriesList();
   if (name === 'admin') {
     renderAdminPanel(); renderParticipantsList(); updateTelegramConfigField();
-    syncParticipantsFromGithub().then(function() { renderParticipantsList(); });
+    syncParticipantsFromGithub().then(function() { renderParticipantsList(); renderOnlineUsersList(); });
+    subscribeOnlineUsers();
+    renderOnlineUsersList();
   }
   if (name === 'add') { updateAddGate(); if (isAdmin()) resetForm(); }
   if (name === 'purchase') {
@@ -4028,7 +4334,7 @@ function resetIngrCalc() {
    Данные хранятся в localStorage, отдельно для каждой из двух
    категорий: "pizza" (Пицца бар) и "hot" (Горячий цех).
    ================================================================ */
-var PURCHASE_STORAGE_KEY = 'route1988_purchase_v1';
+var PURCHASE_STORAGE_KEY = 'route20_purchase_v1';
 var purchaseCategories = defaultPurchaseCategories();
 var purchaseData = { pizza: [], hot: [] };
 var currentPurchaseCategory = 'pizza';
@@ -4815,6 +5121,11 @@ async function initApp() {
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
   loadSiteConfigLocal();
 
+  // Отмечаем "я тут" максимально рано — до какой-либо проверки одобрения
+  // или блокировки, чтобы в списке "Онлайн" было видно вообще всех, кто
+  // хотя бы открыл сайт, а не только уже одобренных участников.
+  initFirebasePresence();
+
   var configPromise = syncSiteConfigFromGithub();
 
   // Если это устройство уже когда-то заблокировали — не тратим его время на
@@ -4827,6 +5138,7 @@ async function initApp() {
 
   await configPromise; // нужен ДО приглашения ввести имя — от него зависит, обязателен ли шаг с Telegram
   await ensureParticipantName(); // держит экран "Загрузка…" поверх контента, пока гость не пройдёт этот шаг
+  sendPresenceUpdate(); // теперь известно имя гостя — обновляем запись "Онлайн", чтобы оно там тоже появилось
 
   if (!isAdmin()) {
     var status = await checkParticipantStatus(); // ещё раз, свежо — вдруг администратор уже успел одобрить, пока шёл диалог выше
