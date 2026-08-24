@@ -955,12 +955,12 @@
 <div id="tab-purchase" class="tab-content">
   <h2 style="margin-bottom:14px">📦 Закупка</h2>
 
-  <div class="chip-row" id="purchase-subtabs" style="margin-bottom:12px">
-    <span class="chip active" data-cat="pizza" onclick="selectPurchaseCategory('pizza')">🍕 Закупка на неделю — Пицца бар</span>
-    <span class="chip" data-cat="hot" onclick="selectPurchaseCategory('hot')">🔥 Закупка на неделю — Горячий цех</span>
-  </div>
+  <div class="chip-row" id="purchase-subtabs" style="margin-bottom:12px"></div>
 
   <div class="admin-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-supplier-btn" onclick="addPurchaseSupplier()">➕ Добавить поставщика</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-remove-supplier-btn" onclick="removePurchaseSupplier()" style="display:none">🗑️ Удалить поставщика</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
     <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
   </div>
@@ -982,6 +982,15 @@
     <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
+  </div>
+
+  <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Общий отчёт сразу по всем поставщикам и категориям — с уже указанным остатком по каждому:</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (все поставщики)</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
+    </div>
   </div>
 </div>
 
@@ -1075,15 +1084,21 @@
 
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
-      <span>👥 Участники (доступ по одобрению)</span>
-      <button class="btn btn-ghost btn-sm" onclick="addParticipantManually()">+ Добавить и одобрить</button>
+      <span>👥 Участники (доступ по ключу)</span>
+      <button class="btn btn-primary btn-sm" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
     </div>
     <p class="admin-panel-hint">
-      Теперь доступ закрыт по умолчанию: новый человек, открыв сайт, увидит «Ожидайте подтверждения
-      администратора» и не сможет ничего посмотреть, пока вы не добавите его сюда. Как только он
-      представится (и, если указан Telegram выше, отправит вам заявку), возьмите из его сообщения
-      код и имя и нажмите «+ Добавить и одобрить» — его страница сама, без перезагрузки,
-      откроет доступ в течение 10 секунд.
+      Нажмите «🔑 Сгенерировать ключ» и передайте его человеку любым способом (голосом, в Telegram и т.п.).
+      При первом заходе на сайт он введёт имя, затем этот ключ — и сразу попадёт в книгу рецептов, без
+      ожидания и без ручного одобрения: ключ и есть одобрение. Этот же ключ можно использовать в любом
+      количестве браузеров и устройств — доступ будет открыт всюду, где он введён. Заблокировать человека
+      можно кнопкой «🚫 Блок» ниже — это закроет доступ сразу во всех браузерах с этим ключом.
+    </p>
+    <p class="admin-panel-hint">
+      Старый способ (человек сам присылает код устройства в Telegram, а вы вставляете его кнопкой ниже)
+      по-прежнему работает как запасной вариант — но привязан к конкретному браузеру и не переносится
+      сам собой на другие.
+      <span onclick="addParticipantManually()" style="text-decoration:underline;cursor:pointer;color:var(--text-muted)">Добавить по коду устройства вручную</span>
     </p>
     <div id="participants-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="participants-list" style="margin-top:10px"></div>
@@ -1334,6 +1349,11 @@ function showToast(msg) {
    код (ensureParticipantName) может однозначно распознать этот случай. */
 var DEV_LOGIN_SENTINEL = { __devLoginRequested: true };
 
+/* Аналогичный спец.значение для ссылки "Уже заходили с другого
+   браузера? Ввести код" на том же экране знакомства — см.
+   promptEnterAccessCode() и ensureParticipantName(). */
+var CODE_ENTRY_SENTINEL = { __codeEntryRequested: true };
+
 /* Экраны ожидания/блокировки (showPendingScreen, showBlockedScreen) делают
    document.body.innerHTML = '...' и тем самым удаляют модалку (#app-modal-overlay
    и всё внутри неё) из DOM вместе со всем остальным содержимым body — после
@@ -1359,6 +1379,9 @@ function ensureModalDom() {
         '<div id="app-modal-dev-login-wrap" style="display:none;text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--glass-border)">' +
           '<span id="app-modal-dev-login" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔑 Я разработчик (владелец) — войти</span>' +
         '</div>' +
+        '<div id="app-modal-code-entry-wrap" style="display:none;text-align:center;margin-top:10px">' +
+          '<span id="app-modal-code-entry" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔗 Уже заходили с другого браузера? Ввести код</span>' +
+        '</div>' +
       '</div>' +
     '</div>'
   );
@@ -1375,6 +1398,8 @@ function showModal(opts) {
     var cancelBtn = $('app-modal-cancel');
     var devWrap = $('app-modal-dev-login-wrap');
     var devLink = $('app-modal-dev-login');
+    var codeWrap = $('app-modal-code-entry-wrap');
+    var codeLink = $('app-modal-code-entry');
 
     titleEl.textContent = opts.title || '';
     if (opts.messageHtml) {
@@ -1400,6 +1425,7 @@ function showModal(opts) {
     }
 
     if (devWrap) devWrap.style.display = opts.devLogin ? '' : 'none';
+    if (codeWrap) codeWrap.style.display = opts.enterCode ? '' : 'none';
 
     overlay.classList.add('show');
     if (opts.withInput) setTimeout(function() { inputEl.focus(); }, 60);
@@ -1410,6 +1436,7 @@ function showModal(opts) {
       cancelBtn.onclick = null;
       inputEl.onkeydown = null;
       if (devLink) devLink.onclick = null;
+      if (codeLink) codeLink.onclick = null;
       resolve(result);
     }
 
@@ -1425,6 +1452,11 @@ function showModal(opts) {
     if (devLink) {
       devLink.onclick = function() {
         cleanup(DEV_LOGIN_SENTINEL);
+      };
+    }
+    if (codeLink) {
+      codeLink.onclick = function() {
+        cleanup(CODE_ENTRY_SENTINEL);
       };
     }
   });
@@ -1470,22 +1502,42 @@ const DEVICE_ID_KEY = 'r20_device_id';
 const DEVICE_NAME_KEY = 'r20_device_name';
 const PARTICIPANTS_KEY = 'r20_participants_cache';
 const PARTICIPANTS_PATH = 'participants.json';
+const MANUAL_CODE_KEY = 'r20_manual_code';
 
 var participants = [];
 
-/* Ключ устройства ("код") теперь ВСЕГДА выводится из отпечатка
-   браузера, а не генерируется случайно. Раньше при первом заходе
-   создавался случайный код и сохранялся в localStorage — если
-   человек очищал данные сайта (или заходил в приватном режиме),
-   он получал НОВЫЙ случайный код и мог заново отправить заявку в
-   Telegram, как будто это другое устройство, и так спамить разными
-   кодами, пытаясь обойти ожидание одобрения или блокировку.
-   Теперь код детерминированно строится из отпечатка: один и тот же
-   браузер/устройство — всегда один и тот же код, сколько угодно раз
-   ни очищай localStorage. Значение всё равно кэшируется в
-   localStorage — просто чтобы не пересчитывать его на каждый чих —
-   но при расхождении с отпечатком кэш переписывается актуальным. */
+/* Ключ устройства ("код") по умолчанию выводится из отпечатка
+   браузера — один и тот же браузер/профиль всегда даёт один и тот
+   же код, сколько угодно раз ни очищай localStorage и в скольки бы
+   инкогнито-вкладках его ни открывали. Это решает проблему повторных
+   заявок в рамках ОДНОГО браузера.
+
+   ЧЕСТНО, без иллюзий: одинакового кода в РАЗНЫХ браузерах (Chrome,
+   Firefox, Edge, Safari) на одном и том же устройстве отпечаток НЕ
+   даёт и в принципе не может — это не баг, а особенность веб-
+   платформы: у каждого браузера свой движок рендеринга (canvas,
+   шрифты, userAgent), а приватный режим ряда браузеров (Firefox,
+   Safari, Brave) намеренно рандомизирует эти значения на каждый
+   заход именно для того, чтобы сайты не могли распознавать
+   пользователя — обойти это с сайта невозможно.
+
+   Поэтому для "одного человека в любом браузере" здесь есть
+   РУЧНОЙ перенос кода: пользователь копирует код в одном браузере
+   (см. buildNameCodeCopyHtml) и вставляет его в другом через
+   promptEnterAccessCode(). Тогда оба браузера привязываются к одной
+   и той же записи участника, и блокировка (бан) этой записи
+   действует во всех браузерах, куда код был перенесён. Ручной код
+   имеет приоритет над автоматическим отпечатком.
+
+   Важно для 100% бана: если устройство уже определено как
+   заблокированное, promptEnterAccessCode() отказывает в смене кода
+   ещё до открытия формы ввода (см. проверку внутри неё) — иначе
+   забаненный человек мог бы вписать произвольный код и попытаться
+   выдать себя за нового гостя. */
 function getDeviceId() {
+  var manual = localStorage.getItem(MANUAL_CODE_KEY);
+  if (manual) return manual;
+
   var derived = deriveDeviceIdFromFingerprint();
   if (derived) {
     if (localStorage.getItem(DEVICE_ID_KEY) !== derived) {
@@ -1502,6 +1554,60 @@ function getDeviceId() {
     localStorage.setItem(DEVICE_ID_KEY, id);
   }
   return id;
+}
+
+/* Нормализует введённый пользователем код к виду XXXX-XXXX (как он
+   и выводится на экране), чтобы не сработать из-за лишних пробелов
+   или маленьких букв при копипасте. Если после чистки код не похож
+   на валидный (нет хотя бы 4+4 буквенно-цифровых символов), вернёт
+   null — тогда promptEnterAccessCode() покажет ошибку и не сохранит
+   его, чтобы не подменить рабочий код мусором. */
+function normalizeEnteredCode(raw) {
+  if (!raw) return null;
+  // код в интерфейсе может содержать и суффикс "·отпечаток" (см.
+  // getCombinedAccessCode) — для привязки нужен только сам код
+  // устройства, часть до "·".
+  var justCode = String(raw).split('·')[0];
+  var cleaned = justCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (cleaned.length < 8) return null;
+  cleaned = cleaned.slice(0, 8);
+  return cleaned.slice(0, 4) + '-' + cleaned.slice(4, 8);
+}
+
+/* Запрашивает у пользователя код, полученный в другом браузере, и
+   привязывает текущий браузер к нему (см. комментарий у getDeviceId).
+   После сохранения перезагружает страницу — дальше вся логика
+   (checkParticipantStatus, getMyParticipantRecord) естественно
+   подхватит статус той записи участника, к которой относится код. */
+async function promptEnterAccessCode() {
+  // Защита от обхода бана: если это устройство уже определено как
+  // заблокированное (по отпечатку или по текущему id — ДО какой-либо
+  // ручной подмены кода), не даём вообще открыть ввод нового кода.
+  // Иначе забаненный человек мог бы вписать произвольный, никому не
+  // принадлежащий код и попытаться выдать себя за нового гостя.
+  await syncParticipantsFromGithub();
+  var current = getMyParticipantRecord();
+  if (current && current.blocked) {
+    await customConfirm('Доступ для этого устройства закрыт администратором. Смена кода недоступна, пока действует блокировка.', '🔒 Доступ закрыт');
+    return;
+  }
+
+  var entered = await showModal({
+    title: '🔗 Код с другого браузера',
+    message: 'Вставьте код устройства, который вы уже видели при заходе в другом браузере (там, где доступ открыт). Формат: XXXX-XXXX.',
+    withInput: true,
+    placeholder: 'XXXX-XXXX',
+    okText: 'Привязать'
+  });
+  if (!entered) return; // отмена
+  var normalized = normalizeEnteredCode(entered);
+  if (!normalized) {
+    await customConfirm('Похоже, это не код устройства. Скопируйте его целиком с экрана другого браузера и попробуйте снова.', 'Не удалось распознать код');
+    return;
+  }
+  localStorage.setItem(MANUAL_CODE_KEY, normalized);
+  localStorage.setItem(DEVICE_ID_KEY, normalized); // для совместимости со старыми проверками
+  location.reload();
 }
 
 function deriveDeviceIdFromFingerprint() {
@@ -1554,7 +1660,10 @@ function getCombinedAccessCode() {
 
 function showDeviceCodeInFooter() {
   var el = $('device-code-footer');
-  if (el) el.textContent = 'Код устройства: ' + getCombinedAccessCode();
+  if (el) {
+    el.innerHTML = 'Код устройства: ' + esc(getCombinedAccessCode()) +
+      ' · <span onclick="promptEnterAccessCode()" style="text-decoration:underline;cursor:pointer">привязать другой браузер</span>';
+  }
 }
 
 async function ensureParticipantName() {
@@ -1586,10 +1695,92 @@ async function ensureParticipantName() {
     if (entered && entered.trim()) {
       var finalName = entered.trim();
       localStorage.setItem(DEVICE_NAME_KEY, finalName);
-      await requireTelegramSend(finalName);
+      await requireAccessKey(finalName); // просит ключ, выданный администратором, и сама привязывает к нему устройство
       return;
     }
     // имя пустое — показываем экран знакомства ещё раз
+  }
+}
+
+/* ================================================================
+   КЛЮЧ ДОСТУПА, ВЫДАННЫЙ АДМИНИСТРАТОРОМ
+
+   Раньше единственным способом попасть в участники было: гость сам
+   отправляет своё имя и автоматически посчитанный код устройства в
+   Telegram, а администратор вручную копирует код из сообщения и
+   добавляет его в список. У этого есть слабое место: код завязан на
+   отпечаток браузера, поэтому в другом браузере/устройстве гость
+   получает другой код и выглядит как новый человек.
+
+   Теперь основной способ — наоборот: администратор ЗАРАНЕЕ создаёт
+   ключ (кнопка "🔑 Сгенерировать ключ" в панели), сам передаёт его
+   человеку любым способом (голосом, в Telegram и т.п.), а человек
+   вводит этот ключ здесь при первом заходе. Ключ — это и есть
+   постоянная личность человека в системе, не привязанная ни к
+   браузеру, ни к устройству: с этим же ключом человек может зайти
+   с любого браузера и увидит книгу рецептов сразу, без ожидания
+   одобрения (оно уже "встроено" в сам факт, что администратор выдал
+   ключ). Блокировка ключа администратором мгновенно закрывает доступ
+   везде, где этот ключ используется — потому что личность определяется
+   ключом, а не отпечатком конкретного браузера. */
+async function requireAccessKey(name) {
+  while (true) {
+    var contactHtml = '';
+    var url = getTelegramSendUrl(name);
+    if (url) {
+      contactHtml = '<p style="text-align:center;font-size:12px;margin-top:12px">' +
+        '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" style="color:var(--accent)">Нет ключа? Написать администратору в Telegram →</a>' +
+        '</p>';
+    }
+
+    var entered = await showModal({
+      title: '🔑 Ключ доступа',
+      message: 'Введите ключ доступа, который вам передал администратор книги рецептов. Без него открыть рецепты нельзя.',
+      messageHtml: contactHtml,
+      withInput: true,
+      placeholder: 'XXXX-XXXX',
+      hideCancel: true,
+      okText: 'Войти',
+      devLogin: true
+    });
+
+    if (entered === DEV_LOGIN_SENTINEL) {
+      var loggedIn = await loginWithGithubKey();
+      if (loggedIn) return; // вошли как разработчик
+      continue;
+    }
+
+    var normalized = normalizeEnteredCode(entered);
+    if (!normalized) {
+      await customConfirm('Ключ не распознан. Проверьте, что скопировали его целиком (формат XXXX-XXXX), и попробуйте снова.', '⚠️ Неверный формат');
+      continue;
+    }
+
+    await syncParticipantsFromGithub();
+    var p = participants.filter(function(x) { return x.id === normalized; })[0];
+
+    if (!p) {
+      await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок, либо получите новый у администратора.', '⚠️ Ключ не найден');
+      continue;
+    }
+
+    // Ключ найден — привязываем к нему это устройство независимо от
+    // статуса (в том числе если он уже занят другим браузером того же
+    // человека, или уже заблокирован — дальше это как обычно проверит
+    // checkParticipantStatus/showBlockedScreen).
+    localStorage.setItem(MANUAL_CODE_KEY, normalized);
+    localStorage.setItem(DEVICE_ID_KEY, normalized);
+
+    if (!p.claimed) {
+      // Первое использование этого ключа — окончательно привязываем
+      // его к человеку: имя, отпечаток (информационно, для админ-панели).
+      p.name = name;
+      p.fingerprint = getDeviceFingerprint() || p.fingerprint || '';
+      p.claimed = true;
+      p.claimedAt = Date.now();
+      await syncParticipantsToGithub(); // при неудаче доступ всё равно работает локально — синхронизация повторится позже
+    }
+    return;
   }
 }
 
@@ -1777,6 +1968,22 @@ function updateTelegramConfigField() {
    ================================================================ */
 const PURCHASE_PATH = 'purchase.json';
 
+/* Список категорий закупки хранится ВМЕСТЕ с позициями в одном файле
+   purchase.json: { categories: [{id,label,icon,builtin}], data: { id: [строки] } }.
+   Две встроенные категории (Пицца бар / Горячий цех) существуют всегда,
+   их нельзя удалить. Поверх них администратор может добавлять сколько
+   угодно "поставщиков" — по сути такие же категории, только удаляемые
+   и переименовываемые, — под каждую свой список позиций с нормой на
+   неделю и тем же расчётом "сколько докупить". Старый формат файла
+   ({pizza:[...], hot:[...]} без categories) распознаётся и на лету
+   преобразуется в новый — старые сайты не ломаются при обновлении. */
+function defaultPurchaseCategories() {
+  return [
+    { id: 'pizza', label: 'Пицца бар', icon: '🍕', builtin: true },
+    { id: 'hot', label: 'Горячий цех', icon: '🔥', builtin: true }
+  ];
+}
+
 async function syncPurchaseFromGithub() {
   // Пока админ активно редактирует шаблон (режим включён кнопкой
   // "✏️ Редактировать шаблон"), фоновое обновление с GitHub НЕ должно
@@ -1795,19 +2002,38 @@ async function syncPurchaseFromGithub() {
     // ждали ответ сети, админ мог успеть нажать "Редактировать шаблон"
     // и добавить строки — не затираем их результатом, который уже устарел.
     if (isAdmin() && purchaseTemplateEditMode) return;
-    if (data && typeof data === 'object') {
-      var incoming = { pizza: Array.isArray(data.pizza) ? data.pizza : [], hot: Array.isArray(data.hot) ? data.hot : [] };
-      // Остатки, введённые прямо сейчас на этом устройстве, — локальные и
-      // временные, поэтому при обновлении шаблона с GitHub переносим их
-      // на новые данные по id строки, а не затираем.
-      ['pizza', 'hot'].forEach(function(cat) {
-        var localById = {};
-        purchaseRowsFor(cat).forEach(function(r) { localById[r.id] = r.residual; });
-        incoming[cat].forEach(function(r) { r.residual = (r.id in localById) ? localById[r.id] : ''; });
-      });
-      purchaseData = incoming;
-      savePurchaseData();
+    if (!data || typeof data !== 'object') return;
+
+    var incomingCategories, incomingData;
+    if (Array.isArray(data.categories) && data.data && typeof data.data === 'object') {
+      incomingCategories = data.categories;
+      incomingData = data.data;
+    } else {
+      // старый формат файла — только pizza/hot без списка категорий
+      incomingCategories = defaultPurchaseCategories();
+      incomingData = { pizza: Array.isArray(data.pizza) ? data.pizza : [], hot: Array.isArray(data.hot) ? data.hot : [] };
     }
+    // Встроенные категории должны быть на месте всегда, даже если файл повреждён
+    defaultPurchaseCategories().forEach(function(def, i) {
+      if (!incomingCategories.some(function(c) { return c.id === def.id; })) incomingCategories.splice(i, 0, def);
+    });
+    incomingCategories.forEach(function(c) { if (!Array.isArray(incomingData[c.id])) incomingData[c.id] = []; });
+
+    // Остатки, введённые прямо сейчас на этом устройстве, — локальные и
+    // временные, поэтому при обновлении шаблона с GitHub переносим их
+    // на новые данные по id строки, а не затираем.
+    incomingCategories.forEach(function(c) {
+      var localById = {};
+      purchaseRowsFor(c.id).forEach(function(r) { localById[r.id] = r.residual; });
+      incomingData[c.id].forEach(function(r) { r.residual = (r.id in localById) ? localById[r.id] : ''; });
+    });
+
+    purchaseCategories = incomingCategories;
+    purchaseData = incomingData;
+    if (!purchaseCategories.some(function(c) { return c.id === currentPurchaseCategory; })) {
+      currentPurchaseCategory = purchaseCategories[0] ? purchaseCategories[0].id : 'pizza';
+    }
+    savePurchaseData();
   } catch (e) {
     console.warn('syncPurchaseFromGithub: используются локальные данные', e);
   }
@@ -1821,10 +2047,10 @@ function syncPurchaseToGithub() {
       return false;
     }
     // Остатки — личный черновик устройства, в общий шаблон их не публикуем.
-    var toSave = {
-      pizza: purchaseRowsFor('pizza').map(function(r) { return { id: r.id, name: r.name, unit: r.unit, norm: r.norm }; }),
-      hot: purchaseRowsFor('hot').map(function(r) { return { id: r.id, name: r.name, unit: r.unit, norm: r.norm }; })
-    };
+    var toSave = { categories: purchaseCategories, data: {} };
+    purchaseCategories.forEach(function(c) {
+      toSave.data[c.id] = purchaseRowsFor(c.id).map(function(r) { return { id: r.id, name: r.name, unit: r.unit, norm: r.norm }; });
+    });
     var res = await putJsonToGithub(PURCHASE_PATH, toSave, 'Обновление шаблона закупки (' + new Date().toLocaleString('ru-RU') + ')');
     if (res.ok) return true;
     console.error('syncPurchaseToGithub error:', res.error);
@@ -2037,6 +2263,7 @@ function showPendingScreen() {
         '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 3 секунды…</p>' +
         actionsHtml +
         '<p style="color:var(--text-muted);font-size:11px;margin-top:10px;max-width:320px;margin-left:auto;margin-right:auto">Сообщение не дошло, закрыли Telegram раньше времени или администратор сменил ссылку? Эти кнопки доступны без входа — ссылка проверяется заново перед каждым нажатием.</p>' +
+        '<p style="margin-top:10px"><span onclick="promptEnterAccessCode()" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔗 Уже одобрили в другом браузере? Ввести код оттуда</span></p>' +
         ownerLoginLinkHtml() +
       '</div>' +
     '</div>';
@@ -2056,7 +2283,7 @@ function schedulePendingPoll() {
   }, 3000);
 }
 
-var participantsFilter = 'all'; // 'all' | 'active' | 'blocked'
+var participantsFilter = 'all'; // 'all' | 'active' | 'blocked' | 'keys'
 
 function setParticipantsFilter(f) {
   participantsFilter = f;
@@ -2067,22 +2294,51 @@ function renderParticipantsList() {
   var holder = $('participants-list');
   if (!holder) return;
 
-  var total = participants.length;
-  var blockedCount = participants.filter(function(p) { return p.blocked; }).length;
+  // Ключи, которые администратор сгенерировал, но которыми ещё никто
+  // не воспользовался (claimed === false) — это ещё не люди, поэтому
+  // они не считаются ни "активными", ни участниками вообще: у них
+  // своя отдельная вкладка ниже.
+  var unclaimedKeys = participants.filter(function(p) { return p.claimed === false; });
+  var realParticipants = participants.filter(function(p) { return p.claimed !== false; });
+
+  var total = realParticipants.length;
+  var blockedCount = realParticipants.filter(function(p) { return p.blocked; }).length;
   var filterRow = $('participants-filter-row');
   if (filterRow) {
     filterRow.innerHTML =
       '<button class="btn btn-sm ' + (participantsFilter === 'all' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'all\')">Все (' + (total - blockedCount) + ')</button>' +
       '<button class="btn btn-sm ' + (participantsFilter === 'active' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'active\')">Активные (' + (total - blockedCount) + ')</button>' +
-      '<button class="btn btn-sm ' + (participantsFilter === 'blocked' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'blocked\')">🚫 Заблокированные (' + blockedCount + ')</button>';
+      '<button class="btn btn-sm ' + (participantsFilter === 'blocked' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'blocked\')">🚫 Заблокированные (' + blockedCount + ')</button>' +
+      '<button class="btn btn-sm ' + (participantsFilter === 'keys' ? 'btn-primary' : 'btn-ghost') + '" onclick="setParticipantsFilter(\'keys\')">🔑 Неиспользованные ключи (' + unclaimedKeys.length + ')</button>';
   }
 
-  if (!participants.length) {
-    holder.innerHTML = '<p class="admin-panel-hint">Пока никого не добавили — список появится, когда вы добавите первого участника.</p>';
+  if (participantsFilter === 'keys') {
+    if (!unclaimedKeys.length) {
+      holder.innerHTML = '<p class="admin-panel-hint">Нет сгенерированных, но ещё не использованных ключей.</p>';
+      return;
+    }
+    holder.innerHTML = unclaimedKeys.map(function(p) {
+      var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
+      return '<div class="participant-item">' +
+        '<div style="min-width:0">' +
+          '<strong>🔑 ' + esc(p.id) + '</strong>' +
+          '<br><span style="font-size:12px;color:var(--text-muted)">ещё не использован' + (dateStr ? ' · создан ' + dateStr : '') + '</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
+          '<button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard(\'' + escAttr(p.id) + '\', \'📋 Ключ скопирован\')" title="Скопировать ключ, чтобы отправить человеку">📋 Копировать</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить неиспользованный ключ">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
     return;
   }
 
-  var shown = participants.filter(function(p) {
+  if (!realParticipants.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">Пока никого нет — список появится, когда кто-то введёт выданный вами ключ.</p>';
+    return;
+  }
+
+  var shown = realParticipants.filter(function(p) {
     if (participantsFilter === 'blocked') return !!p.blocked;
     return !p.blocked; // и «Все», и «Активные» показывают только незаблокированных — заблокированные видны исключительно во вкладке «Заблокированные»
   });
@@ -2211,6 +2467,36 @@ async function prepareAdminHandoffMessage(p) {
     '⚠️ Это личный ключ доступа к репозиторию — никому больше его не пересылайте.';
 
   copyTextToClipboard(message, '📋 Сообщение с ключом скопировано — отправьте его лично, например в Telegram');
+}
+
+/* Создаёт новый ключ доступа и сохраняет его в списке участников как
+   "не использованный" (claimed:false, без имени) — администратор
+   передаёт этот ключ человеку любым способом, а тот вводит его сам
+   при первом заходе (см. requireAccessKey), после чего ключ
+   привязывается к нему автоматически. */
+async function generateInviteKey() {
+  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+
+  var id;
+  do {
+    id = Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  } while (participants.some(function(p) { return p.id === id; }));
+
+  participants.push({ id: id, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, role: 'viewer', claimed: false });
+  participantsFilter = 'keys';
+  renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var ok = await syncParticipantsToGithub();
+  if (!ok) return; // при ok===false внутри syncParticipantsToGithub уже показан toast с точной причиной
+
+  await showModal({
+    title: '🔑 Ключ создан',
+    message: 'Передайте этот ключ человеку любым способом (голосом, в Telegram и т.п.). При первом заходе на сайт он введёт его и сразу получит доступ — одобрять его вручную не нужно.',
+    messageHtml: '<div style="display:flex;justify-content:center;margin:10px 0 4px">' + copyChipHtml('🔑', 'Ключ', id, '📋 Ключ скопирован') + '</div>',
+    withInput: false,
+    hideCancel: true,
+    okText: 'Готово'
+  });
 }
 
 async function addParticipantManually() {
@@ -3731,6 +4017,7 @@ function resetIngrCalc() {
    категорий: "pizza" (Пицца бар) и "hot" (Горячий цех).
    ================================================================ */
 var PURCHASE_STORAGE_KEY = 'route20_purchase_v1';
+var purchaseCategories = defaultPurchaseCategories();
 var purchaseData = { pizza: [], hot: [] };
 var currentPurchaseCategory = 'pizza';
 
@@ -3757,8 +4044,14 @@ function togglePurchaseTemplateEdit() {
 function updatePurchaseTemplateControls() {
   var toggleBtn = $('purchase-edit-toggle-btn');
   var saveBtn = $('purchase-save-template-btn');
+  var renameBtn = $('purchase-rename-btn');
+  var removeBtn = $('purchase-remove-supplier-btn');
   if (toggleBtn) toggleBtn.textContent = purchaseTemplateEditMode ? '🔒 Завершить редактирование' : '✏️ Редактировать шаблон';
   if (saveBtn) saveBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
+  var canManage = isAdmin() && purchaseTemplateEditMode;
+  var c = purchaseCategoryById(currentPurchaseCategory);
+  if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
+  if (removeBtn) removeBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
 }
 
 /* Ручное сохранение шаблона в GitHub сразу, минуя обычную задержку
@@ -3778,32 +4071,132 @@ async function savePurchaseTemplateNow(silent) {
 function loadPurchaseData() {
   try {
     var stored = localStorage.getItem(PURCHASE_STORAGE_KEY);
-    purchaseData = stored ? JSON.parse(stored) : { pizza: [], hot: [] };
-  } catch (e) { purchaseData = { pizza: [], hot: [] }; }
-  if (!purchaseData || typeof purchaseData !== 'object') purchaseData = { pizza: [], hot: [] };
-  if (!Array.isArray(purchaseData.pizza)) purchaseData.pizza = [];
-  if (!Array.isArray(purchaseData.hot)) purchaseData.hot = [];
+    var parsed = stored ? JSON.parse(stored) : null;
+    if (parsed && Array.isArray(parsed.categories) && parsed.data && typeof parsed.data === 'object') {
+      purchaseCategories = parsed.categories;
+      purchaseData = parsed.data;
+    } else if (parsed && (Array.isArray(parsed.pizza) || Array.isArray(parsed.hot))) {
+      // старый формат хранения (до появления поставщиков)
+      purchaseCategories = defaultPurchaseCategories();
+      purchaseData = { pizza: Array.isArray(parsed.pizza) ? parsed.pizza : [], hot: Array.isArray(parsed.hot) ? parsed.hot : [] };
+    } else {
+      purchaseCategories = defaultPurchaseCategories();
+      purchaseData = {};
+    }
+  } catch (e) {
+    purchaseCategories = defaultPurchaseCategories();
+    purchaseData = {};
+  }
+  if (!Array.isArray(purchaseCategories) || !purchaseCategories.length) purchaseCategories = defaultPurchaseCategories();
+  defaultPurchaseCategories().forEach(function(def, i) {
+    if (!purchaseCategories.some(function(c) { return c.id === def.id; })) purchaseCategories.splice(i, 0, def);
+  });
+  if (!purchaseData || typeof purchaseData !== 'object') purchaseData = {};
+  purchaseCategories.forEach(function(c) { if (!Array.isArray(purchaseData[c.id])) purchaseData[c.id] = []; });
+  if (!purchaseCategories.some(function(c) { return c.id === currentPurchaseCategory; })) {
+    currentPurchaseCategory = purchaseCategories[0].id;
+  }
 }
 
 function savePurchaseData() {
-  try { localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify(purchaseData)); } catch (e) {}
+  try { localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify({ categories: purchaseCategories, data: purchaseData })); } catch (e) {}
 }
 
 function purchaseRowsFor(cat) {
-  if (!purchaseData[cat]) purchaseData[cat] = [];
+  if (!Array.isArray(purchaseData[cat])) purchaseData[cat] = [];
   return purchaseData[cat];
 }
 
+function purchaseCategoryById(cat) {
+  return purchaseCategories.find(function(c) { return c.id === cat; }) || null;
+}
+
 function purchaseCategoryLabel(cat) {
-  return cat === 'hot' ? 'Горячий цех' : 'Пицца бар';
+  var c = purchaseCategoryById(cat);
+  return c ? c.label : cat;
+}
+
+function purchaseCategoryIcon(cat) {
+  var c = purchaseCategoryById(cat);
+  return (c && c.icon) || '📦';
+}
+
+function renderPurchaseCategoryChips() {
+  var holder = $('purchase-subtabs');
+  if (!holder) return;
+  holder.innerHTML = purchaseCategories.map(function(c) {
+    return '<span class="chip' + (c.id === currentPurchaseCategory ? ' active' : '') + '" data-cat="' + escAttr(c.id) + '" ' +
+      'onclick="selectPurchaseCategory(\'' + c.id + '\')">' + esc(c.icon || '📦') + ' Закупка на неделю — ' + esc(c.label) + '</span>';
+  }).join('');
 }
 
 function selectPurchaseCategory(cat) {
   currentPurchaseCategory = cat;
-  document.querySelectorAll('#purchase-subtabs .chip').forEach(function(c) {
-    c.classList.toggle('active', c.dataset.cat === cat);
-  });
+  renderPurchaseCategoryChips();
   renderPurchaseList();
+}
+
+/* ===== Поставщики =====
+   Поставщик — это, по сути, ещё одна категория закупки (наравне со
+   встроенными "Пицца бар"/"Горячий цех"), только её может добавить,
+   переименовать и удалить сам администратор прямо на месте. Внутри
+   работает та же самая механика: позиции, норма на неделю, остаток,
+   расчёт "сколько докупить", копирование/выгрузка результата — просто
+   в заголовке результата вместо "Пицца бар" будет название поставщика. */
+function addPurchaseSupplier() {
+  if (!isAdmin()) { showToast('🔒 Добавлять поставщиков может только владелец или администратор'); return; }
+  customPrompt('Название поставщика, например: ООО «Метро» или ФЛП Иванов', '', 'Новый поставщик').then(function(val) {
+    val = (val || '').trim();
+    if (!val) return;
+    var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
+    purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false });
+    purchaseData[id] = [];
+    currentPurchaseCategory = id;
+    purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
+    savePurchaseData();
+    renderPurchaseCategoryChips();
+    renderPurchaseList();
+    updatePurchaseTemplateControls();
+    schedulePurchaseSync();
+    showToast('✅ Поставщик «' + val + '» добавлен — теперь добавьте позиции для закупки');
+  });
+}
+
+function renamePurchaseCategory(cat) {
+  cat = cat || currentPurchaseCategory;
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  var c = purchaseCategoryById(cat);
+  if (!c) return;
+  customPrompt('Новое название:', c.label, 'Переименовать').then(function(val) {
+    if (val === null) return;
+    val = (val || '').trim();
+    if (!val) { showToast('⚠️ Название не может быть пустым'); return; }
+    c.label = val;
+    savePurchaseData();
+    renderPurchaseCategoryChips();
+    renderPurchaseList();
+    schedulePurchaseSync();
+    showToast('✏️ Название обновлено');
+  });
+}
+
+function removePurchaseSupplier(cat) {
+  cat = cat || currentPurchaseCategory;
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  var c = purchaseCategoryById(cat);
+  if (!c) return;
+  if (c.builtin) { showToast('🔒 Эту категорию удалить нельзя'); return; }
+  customConfirm('Удалить поставщика «' + c.label + '» вместе со всеми его позициями? Это действие нельзя отменить.', 'Удалить поставщика').then(function(ok) {
+    if (!ok) return;
+    purchaseCategories = purchaseCategories.filter(function(x) { return x.id !== cat; });
+    delete purchaseData[cat];
+    if (currentPurchaseCategory === cat) currentPurchaseCategory = purchaseCategories[0] ? purchaseCategories[0].id : 'pizza';
+    savePurchaseData();
+    renderPurchaseCategoryChips();
+    renderPurchaseList();
+    schedulePurchaseSync();
+    showToast('🗑️ Поставщик удалён');
+  });
 }
 
 function addPurchaseRow(cat) {
@@ -3880,6 +4273,7 @@ function purchaseResultDisplay(row) {
 function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
+  renderPurchaseCategoryChips();
   var rows = purchaseRowsFor(currentPurchaseCategory);
   var canEditTemplate = isAdmin() && purchaseTemplateEditMode;
 
@@ -3971,7 +4365,7 @@ function buildPurchaseReportLines(cat) {
 function buildPurchaseReportText(cat) {
   var today = new Date().toLocaleDateString('ru-RU');
   var lines = buildPurchaseReportLines(cat);
-  var header = '📦 Закупка на неделю — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
+  var header = purchaseCategoryIcon(cat) + ' Закупка на неделю — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
   if (!lines.length) return header + '\n\nНет позиций.';
   return header + '\n\n' + lines.join('\n');
 }
@@ -4073,8 +4467,91 @@ function downloadPurchaseExcel(cat) {
   var ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
   var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, purchaseCategoryLabel(cat).substring(0, 31));
+  XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(purchaseCategoryLabel(cat), {}));
   XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(cat) + '.xlsx');
+}
+
+/* Название листа Excel не может содержать : \ / ? * [ ], быть пустым,
+   длиннее 31 символа или повторяться в одной книге — приводим к
+   допустимому виду и, если совпало с уже занятым, добавляем "(2)", "(3)"... */
+function sanitizeSheetName(name, used) {
+  var base = String(name || 'Лист').replace(/[:\\\/\?\*\[\]]/g, ' ').trim().substring(0, 31) || 'Лист';
+  var s = base, i = 1;
+  while (used[s]) {
+    i++;
+    var suffix = ' (' + i + ')';
+    s = base.substring(0, 31 - suffix.length) + suffix;
+  }
+  used[s] = true;
+  return s;
+}
+
+/* ================================================================
+   ОБЩИЙ ОТЧЁТ СРАЗУ ПО ВСЕМ ПОСТАВЩИКАМ/КАТЕГОРИЯМ
+   ================================================================
+   Когда остатки вписаны у нескольких поставщиков подряд, не нужно
+   заходить в каждую вкладку по отдельности за своим результатом —
+   эти функции собирают всё в один отчёт: каждый поставщик отдельным
+   разделом (в тексте) или отдельным листом (в Excel), с уже готовым
+   "сколько докупить" по каждой позиции. Пустые категории (без единой
+   вписанной позиции) в общий отчёт не попадают.
+   ================================================================ */
+function buildAllPurchaseReportText() {
+  var today = new Date().toLocaleDateString('ru-RU');
+  var sections = purchaseCategories.map(function(c) {
+    var lines = buildPurchaseReportLines(c.id);
+    if (!lines.length) return null;
+    return (c.icon || '📦') + ' ' + c.label + ':\n' + lines.join('\n');
+  }).filter(function(s) { return s; });
+  var header = '📦 Общая закупка на неделю (' + today + ')';
+  if (!sections.length) return header + '\n\nНет ни одной позиции ни у одного поставщика.';
+  return header + '\n\n' + sections.join('\n\n');
+}
+
+function copyAllPurchaseResults() {
+  var text = buildAllPurchaseReportText();
+  copyTextToClipboard(text, '📋 Общий список по всем поставщикам скопирован');
+}
+
+function downloadAllPurchaseText() {
+  var text = buildAllPurchaseReportText();
+  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Закупка - все поставщики.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+}
+
+function downloadAllPurchaseExcel() {
+  if (typeof XLSX === 'undefined') {
+    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
+    return;
+  }
+  var wb = XLSX.utils.book_new();
+  var usedNames = {};
+  var any = false;
+  purchaseCategories.forEach(function(c) {
+    var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim(); });
+    if (!rows.length) return;
+    any = true;
+    var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить']];
+    rows.forEach(function(row) {
+      var toBuy = computeToBuy(row);
+      data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
+  });
+  if (!any) {
+    showToast('⚠️ Нет ни одной позиции ни у одного поставщика');
+    return;
+  }
+  XLSX.writeFile(wb, 'Закупка - все поставщики.xlsx');
 }
 
 /* ================================================================
