@@ -554,6 +554,18 @@
     .purchase-row-fields { grid-template-columns: 1fr 1fr; }
     .purchase-field-unit { order: -1; }
   }
+  /* Общий список закупки (все поставщики сразу, для обхода цеха) —
+     та же карточка .purchase-row, только имя/ед./норма — просто текст
+     (шаблон правится в разделе поставщика выше), редактируется только
+     остаток. */
+  .purchase-combined-group-title {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+    margin: 18px 0 8px;
+  }
+  .purchase-combined-group-title:first-child { margin-top: 0; }
+  .purchase-row-readonly-name { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+  .purchase-row-readonly-name .purchase-row-meta { font-weight: 500; font-size: 12px; color: var(--text-muted); margin-left: 6px; }
 
   /* Videos list in form */
   .video-row { margin-bottom: 10px; }
@@ -1014,6 +1026,17 @@
     <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
   </div>
 
+  <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
+    <h2 style="margin-bottom:6px">📋 Общий список — все поставщики</h2>
+    <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
+      🧮 Здесь сразу все позиции от всех поставщиков, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
+    </div>
+    <div id="purchase-combined-list"></div>
+    <div style="margin-bottom:14px">
+      <span id="purchase-combined-summary" style="font-size:13px;color:var(--text-muted)"></span>
+    </div>
+  </div>
+
   <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Общий отчёт сразу по всем поставщикам и категориям — с уже указанным остатком по каждому:</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1027,6 +1050,7 @@
 <!-- TAB: ADMIN PANEL -->
 <div id="tab-admin" class="tab-content">
   <h2 style="margin-bottom:18px">⚙️ Админ-панель</h2>
+
 
   <div class="admin-panel-card">
     <div class="admin-panel-row">
@@ -4720,6 +4744,7 @@ function renderPurchaseList() {
     holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">' +
       (canEditTemplate ? 'Пока нет ни одного ингредиента. Нажмите «+ Добавить ингредиент», чтобы начать закупку на неделю.' : 'Список пока пуст — дождитесь, пока администратор его составит.') + '</p>';
     updatePurchaseSummary();
+    renderPurchaseCombinedList();
     return;
   }
 
@@ -4757,18 +4782,99 @@ function renderPurchaseList() {
   }).join('');
 
   updatePurchaseSummary();
+  renderPurchaseCombinedList();
+}
+
+/* ================================================================
+   ОБЩИЙ СПИСОК (все поставщики сразу, для обхода цеха)
+   ================================================================
+   Раньше, чтобы вписать остатки у всех поставщиков, приходилось по
+   очереди переключаться между вкладками-чипами наверху. Этот блок
+   показывает ВСЕ позиции от ВСЕХ поставщиков одним списком, сгруппированным
+   по поставщику — с любого места можно пройтись сверху вниз и вписать
+   остаток. Название/ед./норма тут только для чтения (шаблон правится
+   в разделе конкретного поставщика выше) — редактируется только
+   остаток, и это доступно всем, не только администратору. Позиция,
+   добавленная поставщику выше, попадает сюда автоматически при
+   следующей перерисовке (см. вызов renderPurchaseCombinedList() в
+   конце renderPurchaseList()).
+   ================================================================ */
+function renderPurchaseCombinedList() {
+  var holder = $('purchase-combined-list');
+  if (!holder) return;
+
+  var groups = purchaseCategories.map(function(c) {
+    return { cat: c, rows: purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim(); }) };
+  }).filter(function(g) { return g.rows.length; });
+
+  if (!groups.length) {
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у одного поставщика — добавьте позиции в разделах поставщиков выше.</p>';
+    updatePurchaseCombinedSummary();
+    return;
+  }
+
+  holder.innerHTML = groups.map(function(g) {
+    var catId = g.cat.id;
+    var rowsHtml = g.rows.map(function(row) {
+      var res = purchaseResultDisplay(row);
+      return '<div class="purchase-row" data-id="' + row.id + '">' +
+        '<div class="purchase-row-readonly-name">' + esc(row.name) +
+          '<span class="purchase-row-meta">норма: ' + (row.norm === '' || row.norm == null ? '—' : esc(String(row.norm))) + ' ' + esc(row.unit) + '</span>' +
+        '</div>' +
+        '<div class="purchase-row-fields" style="grid-template-columns:1fr 1fr">' +
+          '<label class="purchase-field"><span>Остаток</span>' +
+            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
+              'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+          '</label>' +
+          '<div class="purchase-field"><span>Докупить</span>' +
+            '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="purchase-combined-group-title">' + esc(g.cat.icon || '📦') + ' ' + esc(g.cat.label) + '</div>' + rowsHtml;
+  }).join('');
+
+  updatePurchaseCombinedSummary();
+}
+
+function updatePurchaseCombinedSummary() {
+  var el = $('purchase-combined-summary');
+  if (!el) return;
+  var all = [];
+  purchaseCategories.forEach(function(c) {
+    purchaseRowsFor(c.id).forEach(function(r) { if ((r.name || '').trim()) all.push(r); });
+  });
+  var needCount = 0;
+  all.forEach(function(r) { var t = computeToBuy(r); if (t !== null && t > 0) needCount++; });
+  el.textContent = all.length ? ('Нужно докупить: ' + needCount + ' из ' + all.length + ' позиций (все поставщики)') : '';
+}
+
+/* Находит строку по её id независимо от того, в какой категории/у
+   какого поставщика она числится — нужно, потому что "Общий список"
+   показывает позиции разных поставщиков вперемешку, а у каждой строки
+   есть только id, без привязки к текущей выбранной категории. */
+function findPurchaseRowById(id) {
+  for (var i = 0; i < purchaseCategories.length; i++) {
+    var cat = purchaseCategories[i].id;
+    var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
+    if (row) return row;
+  }
+  return null;
 }
 
 function recomputePurchaseRow(id) {
-  var row = purchaseRowsFor(currentPurchaseCategory).find(function(r) { return r.id === id; });
+  var row = findPurchaseRowById(id);
   if (!row) return;
-  var el = document.querySelector('.purchase-result[data-result-for="' + id + '"]');
-  if (el) {
-    var res = purchaseResultDisplay(row);
+  var res = purchaseResultDisplay(row);
+  // Одна и та же строка может быть отрисована сразу в двух местах —
+  // в разделе своего поставщика и в "Общем списке" — обновляем оба.
+  document.querySelectorAll('.purchase-result[data-result-for="' + id + '"]').forEach(function(el) {
     el.textContent = res.text;
     el.className = 'purchase-result ' + res.cls;
-  }
+  });
   updatePurchaseSummary();
+  updatePurchaseCombinedSummary();
 }
 
 function updatePurchaseSummary() {
