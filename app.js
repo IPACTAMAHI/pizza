@@ -4156,16 +4156,17 @@ function guessUnitFromText(s) {
   return m ? mapPurchaseUnit(m[1]) : null;
 }
 
-// В карточке позиции есть 6 единиц измерения — "кг", "шт", "л", "мл",
-// "бан" (банки) и "вед" (ведра) (см. renderPurchaseList). Всё штучное
-// сводим к "шт", банки — к "бан", ведра — к "вед", объём — к "л"/"мл",
-// а весовое — к "кг".
+// В карточке позиции есть 7 единиц измерения — "кг", "шт", "л", "мл",
+// "бан" (банки), "вед" (ведра) и "бут" (бутылки) (см. renderPurchaseList).
+// Всё штучное сводим к "шт", банки — к "бан", ведра — к "вед",
+// бутылки — к "бут", объём — к "л"/"мл", а весовое — к "кг".
 function mapPurchaseUnit(raw) {
   var s = String(raw == null ? '' : raw).toLowerCase().trim();
   if (!s) return null;
   if (/^(бан|банк)/.test(s)) return 'бан';
   if (/^вед/.test(s)) return 'вед';
-  if (/^(шт|уп|кор|пач|pcs?|бут|пак)/.test(s)) return 'шт';
+  if (/^бут/.test(s)) return 'бут';
+  if (/^(шт|уп|кор|пач|pcs?|пак)/.test(s)) return 'шт';
   if (/^(мл|ml)/.test(s)) return 'мл';
   if (/^(л|l)\b/.test(s)) return 'л';
   if (/^(кг|г|гр|kg|g)/.test(s)) return 'кг';
@@ -4298,6 +4299,7 @@ function renderPurchaseList() {
             '<option value="мл"' + (row.unit === 'мл' ? ' selected' : '') + '>мл</option>' +
             '<option value="бан"' + (row.unit === 'бан' ? ' selected' : '') + '>банки</option>' +
             '<option value="вед"' + (row.unit === 'вед' ? ' selected' : '') + '>ведра</option>' +
+            '<option value="бут"' + (row.unit === 'бут' ? ' selected' : '') + '>бутылки</option>' +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
@@ -4323,6 +4325,7 @@ function renderPurchaseList() {
               '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
               '<option value="бан"' + (reorderUnit === 'бан' ? ' selected' : '') + '>банки</option>' +
               '<option value="вед"' + (reorderUnit === 'вед' ? ' selected' : '') + '>ведра</option>' +
+              '<option value="бут"' + (reorderUnit === 'бут' ? ' selected' : '') + '>бутылки</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -4398,6 +4401,7 @@ function renderPurchaseCombinedList() {
               '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
               '<option value="бан"' + (reorderUnit === 'бан' ? ' selected' : '') + '>банки</option>' +
               '<option value="вед"' + (reorderUnit === 'вед' ? ' selected' : '') + '>ведра</option>' +
+              '<option value="бут"' + (reorderUnit === 'бут' ? ' selected' : '') + '>бутылки</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
