@@ -74,6 +74,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787672060908pljxc",
+      "label": "Чп бубликов",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -410,6 +419,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787672060908pljxc": []
   }
 }
