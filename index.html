@@ -289,6 +289,7 @@
     background: var(--text-muted); margin-right: 6px; flex-shrink: 0;
   }
   .online-item.is-live .online-dot { background: var(--success); box-shadow: 0 0 0 3px rgba(63,181,121,.25); }
+  .online-dot.is-live { background: var(--success); box-shadow: 0 0 0 3px rgba(63,181,121,.25); }
   .online-member-badge {
     display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .3px;
     padding: 2px 7px; border-radius: 20px;
@@ -2293,6 +2294,7 @@ function subscribeOnlineUsers() {
     firebase.database().ref('presence').on('value', function(snap) {
       onlineUsers = snap.val() || {};
       renderOnlineUsersList();
+      if (currentTab === 'admin' && participantsFilter !== 'keys') renderParticipantsList(); // подтягиваем статус онлайн/офлайн в основном списке участников
       reconcileClaimedKeysFromPresence();
     });
     onlineListenerAttached = true;
@@ -3056,15 +3058,29 @@ function renderParticipantsList() {
   }
 
   var devMode = isDeveloper();
+  var presenceAvailable = (typeof firebase !== 'undefined');
   holder.innerHTML = shown.map(function(p) {
     var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
     var isRoleAdmin = p.role === 'admin';
     var itemClass = 'participant-item' + (isRoleAdmin ? ' is-admin' : '') + (p.blocked ? ' is-blocked' : '');
+    // Статус "онлайн" берём из того же источника, что и вкладка "Онлайн" —
+    // Firebase presence (см. subscribeOnlineUsers): её id совпадает с id
+    // участника (см. requireAccessKey — после входа id устройства = ключ).
+    // Поэтому статус здесь и там всегда согласован, это одни и те же данные.
+    var presenceEntry = onlineUsers[p.id];
+    var isLive = presenceAvailable && isOnlineLive(presenceEntry);
+    var statusHtml = '';
+    if (presenceAvailable) {
+      var statusText = isLive ? 'на сайте сейчас' : (presenceEntry ? 'был(а) ' + formatTimeAgo(presenceEntry.lastSeen) : 'офлайн');
+      statusHtml = '<span class="online-dot' + (isLive ? ' is-live' : '') + '" title="' + escAttr(statusText) + '"></span>' +
+        '<span style="font-size:12px;color:' + (isLive ? 'var(--success)' : 'var(--text-muted)') + '">' + esc(statusText) + '</span>';
+    }
     return '<div class="' + itemClass + '">' +
       '<div style="min-width:0">' +
         '<strong>' + esc(p.name) + '</strong>' +
         (isRoleAdmin ? ' <span style="color:var(--accent-2);font-size:12px">· 👑 админ</span>' : '') +
         (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
+        (statusHtml ? '<br>' + statusHtml : '') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
