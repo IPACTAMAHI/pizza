@@ -25,6 +25,13 @@
       "icon": "🚚",
       "builtin": false,
       "workshop": "hot"
+    },
+    {
+      "id": "sup17876198116888gh33",
+      "label": "ууй",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "pizza"
     }
   ],
   "data": {
@@ -69,6 +76,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup17876198116888gh33": []
   }
 }
