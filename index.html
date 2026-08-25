@@ -2023,7 +2023,7 @@ async function requireAccessKey(name) {
 
     if (!p) {
       registerFailedKeyAttempt();
-      await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок, либо получите новый у администратора.', '⚠️ Ключ не найден');
+      await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок. Если ключ создан только что — сайту нужно до минуты, чтобы опубликовать его на GitHub Pages, попробуйте ещё раз через минуту. Если не поможет — получите новый ключ у администратора.', '⚠️ Ключ не найден');
       continue;
     }
 
@@ -2043,8 +2043,28 @@ async function requireAccessKey(name) {
       p.fingerprint = getDeviceFingerprint() || p.fingerprint || '';
       p.claimed = true;
       p.claimedAt = Date.now();
-      await syncParticipantsToGithub(); // при неудаче доступ всё равно работает локально — синхронизация повторится позже
+      saveParticipantsLocal();
+      // ВАЖНО: у обычного участника (не администратора) нет GitHub-токена —
+      // он никогда не хранится в его браузере, только у администратора
+      // (см. loginWithGithubKey/openGithubSettings). Поэтому запись сюда
+      // почти всегда молча не удастся, а showToast с "настройте синхронизацию"
+      // только пугала бы гостя, у которого и так всё работает. Пробуем
+      // только если токен реально есть (например разработчик сам проверяет
+      // свой же ключ), а окончательную фиксацию claimed:true в общем
+      // participants.json на GitHub берёт на себя reconcileClaimedKeysFromPresence()
+      // — как только администратор откроет вкладку "Админка", увидит это
+      // устройство в списке "Онлайн" и сам, своим токеном, дозапишет статус.
+      var cfg = getGithubConfig();
+      if (cfg && cfg.token) {
+        await syncParticipantsToGithub();
+      }
     }
+    // Перезагружаем страницу: getDeviceId()/Firebase-присутствие и все
+    // остальные проверки должны сразу использовать НОВЫЙ id (сам ключ),
+    // а не старый, посчитанный по отпечатку браузера до входа — иначе
+    // администратор увидит "онлайн" по старому id, который ни с одной
+    // записью участников не совпадает, и автосверка ниже не сработает.
+    location.reload();
     return;
   }
 }
@@ -2273,11 +2293,56 @@ function subscribeOnlineUsers() {
     firebase.database().ref('presence').on('value', function(snap) {
       onlineUsers = snap.val() || {};
       renderOnlineUsersList();
+      reconcileClaimedKeysFromPresence();
     });
     onlineListenerAttached = true;
   } catch (e) {
     console.warn('subscribeOnlineUsers error:', e);
   }
+}
+
+/* ================================================================
+   АВТОСВЕРКА "НЕИСПОЛЬЗОВАННЫХ" КЛЮЧЕЙ, КОТОРЫЕ НА САМОМ ДЕЛЕ УЖЕ
+   ИСПОЛЬЗОВАНЫ
+   ================================================================
+   Проблема: когда обычный гость (не администратор) вводит ключ
+   доступа в requireAccessKey(), его браузер помечает участника как
+   claimed:true ТОЛЬКО локально — записать это в общий participants.json
+   на GitHub он не может, потому что GitHub-токен есть лишь в браузере
+   администратора (см. loginWithGithubKey). Из-за этого в админ-панели
+   ключ мог вечно висеть как "неиспользованный", даже если человек уже
+   давно им пользуется.
+
+   Решение использует то, что УЖЕ работает без токена — Firebase
+   presence (см. initFirebasePresence): после входа по ключу id
+   устройства в presence совпадает с самим ключом (id участника). Раз
+   в presence "живёт" запись с этим id — значит ключ точно кем-то введён
+   и используется, независимо от того, что написано в participants.json.
+
+   Поэтому здесь, пока открыта вкладка "Админка" (только тогда и активен
+   этот слушатель — см. subscribeOnlineUsers/unsubscribeOnlineUsers), при
+   каждом обновлении списка "Онлайн" сверяем: если участник с таким id
+   в наших данных всё ещё claimed:false — значит запись просто не успела
+   дойти до GitHub, и мы, уже СВОИМ (администраторским) токеном,
+   дозаписываем claimed:true. Гостю для этого ничего заново вводить не
+   нужно — достаточно, что администратор хоть раз откроет админ-панель. */
+function reconcileClaimedKeysFromPresence() {
+  if (!isAdmin()) return;
+  var changed = false;
+  Object.keys(onlineUsers).forEach(function(id) {
+    var entry = onlineUsers[id];
+    var p = participants.filter(function(x) { return x.id === id; })[0];
+    if (p && p.claimed === false) {
+      p.claimed = true;
+      p.claimedAt = p.claimedAt || (entry && entry.lastSeen) || Date.now();
+      if (!p.name && entry && entry.name) p.name = entry.name;
+      changed = true;
+    }
+  });
+  if (!changed) return;
+  saveParticipantsLocal();
+  if (currentTab === 'admin') renderParticipantsList();
+  syncParticipantsToGithub(); // тихо, без лишних тостов об успехе — это фоновое исправление, а не действие администратора
 }
 
 function unsubscribeOnlineUsers() {
