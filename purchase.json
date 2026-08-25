@@ -92,6 +92,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787672350641y4ocm",
+      "label": "Масло",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -462,6 +471,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787672350641y4ocm": []
   }
 }
