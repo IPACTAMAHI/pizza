@@ -1005,6 +1005,8 @@
   <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-workshop-btn" onclick="addPurchaseWorkshop()">🏭 Добавить цех</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-supplier-btn" onclick="addPurchaseSupplier()">➕ Добавить поставщика</button>
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
+    <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Привязать к цеху</button>
     <button type="button" class="btn btn-ghost btn-sm" id="purchase-remove-supplier-btn" onclick="removePurchaseCategory()" style="display:none">🗑️ Удалить</button>
@@ -1364,6 +1366,7 @@
 <!-- Библиотека генерации QR-кодов (кэшируется браузером после первой загрузки) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer onload="if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';"></script>
 <!-- Firebase Realtime Database — используется ТОЛЬКО для блока "Онлайн" в
      админ-панели (кто сейчас на сайте / был в последний раз). Данные
      рецептов, участников и настроек сайта по-прежнему хранятся в GitHub —
@@ -4666,26 +4669,43 @@ var currentPurchaseCategory = 'pizza';
    свой остаток. Это защищает от случайной правки шаблона на лету. */
 var purchaseTemplateEditMode = false;
 
-function togglePurchaseTemplateEdit() {
+async function togglePurchaseTemplateEdit() {
   if (!isAdmin()) { showToast('🔒 Редактировать шаблон может только владелец или администратор'); return; }
-  purchaseTemplateEditMode = !purchaseTemplateEditMode;
+  if (purchaseTemplateEditMode) {
+    // Выход из режима редактирования: сначала пытаемся сохранить то, что
+    // успели поправить (минуя debounce), и выходим из режима ТОЛЬКО если
+    // сохранение реально прошло успешно. Если сохранить не удалось —
+    // остаёмся в режиме редактирования (точная причина ошибки уже
+    // показана тостом внутри savePurchaseTemplateNow), чтобы правки не
+    // выглядели "потерянными" из-за проблем с сетью/GitHub.
+    var toggleBtn = $('purchase-edit-toggle-btn');
+    if (toggleBtn) toggleBtn.disabled = true;
+    var ok = await savePurchaseTemplateNow(true);
+    if (toggleBtn) toggleBtn.disabled = false;
+    if (!ok) return;
+    purchaseTemplateEditMode = false;
+  } else {
+    purchaseTemplateEditMode = true;
+  }
   renderPurchaseList();
   updatePurchaseTemplateControls();
-  if (!purchaseTemplateEditMode) {
-    // Выходя из режима редактирования, сразу сохраняем то, что успели
-    // поправить, — чтобы никакая правка не потерялась из-за debounce.
-    savePurchaseTemplateNow(true);
-  }
 }
 
 function updatePurchaseTemplateControls() {
   var toggleBtn = $('purchase-edit-toggle-btn');
   var saveBtn = $('purchase-save-template-btn');
+  var importBtn = $('purchase-import-btn');
   var renameBtn = $('purchase-rename-btn');
   var removeBtn = $('purchase-remove-supplier-btn');
   var linkBtn = $('purchase-link-workshop-btn');
   if (toggleBtn) toggleBtn.textContent = purchaseTemplateEditMode ? '🔒 Завершить редактирование' : '✏️ Редактировать шаблон';
   if (saveBtn) saveBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
+  // Загрузка прайса привязана к тому поставщику/цеху, который сейчас
+  // открыт для редактирования, — поэтому кнопка доступна только внутри
+  // режима редактирования шаблона (как и "Сохранить шаблон"), а не
+  // постоянно: иначе было бы не очевидно, в какую именно категорию
+  // упадут позиции из файла.
+  if (importBtn) importBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
   var canManage = isAdmin() && purchaseTemplateEditMode;
   var c = purchaseCategoryById(currentPurchaseCategory);
   if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
@@ -4699,15 +4719,18 @@ function updatePurchaseTemplateControls() {
 /* Ручное сохранение шаблона в GitHub сразу, минуя обычную задержку
    (debounce) автосохранения — на случай медленного интернета или чтобы
    быть уверенным, что правки точно ушли, прежде чем закрыть вкладку.
-   silent=true — не показывать лишний тост, если сохранять по сути нечего
-   (используется при автоматическом выходе из режима редактирования). */
+   silent=true — не показывать лишний тост об успехе (используется при
+   автоматическом сохранении на выходе из режима редактирования).
+   Возвращает true/false — вызывающий код (например, togglePurchaseTemplateEdit)
+   использует это, чтобы решить, можно ли считать сохранение завершённым. */
 async function savePurchaseTemplateNow(silent) {
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return false; }
   clearTimeout(purchaseSyncDebounceTimer);
   if (!silent) showToast('⏳ Сохраняю шаблон...');
   var ok = await syncPurchaseToGithub();
   if (ok && !silent) showToast('✅ Шаблон закупки сохранён в GitHub');
   // при ok===false внутри syncPurchaseToGithub уже показан тост с точной причиной — не перезаписываем его
+  return ok;
 }
 
 function loadPurchaseData() {
@@ -4983,6 +5006,186 @@ function addPurchaseRow(cat) {
     }
     if (el) el.focus();
   }, 30);
+}
+
+/* ================================================================
+   ЗАГРУЗКА ПРАЙСА ОТ ПОСТАВЩИКА
+   ================================================================
+   Позволяет вместо ручного добавления позиций одной за другой загрузить
+   файл прайса (xlsx/xls/csv/txt/pdf) и получить сразу все позиции —
+   ровно по той же логике, что и ручное "+ Добавить ингредиент": каждая
+   новая позиция получает название и ед. измерения из файла, а норму на
+   неделю и остаток администратор вписывает потом сам вручную.
+   Позиции, чьё название (без учёта регистра/лишних пробелов) уже есть в
+   списке текущей категории, — пропускаются, чтобы не плодить дубли и не
+   затирать уже вписанные недельные нормы у существующих строк. */
+
+function triggerPurchaseImport() {
+  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы загрузить прайс, сначала нажмите «✏️ Редактировать шаблон»'); return; }
+  var input = $('purchase-import-file');
+  if (input) input.click();
+}
+
+async function handlePurchaseImportFile(file) {
+  if (!file) return;
+  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы загрузить прайс, сначала нажмите «✏️ Редактировать шаблон»'); return; }
+  showToast('⏳ Читаю файл...');
+  var pairs;
+  try {
+    pairs = await parsePurchaseImportFile(file);
+  } catch (e) {
+    console.error('handlePurchaseImportFile error:', e);
+    showToast('⚠️ Не удалось прочитать файл: ' + (e && e.message ? e.message : 'неизвестная ошибка'));
+    return;
+  }
+  if (!pairs.length) {
+    showToast('⚠️ Не нашёл позиций в файле — проверьте, что в нём есть названия товаров');
+    return;
+  }
+
+  var cat = currentPurchaseCategory;
+  var rows = purchaseRowsFor(cat);
+  var existingNames = {};
+  rows.forEach(function(r) { existingNames[normPurchaseName(r.name)] = true; });
+
+  var added = 0, skipped = 0;
+  var seenInFile = {}; // на случай, если один и тот же товар дважды встретился в самом файле
+  pairs.forEach(function(p) {
+    var key = normPurchaseName(p.name);
+    if (!key || existingNames[key] || seenInFile[key]) { skipped++; return; }
+    seenInFile[key] = true;
+    existingNames[key] = true;
+    rows.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: p.name.trim(), unit: p.unit || 'кг', norm: '', residual: '', reorder: '' });
+    added++;
+  });
+
+  if (!added) {
+    showToast('ℹ️ Все позиции из файла уже есть в списке (пропущено: ' + skipped + ') — новых не добавлено');
+    return;
+  }
+
+  savePurchaseData();
+  purchaseTemplateEditMode = true; // сразу входим в режим редактирования — новым позициям нужно вписать норму
+  renderPurchaseList();
+  updatePurchaseTemplateControls();
+  schedulePurchaseSync();
+  showToast('📥 Добавлено новых позиций: ' + added + (skipped ? ' (уже было в списке: ' + skipped + ')' : '') + ' — впишите норму на неделю');
+}
+
+function purchaseImportExt(file) {
+  var m = /\.([a-z0-9]+)$/i.exec(file.name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+
+async function parsePurchaseImportFile(file) {
+  var ext = purchaseImportExt(file);
+  if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') return parsePurchaseSpreadsheet(file);
+  if (ext === 'pdf') return parsePurchaseTextLines(await extractPdfText(file));
+  return parsePurchaseTextLines(await file.text()); // txt и всё, что не распознали, — читаем как обычный текст
+}
+
+function parsePurchaseSpreadsheet(file) {
+  return new Promise(function(resolve, reject) {
+    if (!window.XLSX) { reject(new Error('Модуль чтения таблиц ещё не загрузился — подождите секунду и попробуйте снова')); return; }
+    var reader = new FileReader();
+    reader.onerror = function() { reject(new Error('Не удалось прочитать файл')); };
+    reader.onload = function() {
+      try {
+        var wb = XLSX.read(new Uint8Array(reader.result), { type: 'array' });
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+        resolve(rowsToPurchasePairs(rows));
+      } catch (e) { reject(e); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/* Ищем колонку с названием и колонку с ед. измерения по заголовку;
+   если заголовок не распознан (или его вовсе нет) — считаем, что
+   название в колонке A, ед. измерения — в колонке B, и это уже данные,
+   а не шапка таблицы. */
+function rowsToPurchasePairs(rows) {
+  rows = (rows || []).filter(function(r) { return r && r.some(function(c) { return String(c || '').trim() !== ''; }); });
+  if (!rows.length) return [];
+  var header = rows[0].map(function(c) { return String(c || '').toLowerCase().trim(); });
+  var foundName = header.findIndex(function(h) { return /назв|наимен|товар|позици|продукт|ингредиент|name/.test(h); });
+  var foundUnit = header.findIndex(function(h) { return /^ед\b|единиц|ед\.?\s*изм|unit/.test(h); });
+  var nameCol = 0, unitCol = 1, startRow = 0;
+  if (foundName !== -1) { nameCol = foundName; unitCol = foundUnit !== -1 ? foundUnit : 1; startRow = 1; }
+  var pairs = [];
+  for (var i = startRow; i < rows.length; i++) {
+    var row = rows[i];
+    var name = String(row[nameCol] == null ? '' : row[nameCol]).trim();
+    if (!name) continue;
+    var unit = mapPurchaseUnit(unitCol < row.length ? row[unitCol] : '') || guessUnitFromText(name);
+    pairs.push({ name: name, unit: unit || 'кг' });
+  }
+  return pairs;
+}
+
+/* Читает txt-файл или уже извлечённый из PDF текст построчно: одна
+   строка — одна позиция. Понимает и "Название [таб/;] ед." (обычно так
+   выглядит вставка из таблицы), и "Название кг" без разделителя. */
+function parsePurchaseTextLines(text) {
+  var pairs = [];
+  String(text || '').split(/\r?\n/).forEach(function(line) {
+    line = line.trim();
+    if (!line) return;
+    var parts = line.split(/\t|;|,(?!\d)/).map(function(s) { return s.trim(); }).filter(Boolean);
+    var name = line, unit = null;
+    if (parts.length >= 2) {
+      var lastUnit = mapPurchaseUnit(parts[parts.length - 1]);
+      if (lastUnit) { name = parts.slice(0, -1).join(' '); unit = lastUnit; }
+    }
+    var m = /^(.*?)[\s,]+(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|пак)\.?\s*$/i.exec(name);
+    if (m && m[1].trim()) { name = m[1].trim(); if (!unit) unit = mapPurchaseUnit(m[2]); }
+    if (!name) return;
+    pairs.push({ name: name, unit: unit || guessUnitFromText(line) || 'кг' });
+  });
+  return pairs;
+}
+
+function guessUnitFromText(s) {
+  var m = /(?:^|\s)(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|пак)\.?(?:\s|$)/i.exec(String(s || ''));
+  return m ? mapPurchaseUnit(m[1]) : null;
+}
+
+// В карточке позиции есть только 2 единицы измерения — "кг" и "шт" (см. renderPurchaseList),
+// поэтому всё штучное сводим к "шт", а весовое/объёмное — к "кг".
+function mapPurchaseUnit(raw) {
+  var s = String(raw == null ? '' : raw).toLowerCase().trim();
+  if (!s) return null;
+  if (/^(шт|уп|кор|пач|pcs?|бан|бут|пак)/.test(s)) return 'шт';
+  if (/^(кг|г|гр|л|мл|kg|g|l|ml)/.test(s)) return 'кг';
+  return null;
+}
+
+function normPurchaseName(s) {
+  return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/* Извлекает текст из PDF постранично, группируя фрагменты по Y-координате
+   в строки — иначе pdf.js отдаёт текст страницы одним потоком без
+   переносов, и разбить его на отдельные позиции прайса невозможно. */
+async function extractPdfText(file) {
+  if (!window.pdfjsLib) throw new Error('Модуль чтения PDF ещё не загрузился — подождите секунду и попробуйте снова');
+  var pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  var lines = [];
+  for (var p = 1; p <= pdf.numPages; p++) {
+    var content = await (await pdf.getPage(p)).getTextContent();
+    var byY = {};
+    content.items.forEach(function(it) {
+      var y = Math.round(it.transform[5]);
+      (byY[y] = byY[y] || []).push(it);
+    });
+    Object.keys(byY).map(Number).sort(function(a, b) { return b - a; }).forEach(function(y) {
+      var lineText = byY[y].sort(function(a, b) { return a.transform[4] - b.transform[4]; })
+        .map(function(it) { return it.str; }).join(' ').replace(/\s+/g, ' ').trim();
+      if (lineText) lines.push(lineText);
+    });
+  }
+  return lines.join('\n');
 }
 
 function removePurchaseRow(cat, id) {
