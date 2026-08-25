@@ -4143,7 +4143,7 @@ function parsePurchaseTextLines(text) {
       var lastUnit = mapPurchaseUnit(parts[parts.length - 1]);
       if (lastUnit) { name = parts.slice(0, -1).join(' '); unit = lastUnit; }
     }
-    var m = /^(.*?)[\s,]+(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|пак)\.?\s*$/i.exec(name);
+    var m = /^(.*?)[\s,]+(кг|г|гр|л|мл|шт|уп|кор|пач|банк[аи]?|бан|вед[роер]*|бут|пак)\.?\s*$/i.exec(name);
     if (m && m[1].trim()) { name = m[1].trim(); if (!unit) unit = mapPurchaseUnit(m[2]); }
     if (!name) return;
     pairs.push({ name: name, unit: unit || guessUnitFromText(line) || 'кг' });
@@ -4152,17 +4152,23 @@ function parsePurchaseTextLines(text) {
 }
 
 function guessUnitFromText(s) {
-  var m = /(?:^|\s)(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|пак)\.?(?:\s|$)/i.exec(String(s || ''));
+  var m = /(?:^|\s)(кг|г|гр|л|мл|шт|уп|кор|пач|банк[аи]?|бан|вед[роер]*|бут|пак)\.?(?:\s|$)/i.exec(String(s || ''));
   return m ? mapPurchaseUnit(m[1]) : null;
 }
 
-// В карточке позиции есть только 2 единицы измерения — "кг" и "шт" (см. renderPurchaseList),
-// поэтому всё штучное сводим к "шт", а весовое/объёмное — к "кг".
+// В карточке позиции есть 6 единиц измерения — "кг", "шт", "л", "мл",
+// "бан" (банки) и "вед" (ведра) (см. renderPurchaseList). Всё штучное
+// сводим к "шт", банки — к "бан", ведра — к "вед", объём — к "л"/"мл",
+// а весовое — к "кг".
 function mapPurchaseUnit(raw) {
   var s = String(raw == null ? '' : raw).toLowerCase().trim();
   if (!s) return null;
-  if (/^(шт|уп|кор|пач|pcs?|бан|бут|пак)/.test(s)) return 'шт';
-  if (/^(кг|г|гр|л|мл|kg|g|l|ml)/.test(s)) return 'кг';
+  if (/^(бан|банк)/.test(s)) return 'бан';
+  if (/^вед/.test(s)) return 'вед';
+  if (/^(шт|уп|кор|пач|pcs?|бут|пак)/.test(s)) return 'шт';
+  if (/^(мл|ml)/.test(s)) return 'мл';
+  if (/^(л|l)\b/.test(s)) return 'л';
+  if (/^(кг|г|гр|kg|g)/.test(s)) return 'кг';
   return null;
 }
 
@@ -4288,6 +4294,10 @@ function renderPurchaseList() {
           '<select class="purchase-unit"' + dis + ' onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
             '<option value="кг"' + (row.unit === 'кг' ? ' selected' : '') + '>кг</option>' +
             '<option value="шт"' + (row.unit === 'шт' ? ' selected' : '') + '>шт</option>' +
+            '<option value="л"' + (row.unit === 'л' ? ' selected' : '') + '>л</option>' +
+            '<option value="мл"' + (row.unit === 'мл' ? ' selected' : '') + '>мл</option>' +
+            '<option value="бан"' + (row.unit === 'бан' ? ' selected' : '') + '>банки</option>' +
+            '<option value="вед"' + (row.unit === 'вед' ? ' selected' : '') + '>ведра</option>' +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
@@ -4309,6 +4319,10 @@ function renderPurchaseList() {
               '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
               '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
               '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+              '<option value="л"' + (reorderUnit === 'л' ? ' selected' : '') + '>л</option>' +
+              '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
+              '<option value="бан"' + (reorderUnit === 'бан' ? ' selected' : '') + '>банки</option>' +
+              '<option value="вед"' + (reorderUnit === 'вед' ? ' selected' : '') + '>ведра</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -4380,6 +4394,10 @@ function renderPurchaseCombinedList() {
               '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
               '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
               '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+              '<option value="л"' + (reorderUnit === 'л' ? ' selected' : '') + '>л</option>' +
+              '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
+              '<option value="бан"' + (reorderUnit === 'бан' ? ' selected' : '') + '>банки</option>' +
+              '<option value="вед"' + (reorderUnit === 'вед' ? ' selected' : '') + '>ведра</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -5064,39 +5082,3 @@ async function initApp() {
   }
 
   openRecipeFromHash(false); // если рецепт уже есть в локальном кэше — откроется сразу, минуя загрузку
-
-  syncFromGithub().then(function() {
-    openRecipeFromHash(true); // финальная попытка на свежих данных с GitHub
-    if (hasDeepLink && currentTab !== 'detail') {
-      // Ссылка была, но рецепт так и не нашёлся — показываем обычный список вместо "вечной загрузки"
-      switchTab('categories');
-    }
-  });
-
-  // Tab click handlers
-  document.querySelectorAll('.nav-tab').forEach(function(tab) {
-    tab.addEventListener('click', function() { switchTab(tab.dataset.tab); });
-  });
-}
-
-function showDetailLoading() {
-  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
-  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-  var detailTab = $('tab-detail');
-  if (detailTab) detailTab.classList.add('active');
-  window.scrollTo(0, 0);
-  var body = $('detail-body');
-  if (body) body.innerHTML =
-    '<div class="skeleton skeleton-photo"></div>' +
-    '<div class="skeleton skeleton-title"></div>' +
-    '<div class="skeleton skeleton-badges">' +
-      '<div class="skeleton skeleton-chip"></div>' +
-      '<div class="skeleton skeleton-chip"></div>' +
-      '<div class="skeleton skeleton-chip"></div>' +
-    '</div>' +
-    '<div class="skeleton skeleton-line" style="width:40%"></div>' +
-    '<div class="skeleton skeleton-line"></div>' +
-    '<div class="skeleton skeleton-line"></div>' +
-    '<div class="skeleton skeleton-line" style="width:70%"></div>';
-  currentTab = 'detail';
-}
