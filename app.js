@@ -3285,6 +3285,7 @@ function clearSearchInput(inputId) {
   toggleSearchClear(inputId);
   input.focus();
   if (inputId === 'search-categories') renderCategoriesList();
+  if (inputId === 'purchase-search') renderPurchaseList();
 }
 
 /* ================================================================
@@ -3765,6 +3766,8 @@ function showPurchaseDetail(cat) {
   var c = purchaseCategoryById(cat);
   var titleEl = $('purchase-detail-title');
   if (titleEl) titleEl.textContent = (c && c.icon || '📦') + ' Закупка на неделю + дозаказ — ' + (c ? esc(c.label) : '');
+  var searchInput = $('purchase-search');
+  if (searchInput) { searchInput.value = ''; toggleSearchClear('purchase-search'); }
   updatePurchaseTemplateControls();
   renderPurchaseList();
   updatePurchaseViewVisibility();
@@ -4254,7 +4257,8 @@ function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
   updatePurchaseCombinedSectionVisibility();
-  var rows = purchaseRowsFor(currentPurchaseCategory);
+  var allRows = purchaseRowsFor(currentPurchaseCategory);
+  var rows = applySearch(allRows, 'purchase-search');
   var canEditTemplate = hasPerm('purchases') && purchaseTemplateEditMode;
 
   updatePurchaseTemplateControls();
@@ -4270,9 +4274,16 @@ function renderPurchaseList() {
         : '🧮 Список составлен администратором. Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).');
   }
 
-  if (!rows.length) {
+  if (!allRows.length) {
     holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">' +
       (canEditTemplate ? 'Пока нет ни одного ингредиента. Нажмите «+ Добавить ингредиент», чтобы начать закупку на неделю.' : 'Список пока пуст — дождитесь, пока администратор его составит.') + '</p>';
+    updatePurchaseSummary();
+    renderPurchaseCombinedList();
+    return;
+  }
+
+  if (!rows.length) {
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">🔍 Ничего не найдено по запросу.</p>';
     updatePurchaseSummary();
     renderPurchaseCombinedList();
     return;
@@ -4366,13 +4377,23 @@ function renderPurchaseCombinedList() {
     });
   });
 
+  var searchInput = $('purchase-search');
+  var q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  var visibleRows = q ? allRows.filter(function(entry) { return entry.row.name.toLowerCase().indexOf(q) !== -1; }) : allRows;
+
   if (!allRows.length) {
     holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у этого цеха, ни у привязанных к нему поставщиков — добавьте позиции выше или привяжите поставщика к этому цеху («🔗 Привязать к цеху» в режиме редактирования шаблона).</p>';
     updatePurchaseCombinedSummary();
     return;
   }
 
-  holder.innerHTML = allRows.map(function(entry) {
+  if (!visibleRows.length) {
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">🔍 Ничего не найдено по запросу.</p>';
+    updatePurchaseCombinedSummary();
+    return;
+  }
+
+  holder.innerHTML = visibleRows.map(function(entry) {
     var catId = entry.catId;
     var row = entry.row;
     var res = purchaseResultDisplay(row);
