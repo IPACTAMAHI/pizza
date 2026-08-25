@@ -5082,3 +5082,39 @@ async function initApp() {
   }
 
   openRecipeFromHash(false); // если рецепт уже есть в локальном кэше — откроется сразу, минуя загрузку
+
+  syncFromGithub().then(function() {
+    openRecipeFromHash(true); // финальная попытка на свежих данных с GitHub
+    if (hasDeepLink && currentTab !== 'detail') {
+      // Ссылка была, но рецепт так и не нашёлся — показываем обычный список вместо "вечной загрузки"
+      switchTab('categories');
+    }
+  });
+
+  // Tab click handlers
+  document.querySelectorAll('.nav-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() { switchTab(tab.dataset.tab); });
+  });
+}
+
+function showDetailLoading() {
+  document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  var detailTab = $('tab-detail');
+  if (detailTab) detailTab.classList.add('active');
+  window.scrollTo(0, 0);
+  var body = $('detail-body');
+  if (body) body.innerHTML =
+    '<div class="skeleton skeleton-photo"></div>' +
+    '<div class="skeleton skeleton-title"></div>' +
+    '<div class="skeleton skeleton-badges">' +
+      '<div class="skeleton skeleton-chip"></div>' +
+      '<div class="skeleton skeleton-chip"></div>' +
+      '<div class="skeleton skeleton-chip"></div>' +
+    '</div>' +
+    '<div class="skeleton skeleton-line" style="width:40%"></div>' +
+    '<div class="skeleton skeleton-line"></div>' +
+    '<div class="skeleton skeleton-line"></div>' +
+    '<div class="skeleton skeleton-line" style="width:70%"></div>';
+  currentTab = 'detail';
+}
