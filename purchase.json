@@ -119,6 +119,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787672455789e25tp",
+      "label": "Озерка",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -516,6 +525,14 @@
       {
         "id": "p17876724245237lrqb",
         "name": "Лосось филе",
+        "unit": "кг",
+        "norm": ""
+      }
+    ],
+    "sup1787672455789e25tp": [
+      {
+        "id": "p17876724566540p1hv",
+        "name": "",
         "unit": "кг",
         "norm": ""
       }
