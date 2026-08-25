@@ -11,37 +11,10 @@
       "label": "Горячий цех",
       "icon": "🔥",
       "builtin": true
-    },
-    {
-      "id": "sup1787619819731xgnzb",
-      "label": "ыыыыфффввв",
-      "icon": "🚚",
-      "builtin": false,
-      "workshop": "pizza"
     }
   ],
   "data": {
     "pizza": [],
-    "hot": [],
-    "sup1787619819731xgnzb": [
-      {
-        "id": "p1787620110270adn9l",
-        "name": "4234234",
-        "unit": "кг",
-        "norm": "23"
-      },
-      {
-        "id": "p1787620113672sfija",
-        "name": "543534",
-        "unit": "кг",
-        "norm": "432"
-      },
-      {
-        "id": "p1787620115101oo6x5",
-        "name": "345634",
-        "unit": "кг",
-        "norm": "233"
-      }
-    ]
+    "hot": []
   }
 }
