@@ -529,6 +529,9 @@
     display: grid; grid-template-columns: 60px 1fr 1fr 1fr 1fr; gap: 6px;
   }
   .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
+  .purchase-reorder-group { display: flex; gap: 4px; }
+  .purchase-reorder-group input { min-width: 0; flex: 1 1 auto; }
+  .purchase-reorder-group select { flex: 0 0 58px; padding: 8px 2px; }
   .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
@@ -963,7 +966,7 @@
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 2-1.58l1.65-7.42H5.12"></path></svg></span>
     <span class="nav-label">Закупка</span>
   </div>
-  <div class="nav-tab developer-only" data-tab="admin">
+  <div class="nav-tab admin-only" data-tab="admin">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
     <span class="nav-label">Админ-панель / Настройки</span>
   </div>
@@ -1173,7 +1176,7 @@
     <div id="online-list" style="margin-top:10px"></div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
       <span>👥 Участники (доступ по ключу)</span>
       <button class="btn btn-primary btn-sm developer-only" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
@@ -1199,10 +1202,11 @@
       <strong>✕</strong> — это не разбан, а полное удаление записи из списка (например, если добавили по ошибке).
       После удаления «отменить» уже нельзя — если понадобится снова дать доступ этому человеку,
       его придётся добавить заново, попросив код ещё раз.<br>
-      <strong>👑 «Сделать админом»</strong> — даёт участнику полный доступ к редактированию рецептов и
-      к этой же админ-панели прямо на его устройстве, без ввода GitHub-ключа. Публиковать изменения на
-      GitHub он сможет, только если сам отдельно настроит синхронизацию (⚙️ в форме рецепта) — до этого
-      его правки сохраняются только в его браузере. Права можно в любой момент снять кнопкой «👤 Снять админа».
+      <strong>👑 «Сделать админом»</strong> — даёт участнику ограниченные права прямо на его устройстве,
+      без ввода GitHub-ключа: управление участниками (блокировка/удаление, но не назначение других
+      администраторов) и редактирование уже существующих карточек рецептов. Добавлять или удалять
+      рецепты, генерировать ключи доступа и менять настройки сайта такой админ не может — это остаётся
+      только у разработчика (вход по GitHub-ключу). Права можно в любой момент снять кнопкой «👤 Снять админа».
     </p>
   </div>
 </div>
@@ -2967,7 +2971,7 @@ async function toggleParticipantAdmin(id) {
 
   var ok = await customConfirm(
     willGrant
-      ? 'Назначить «' + p.name + '» администратором?\n\nОн сможет добавлять и редактировать рецепты, а также управлять базовыми функциями — без ввода GitHub-ключа (сохранять изменения на GitHub он сможет, только если сам настроит синхронизацию). Назначать/снимать других админов и удалять участников он не сможет — это остаётся только у вас.'
+      ? 'Назначить «' + p.name + '» администратором?\n\nОн сможет управлять участниками (блокировать/удалять) и редактировать уже существующие карточки рецептов — без ввода GitHub-ключа. Добавлять новые рецепты, генерировать ключи доступа, назначать/снимать других админов и менять настройки сайта он не сможет — это остаётся только у вас.'
       : 'Снять права администратора с «' + p.name + '»?'
   );
   if (!ok) return;
@@ -4771,8 +4775,13 @@ function purchaseRowsFor(cat) {
   if (!Array.isArray(purchaseData[cat])) purchaseData[cat] = [];
   // На старых сохранённых данных (до появления колонки "Дозаказ") поля
   // reorder ещё нет — подставляем пустую строку, чтобы поле было и
-  // сразу редактировалось, не ломая старые записи.
-  purchaseData[cat].forEach(function(r) { if (r.reorder === undefined) r.reorder = ''; });
+  // сразу редактировалось, не ломая старые записи. Единица дозаказа
+  // (reorderUnit) — отдельная от основной единицы позиции (row.unit),
+  // по умолчанию "кг", тоже подставляется на старых записях.
+  purchaseData[cat].forEach(function(r) {
+    if (r.reorder === undefined) r.reorder = '';
+    if (!r.reorderUnit) r.reorderUnit = 'кг';
+  });
   return purchaseData[cat];
 }
 
@@ -4991,7 +5000,7 @@ function addPurchaseRow(cat) {
   if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы добавлять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   cat = cat || currentPurchaseCategory;
   var rows = purchaseRowsFor(cat);
-  var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '', reorder: '' };
+  var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '', reorder: '', reorderUnit: 'кг' };
   rows.push(row);
   savePurchaseData();
   renderPurchaseList();
@@ -5055,7 +5064,7 @@ async function handlePurchaseImportFile(file) {
     if (!key || existingNames[key] || seenInFile[key]) { skipped++; return; }
     seenInFile[key] = true;
     existingNames[key] = true;
-    rows.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: p.name.trim(), unit: p.unit || 'кг', norm: '', residual: '', reorder: '' });
+    rows.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: p.name.trim(), unit: p.unit || 'кг', norm: '', residual: '', reorder: '', reorderUnit: 'кг' });
     added++;
   });
 
@@ -5272,6 +5281,7 @@ function renderPurchaseList() {
     var res = purchaseResultDisplay(row);
     var ro = canEditTemplate ? '' : ' readonly';
     var dis = canEditTemplate ? '' : ' disabled';
+    var reorderUnit = row.reorderUnit || 'кг';
     return '<div class="purchase-row" data-id="' + row.id + '">' +
       '<div class="purchase-row-top">' +
         '<input type="text" class="purchase-name" placeholder="Название, например: Салями" value="' + escAttr(row.name) + '"' + ro + ' ' +
@@ -5297,8 +5307,15 @@ function renderPurchaseList() {
           '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
         '</div>' +
         '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
-          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="0" value="' + escAttr(row.reorder) + '" ' +
-            'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+          '<div class="purchase-reorder-group">' +
+            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
+              'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
+              '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
+              '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
+              '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+            '</select>' +
+          '</div>' +
         '</label>' +
       '</div>' +
     '</div>';
@@ -5347,6 +5364,7 @@ function renderPurchaseCombinedList() {
     var catId = entry.catId;
     var row = entry.row;
     var res = purchaseResultDisplay(row);
+    var reorderUnit = row.reorderUnit || 'кг';
     return '<div class="purchase-row" data-id="' + row.id + '">' +
       '<div class="purchase-row-readonly-name">' + esc(row.name) +
         '<span class="purchase-row-meta">норма: ' + (row.norm === '' || row.norm == null ? '—' : esc(String(row.norm))) + ' ' + esc(row.unit) + '</span>' +
@@ -5360,8 +5378,15 @@ function renderPurchaseCombinedList() {
           '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
         '</div>' +
         '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
-          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="0" value="' + escAttr(row.reorder) + '" ' +
-            'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+          '<div class="purchase-reorder-group">' +
+            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
+              'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
+              '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
+              '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
+              '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+            '</select>' +
+          '</div>' +
         '</label>' +
       '</div>' +
     '</div>';
@@ -5425,7 +5450,7 @@ function buildPurchaseReportLines(cat) {
     var res = purchaseResultDisplay(row);
     var line = row.name.trim() + ' — ' + (res.cls === 'purchase-result-need' ? res.text : (res.text === '—' ? 'норма не указана' : res.text));
     var reorder = String(row.reorder == null ? '' : row.reorder).trim();
-    if (reorder) line += ' (🔁 дозаказ: ' + reorder + ' ' + row.unit + ')';
+    if (reorder) line += ' (🔁 дозаказ: ' + reorder + ' ' + (row.reorderUnit || 'кг') + ')';
     return line;
   });
 }
@@ -5517,7 +5542,7 @@ function buildPurchaseReorderLines(cat) {
   return purchaseRowsFor(cat).filter(function(r) {
     return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim();
   }).map(function(row) {
-    return row.name.trim() + ' — ' + String(row.reorder).trim() + ' ' + row.unit;
+    return row.name.trim() + ' — ' + String(row.reorder).trim() + ' ' + (row.reorderUnit || 'кг');
   });
 }
 
@@ -5556,12 +5581,12 @@ function downloadPurchaseReorderExcel(cat) {
     return;
   }
   var rows = purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim(); });
-  var data = [['Ингредиент', 'Ед.', 'Дозаказ']];
+  var data = [['Ингредиент', 'Ед. дозаказа', 'Дозаказ']];
   rows.forEach(function(row) {
-    data.push([row.name.trim(), row.unit, parseFloat(String(row.reorder).replace(',', '.'))]);
+    data.push([row.name.trim(), row.reorderUnit || 'кг', parseFloat(String(row.reorder).replace(',', '.'))]);
   });
   var ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 10 }];
+  ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 10 }];
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(purchaseCategoryLabel(cat), {}));
   XLSX.writeFile(wb, 'Дозаказ - ' + purchaseCategoryLabel(cat) + '.xlsx');
@@ -5610,12 +5635,12 @@ function downloadAllPurchaseReorderExcel() {
     var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim(); });
     if (!rows.length) return;
     any = true;
-    var data = [['Ингредиент', 'Ед.', 'Дозаказ']];
+    var data = [['Ингредиент', 'Ед. дозаказа', 'Дозаказ']];
     rows.forEach(function(row) {
-      data.push([row.name.trim(), row.unit, parseFloat(String(row.reorder).replace(',', '.'))]);
+      data.push([row.name.trim(), row.reorderUnit || 'кг', parseFloat(String(row.reorder).replace(',', '.'))]);
     });
     var ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 10 }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 10 }];
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
   });
   if (!any) {
@@ -5649,7 +5674,8 @@ function downloadPurchaseExcel(cat) {
   var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить', 'Дозаказ']];
   rows.forEach(function(row) {
     var toBuy = computeToBuy(row);
-    data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, row.reorder === '' || row.reorder == null ? '' : parseFloat(String(row.reorder).replace(',', '.'))]);
+    var reorderCell = (row.reorder === '' || row.reorder == null) ? '' : (String(row.reorder).trim() + ' ' + (row.reorderUnit || 'кг'));
+    data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, reorderCell]);
   });
   var ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
@@ -5731,7 +5757,8 @@ function downloadAllPurchaseExcel() {
     var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить', 'Дозаказ']];
     rows.forEach(function(row) {
       var toBuy = computeToBuy(row);
-      data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, row.reorder === '' || row.reorder == null ? '' : parseFloat(String(row.reorder).replace(',', '.'))]);
+      var reorderCell = (row.reorder === '' || row.reorder == null) ? '' : (String(row.reorder).trim() + ' ' + (row.reorderUnit || 'кг'));
+      data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, reorderCell]);
     });
     var ws = XLSX.utils.aoa_to_sheet(data);
     ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
