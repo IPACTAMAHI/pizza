@@ -951,6 +951,26 @@
   }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
 
+  .modal-checkbox-list {
+    display: flex; flex-direction: column; gap: 2px;
+    max-height: 260px; overflow-y: auto;
+    margin-bottom: 4px;
+  }
+  .modal-checkbox-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px;
+    background: var(--surface); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 10px; cursor: pointer;
+    font-size: 15px; color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal-checkbox-item + .modal-checkbox-item { margin-top: 6px; }
+  .modal-checkbox-item input[type="checkbox"] {
+    width: 18px; height: 18px; flex: none; accent-color: var(--accent, #e6553a);
+  }
+  .modal-checkbox-item.modal-checkbox-general { border-color: rgba(255,255,255,.28); }
+  .modal-checkbox-item span { flex: 1; }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 500px) {
     .header h1 { font-size: 22px; }
