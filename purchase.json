@@ -47,6 +47,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787671874229dqp9c",
+      "label": "Заморозка",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -305,6 +314,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787671874229dqp9c": []
   }
 }
