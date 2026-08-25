@@ -95,6 +95,7 @@ function ensureModalDom() {
         '<p id="app-modal-message"></p>' +
         '<input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">' +
         '<select id="app-modal-select" style="display:none"></select>' +
+        '<div id="app-modal-checkboxes" class="modal-checkbox-list" style="display:none"></div>' +
         '<div class="modal-actions">' +
           '<button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>' +
           '<button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>' +
@@ -118,6 +119,7 @@ function showModal(opts) {
     var msgEl = $('app-modal-message');
     var inputEl = $('app-modal-input');
     var selectEl = $('app-modal-select');
+    var checkboxesEl = $('app-modal-checkboxes');
     var okBtn = $('app-modal-ok');
     var cancelBtn = $('app-modal-cancel');
     var devWrap = $('app-modal-dev-login-wrap');
@@ -160,6 +162,23 @@ function showModal(opts) {
       }
     }
 
+    if (checkboxesEl) {
+      if (opts.withCheckboxes && opts.checkboxOptions && opts.checkboxOptions.length) {
+        var checkedValues = opts.checkboxValues || [];
+        checkboxesEl.style.display = '';
+        checkboxesEl.innerHTML = opts.checkboxOptions.map(function(o, i) {
+          var checked = checkedValues.indexOf(o.value) !== -1;
+          return '<label class="modal-checkbox-item' + (o.general ? ' modal-checkbox-general' : '') + '">' +
+            '<input type="checkbox" data-modal-cb-value="' + escAttr(o.value) + '"' + (checked ? ' checked' : '') + '>' +
+            '<span>' + esc(o.label) + '</span>' +
+          '</label>';
+        }).join('');
+      } else {
+        checkboxesEl.style.display = 'none';
+        checkboxesEl.innerHTML = '';
+      }
+    }
+
     if (devWrap) devWrap.style.display = opts.devLogin ? '' : 'none';
     if (codeWrap) codeWrap.style.display = opts.enterCode ? '' : 'none';
 
@@ -177,11 +196,17 @@ function showModal(opts) {
     }
 
     okBtn.onclick = function() {
-      if (opts.withSelect) cleanup(selectEl.value);
+      if (opts.withCheckboxes) {
+        var picked = [];
+        checkboxesEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+          if (cb.checked) picked.push(cb.getAttribute('data-modal-cb-value'));
+        });
+        cleanup(picked);
+      } else if (opts.withSelect) cleanup(selectEl.value);
       else cleanup(opts.withInput ? inputEl.value : true);
     };
     cancelBtn.onclick = function() {
-      cleanup((opts.withInput || opts.withSelect) ? null : false);
+      cleanup((opts.withInput || opts.withSelect || opts.withCheckboxes) ? null : false);
     };
     inputEl.onkeydown = function(e) {
       if (e.key === 'Enter') { e.preventDefault(); okBtn.onclick(); }
@@ -212,6 +237,15 @@ function customConfirm(message, title) {
    к конкретному цеху (Пицца бар / Горячий цех / без привязки). */
 function customSelect(message, options, selectedValue, title) {
   return showModal({ title: title || 'Выберите значение', message: message, withSelect: true, selectOptions: options, selectValue: selectedValue || '' });
+}
+
+/* Модалка-список чекбоксов: возвращает массив отмеченных value (может
+   быть пустым, если ничего не отмечено) или null, если нажали
+   "Отмена". Используется, чтобы привязать поставщика сразу к
+   НЕСКОЛЬКИМ цехам (плюс отдельная опция "Общая категория" —
+   см. purchaseWorkshopCheckboxOptions()). */
+function customCheckboxSelect(message, options, selectedValues, title) {
+  return showModal({ title: title || 'Выберите значения', message: message, withCheckboxes: true, checkboxOptions: options, checkboxValues: selectedValues || [] });
 }
 
 /* ================================================================
@@ -1236,6 +1270,7 @@ async function syncPurchaseFromGithub() {
       if (!incomingCategories.some(function(c) { return c.id === def.id; })) incomingCategories.splice(i, 0, def);
     });
     incomingCategories.forEach(function(c) { if (!Array.isArray(incomingData[c.id])) incomingData[c.id] = []; });
+    normalizePurchaseCategoriesWorkshops(incomingCategories);
 
     // Остатки и дозаказ, введённые прямо сейчас на этом устройстве, —
     // локальные и временные, поэтому при обновлении шаблона с GitHub
@@ -3595,6 +3630,7 @@ function loadPurchaseData() {
   });
   if (!purchaseData || typeof purchaseData !== 'object') purchaseData = {};
   purchaseCategories.forEach(function(c) { if (!Array.isArray(purchaseData[c.id])) purchaseData[c.id] = []; });
+  normalizePurchaseCategoriesWorkshops(purchaseCategories);
   if (!purchaseCategories.some(function(c) { return c.id === currentPurchaseCategory; })) {
     currentPurchaseCategory = purchaseCategories[0].id;
   }
@@ -3632,28 +3668,55 @@ function purchaseCategoryIcon(cat) {
   return (c && c.icon) || '📦';
 }
 
-/* Список встроенных цехов (Пицца бар / Горячий цех, и любые другие,
-   которые появятся в будущем) — варианты, к которым можно привязать
-   поставщика. "Без привязки" — тоже допустимый вариант: такой
-   поставщик просто не попадает ни в один общий список цеха. */
-function purchaseWorkshopOptions() {
-  var opts = purchaseCategories.filter(function(c) { return c.builtin; }).map(function(c) {
-    return { value: c.id, label: (c.icon || '📦') + ' ' + c.label };
+/* Спец.значение в c.workshops, означающее "Общая категория" — поставщик
+   с такой привязкой считается относящимся сразу ко ВСЕМ цехам: его
+   позиции появляются в общем списке/отчёте каждого из них, а не
+   только одного конкретного. Отличимо от id обычного цеха (у тех id
+   вида "pizza"/"hot"/"ws<timestamp>..."), поэтому конфликтов не будет. */
+var GENERAL_WORKSHOP_VALUE = '__general__';
+
+/* На старых сохранённых данных у поставщика было одиночное поле
+   c.workshop (строка id цеха или '' — без привязки). Приводим такие
+   записи к новому формату c.workshops (массив id, может содержать
+   несколько цехов и/или GENERAL_WORKSHOP_VALUE) — один раз при
+   загрузке/синхронизации, дальше везде используется только новый
+   формат. Ничего не делает, если c.workshops уже массив (в т.ч. пустой
+   — "без привязки"). Цехов (c.builtin) не касается — привязка есть
+   только у поставщиков. */
+function normalizeSupplierWorkshops(c) {
+  if (!c || c.builtin) return;
+  if (!Array.isArray(c.workshops)) c.workshops = c.workshop ? [c.workshop] : [];
+}
+function normalizePurchaseCategoriesWorkshops(categories) {
+  (categories || []).forEach(normalizeSupplierWorkshops);
+}
+
+/* Варианты для чекбокс-модалки привязки поставщика: сначала "Общая
+   категория" (показывать во всех цехах сразу), затем каждый встроенный
+   цех по отдельности. Ничего не отметить — тоже допустимый вариант,
+   такой поставщик просто не попадает ни в один общий список цеха. */
+function purchaseWorkshopCheckboxOptions() {
+  var opts = [{ value: GENERAL_WORKSHOP_VALUE, label: '🌐 Общая категория — показывать во всех цехах', general: true }];
+  purchaseCategories.filter(function(c) { return c.builtin; }).forEach(function(c) {
+    opts.push({ value: c.id, label: (c.icon || '📦') + ' ' + c.label });
   });
-  opts.push({ value: '', label: '— без привязки к цеху —' });
   return opts;
 }
 
 /* Категории, чьи позиции должны попадать в "Общий список"/"Общий отчёт"
    конкретного цеха: сам цех плюс все поставщики, привязанные именно к
-   нему (c.workshop === workshopCat). Поставщики без привязки или
-   привязанные к другому цеху сюда не попадают. */
+   нему (workshopCat есть в c.workshops), а также все поставщики с
+   "Общей категорией" (GENERAL_WORKSHOP_VALUE в c.workshops) — те
+   попадают сразу во все цеха. Поставщики без привязки сюда не
+   попадают. */
 function purchaseCategoriesForWorkshop(workshopCat) {
   var list = [];
   var self = purchaseCategoryById(workshopCat);
   if (self) list.push(self);
   purchaseCategories.forEach(function(c) {
-    if (!c.builtin && c.workshop === workshopCat) list.push(c);
+    if (c.builtin) return;
+    var ws = c.workshops || [];
+    if (ws.indexOf(workshopCat) !== -1 || ws.indexOf(GENERAL_WORKSHOP_VALUE) !== -1) list.push(c);
   });
   return list;
 }
@@ -3726,9 +3789,17 @@ function renderPurchaseHomeList() {
 
   function cardHtml(c) {
     var workshopMark = '';
-    if (!c.builtin && c.workshop) {
-      var w = purchaseCategoryById(c.workshop);
-      if (w) workshopMark = '<div class="purchase-home-card-meta">' + esc(w.icon || '📦') + ' ' + esc(w.label) + '</div>';
+    if (!c.builtin && c.workshops && c.workshops.length) {
+      var labels = [];
+      if (c.workshops.indexOf(GENERAL_WORKSHOP_VALUE) !== -1) {
+        labels.push('🌐 Общая категория');
+      } else {
+        c.workshops.forEach(function(wid) {
+          var w = purchaseCategoryById(wid);
+          if (w) labels.push((w.icon || '📦') + ' ' + w.label);
+        });
+      }
+      if (labels.length) workshopMark = '<div class="purchase-home-card-meta">' + esc(labels.join(', ')) + '</div>';
     }
     return '<div class="purchase-home-card">' +
       '<div class="purchase-home-card-main" onclick="showPurchaseDetail(\'' + c.id + '\')">' +
@@ -3817,10 +3888,10 @@ function addPurchaseSupplier() {
   customPrompt('Название поставщика, например: ООО «Метро» или ФЛП Иванов', '', 'Новый поставщик').then(function(val) {
     val = (val || '').trim();
     if (!val) return;
-    customSelect('К какому цеху относится поставщик «' + val + '»? Его позиции появятся в общем списке и отчёте этого цеха.', purchaseWorkshopOptions(), '', 'Привязать к цеху').then(function(workshop) {
-      if (workshop === null) workshop = ''; // отменили выбор цеха — сам поставщик всё равно добавляем, просто без привязки
+    customCheckboxSelect('К каким цехам относится поставщик «' + val + '»? Можно отметить несколько цехов или «Общую категорию» — тогда позиции появятся в общем списке и отчёте каждого из них.', purchaseWorkshopCheckboxOptions(), [], 'Привязать к цеху').then(function(workshops) {
+      if (workshops === null) workshops = []; // отменили выбор цехов — сам поставщик всё равно добавляем, просто без привязки
       var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
-      purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false, workshop: workshop });
+      purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false, workshops: workshops });
       purchaseData[id] = [];
       purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
       savePurchaseData();
@@ -3876,7 +3947,11 @@ function removePurchaseCategory(cat) {
     purchaseCategories = purchaseCategories.filter(function(x) { return x.id !== cat; });
     delete purchaseData[cat];
     if (c.builtin) {
-      purchaseCategories.forEach(function(x) { if (!x.builtin && x.workshop === cat) x.workshop = ''; });
+      purchaseCategories.forEach(function(x) {
+        if (x.builtin || !Array.isArray(x.workshops)) return;
+        var idx = x.workshops.indexOf(cat);
+        if (idx !== -1) x.workshops.splice(idx, 1);
+      });
     }
     if (currentPurchaseCategory === cat) currentPurchaseCategory = purchaseCategories[0] ? purchaseCategories[0].id : 'pizza';
     savePurchaseData();
@@ -3886,10 +3961,10 @@ function removePurchaseCategory(cat) {
   });
 }
 
-/* Изменить (или снять) привязку уже существующего поставщика к цеху —
-   доступно в любой момент, не только при создании. От этой привязки
-   зависит, в общем списке и отчёте какого цеха («Пицца бар» /
-   «Горячий цех») появятся позиции этого поставщика — см.
+/* Изменить (или снять) привязку уже существующего поставщика — сразу к
+   нескольким цехам и/или к "Общей категории" — доступно в любой момент,
+   не только при создании. От этой привязки зависит, в общем списке и
+   отчёте каких цехов появятся позиции этого поставщика — см.
    purchaseCategoriesForWorkshop(). */
 function linkPurchaseSupplierWorkshop(cat) {
   cat = cat || currentPurchaseCategory;
@@ -3897,14 +3972,23 @@ function linkPurchaseSupplierWorkshop(cat) {
   var c = purchaseCategoryById(cat);
   if (!c) return;
   if (c.builtin) { showToast('🔒 Цех уже сам является цехом — привязка не нужна'); return; }
-  customSelect('К какому цеху относится поставщик «' + c.label + '»?', purchaseWorkshopOptions(), c.workshop || '', 'Привязать к цеху').then(function(workshop) {
-    if (workshop === null) return; // отменили — ничего не меняем
-    c.workshop = workshop;
+  normalizeSupplierWorkshops(c);
+  customCheckboxSelect('К каким цехам относится поставщик «' + c.label + '»? Можно отметить несколько цехов или «Общую категорию».', purchaseWorkshopCheckboxOptions(), c.workshops || [], 'Привязать к цеху').then(function(workshops) {
+    if (workshops === null) return; // отменили — ничего не меняем
+    c.workshops = workshops;
+    delete c.workshop; // старое одиночное поле больше не используется
     savePurchaseData();
     renderPurchaseHomeList();
     renderPurchaseList();
     schedulePurchaseSync();
-    showToast(workshop ? '🔗 Поставщик привязан к цеху «' + purchaseCategoryLabel(workshop) + '»' : '🔗 Привязка к цеху снята');
+    if (!workshops.length) {
+      showToast('🔗 Привязка к цехам снята');
+    } else if (workshops.indexOf(GENERAL_WORKSHOP_VALUE) !== -1) {
+      showToast('🔗 Поставщик привязан к «Общей категории» — виден во всех цехах');
+    } else {
+      var labels = workshops.map(function(w) { return purchaseCategoryLabel(w); });
+      showToast('🔗 Поставщик привязан к цеху: ' + labels.join(', '));
+    }
   });
 }
 
