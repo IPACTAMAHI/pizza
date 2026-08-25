@@ -100,9 +100,12 @@
        Открывается кликом по карточке (или иконкой ✏️) на главной странице;
        "← Назад к списку" возвращает на неё. -->
   <div id="purchase-detail-view" style="display:none">
-    <button type="button" class="btn btn-ghost btn-sm" onclick="showPurchaseHome()" style="margin-bottom:14px">← Назад к списку</button>
-
-    <h3 id="purchase-detail-title" style="margin-bottom:14px"></h3>
+    <div class="purchase-detail-header">
+      <button type="button" class="purchase-back-btn" onclick="showPurchaseHome()" title="Назад к списку" aria-label="Назад к списку">
+        <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      </button>
+      <h3 id="purchase-detail-title"></h3>
+    </div>
 
     <!-- Управление самой карточкой цеха/поставщика (не позициями) —
          доступно только разработчику: добавить к цеху, переименовать,
@@ -121,6 +124,12 @@
     <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
       🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить,
       округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
+    </div>
+
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" class="search-input" id="purchase-search" placeholder="Поиск ингредиента..." oninput="renderPurchaseList(); toggleSearchClear('purchase-search')">
+      <button type="button" class="search-clear" id="purchase-search-clear" onclick="clearSearchInput('purchase-search')" title="Очистить" style="display:none">✕</button>
     </div>
 
     <div id="purchase-list"></div>
