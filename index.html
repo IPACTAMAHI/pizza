@@ -230,6 +230,53 @@
     background: rgba(226, 86, 75, .08);
   }
 
+  /* Главная страница вкладки "Закупка" — список цехов и поставщиков
+     карточками (вместо строки чипов), с иконками правки/удаления
+     напротив каждого. Клик по самой карточке открывает список позиций
+     этого цеха/поставщика; иконки справа — отдельные действия и клик
+     по ним не должен "провалиться" в открытие карточки (event.stopPropagation
+     в разметке). */
+  .purchase-home-group-title {
+    font-size: 13px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .04em;
+    margin: 18px 0 8px;
+  }
+  .purchase-home-group-title:first-child { margin-top: 0; }
+  .purchase-home-card {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 6px 6px 6px 14px;
+    margin-bottom: 8px;
+    transition: border-color .15s ease;
+  }
+  .purchase-home-card:hover { border-color: rgba(255,255,255,.25); }
+  .purchase-home-card-main {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .purchase-home-card-icon { font-size: 20px; flex-shrink: 0; }
+  .purchase-home-card-text { min-width: 0; }
+  .purchase-home-card-text strong { display: block; font-size: 15px; }
+  .purchase-home-card-meta { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .purchase-home-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .purchase-home-icon-btn {
+    width: 36px; height: 36px; border-radius: 9px; border: none;
+    background: rgba(255,255,255,.06); color: var(--text-muted);
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .purchase-home-icon-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+  .purchase-home-icon-btn:active { transform: scale(.92); }
+  .purchase-home-icon-btn-danger { color: #e2564b; background: rgba(226,86,75,.14); }
+  .purchase-home-icon-btn-danger:hover { background: rgba(226,86,75,.22); }
+  .purchase-home-empty { color: var(--text-muted); font-size: 13px; padding: 10px 2px 4px; }
+
   /* Карточка "живого" посетителя в блоке "Онлайн" — тот же стиль,
      что у участников, плюс цветной индикатор (зелёный — онлайн
      прямо сейчас, серый — просто был(а) недавно). */
@@ -1003,68 +1050,85 @@
 <div id="tab-purchase" class="tab-content">
   <h2 style="margin-bottom:14px">📦 Закупка</h2>
 
-  <div class="chip-row" id="purchase-subtabs" style="margin-bottom:12px"></div>
-
-  <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-workshop-btn" onclick="addPurchaseWorkshop()">🏭 Добавить цех</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-supplier-btn" onclick="addPurchaseSupplier()">➕ Добавить поставщика</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
-    <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Привязать к цеху</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-remove-supplier-btn" onclick="removePurchaseCategory()" style="display:none">🗑️ Удалить</button>
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
-    <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
+  <!-- ГЛАВНАЯ СТРАНИЦА: список всех цехов и поставщиков одним экраном.
+       Клик по карточке открывает её список позиций (ДЕТАЛЬНЫЙ ЭКРАН ниже);
+       иконки ✏️/🗑️ (видны только разработчику) — редактирование и удаление
+       прямо отсюда, без захода внутрь. -->
+  <div id="purchase-home-view">
+    <div id="purchase-home-list"></div>
   </div>
 
-  <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
-    🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить,
-    округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
-  </div>
+  <!-- ДЕТАЛЬНЫЙ ЭКРАН: список позиций одного конкретного цеха/поставщика.
+       Открывается кликом по карточке (или иконкой ✏️) на главной странице;
+       "← Назад к списку" возвращает на неё. -->
+  <div id="purchase-detail-view" style="display:none">
+    <button type="button" class="btn btn-ghost btn-sm" onclick="showPurchaseHome()" style="margin-bottom:14px">← Назад к списку</button>
 
-  <div id="purchase-list"></div>
+    <h3 id="purchase-detail-title" style="margin-bottom:14px"></h3>
 
-  <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="margin:4px 0 18px;width:100%">+ Добавить ингредиент</button>
-
-  <div style="margin-bottom:14px">
-    <span id="purchase-summary" style="font-size:13px;color:var(--text-muted)"></span>
-  </div>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-    <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="copyPurchaseReorder()">🔁 Скопировать дозаказ</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderText()">📄 Дозаказ — текст</button>
-    <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderExcel()">📊 Дозаказ — Excel</button>
-  </div>
-
-  <!-- "Общий список" и "Общий отчёт" имеют смысл только для встроенных
-       цехов (Пицца бар / Горячий цех) — это ещё раз здесь все ингредиенты
-       от разных поставщиков, сгруппированные для конкретного цеха. Для
-       вкладки отдельного поставщика это дублирует его же список, поэтому
-       блок скрывается — см. updatePurchaseCombinedSectionVisibility(). -->
-  <div id="purchase-combined-section">
-    <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
-      <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — цех и его поставщики</h2>
-      <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
-        🧮 Здесь сразу все позиции этого цеха и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
-      </div>
-      <div id="purchase-combined-list"></div>
-      <div style="margin-bottom:14px">
-        <span id="purchase-combined-summary" style="font-size:13px;color:var(--text-muted)"></span>
-      </div>
+    <!-- Управление самой карточкой цеха/поставщика (не позициями) —
+         доступно только разработчику: добавить к цеху, переименовать,
+         загрузить прайс. "Завершить редактирование" — тот же переключатель,
+         что включает правку позиций ниже (см. togglePurchaseTemplateEdit) —
+         закрывается ТОЛЬКО после успешного сохранения на GitHub. -->
+    <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Добавить к цеху</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
+      <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
+      <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
     </div>
 
-    <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по цеху и его поставщикам — с уже указанным остатком по каждому:</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (цех + поставщики)</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderText()">📄 Дозаказ — текст (все)</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderExcel()">📊 Дозаказ — Excel (все)</button>
+    <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
+      🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить,
+      округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
+    </div>
+
+    <div id="purchase-list"></div>
+
+    <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="margin:4px 0 18px;width:100%">+ Добавить ингредиент</button>
+
+    <div style="margin-bottom:14px">
+      <span id="purchase-summary" style="font-size:13px;color:var(--text-muted)"></span>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="copyPurchaseReorder()">🔁 Скопировать дозаказ</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderText()">📄 Дозаказ — текст</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderExcel()">📊 Дозаказ — Excel</button>
+    </div>
+
+    <!-- "Общий список" и "Общий отчёт" имеют смысл только для встроенных
+         цехов (Пицца бар / Горячий цех) — это ещё раз здесь все ингредиенты
+         от разных поставщиков, сгруппированные для конкретного цеха. Для
+         вкладки отдельного поставщика это дублирует его же список, поэтому
+         блок скрывается — см. updatePurchaseCombinedSectionVisibility(). -->
+    <div id="purchase-combined-section">
+      <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
+        <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — цех и его поставщики</h2>
+        <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
+          🧮 Здесь сразу все позиции этого цеха и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
+        </div>
+        <div id="purchase-combined-list"></div>
+        <div style="margin-bottom:14px">
+          <span id="purchase-combined-summary" style="font-size:13px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+
+      <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по цеху и его поставщикам — с уже указанным остатком по каждому:</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (цех + поставщики)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderText()">📄 Дозаказ — текст (все)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderExcel()">📊 Дозаказ — Excel (все)</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3295,7 +3359,7 @@ function applyAdminUI() {
     if (labelEl) labelEl.textContent = isAdmin() ? 'Выход' : 'Вход';
   }
   updateAddGate();
-  if (currentTab === 'purchase') renderPurchaseList();
+  if (currentTab === 'purchase') renderPurchaseTab();
   if (currentTab === 'admin') renderAdminPanel();
 }
 
@@ -3855,8 +3919,8 @@ function switchTab(name) {
   // выставил ДО вызова switchTab('add').
   if (name === 'add') { updateAddGate(); if (isAdmin() && !editingRecipe) resetForm(); }
   if (name === 'purchase') {
-    renderPurchaseList();
-    syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseList(); });
+    renderPurchaseTab();
+    syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
   }
 }
 
@@ -4700,7 +4764,6 @@ function updatePurchaseTemplateControls() {
   var saveBtn = $('purchase-save-template-btn');
   var importBtn = $('purchase-import-btn');
   var renameBtn = $('purchase-rename-btn');
-  var removeBtn = $('purchase-remove-supplier-btn');
   var linkBtn = $('purchase-link-workshop-btn');
   if (toggleBtn) toggleBtn.textContent = purchaseTemplateEditMode ? '🔒 Завершить редактирование' : '✏️ Редактировать шаблон';
   if (saveBtn) saveBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
@@ -4713,10 +4776,9 @@ function updatePurchaseTemplateControls() {
   var canManage = isAdmin() && purchaseTemplateEditMode;
   var c = purchaseCategoryById(currentPurchaseCategory);
   if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
-  if (removeBtn) {
-    removeBtn.style.display = (canManage && c && !c.protected) ? '' : 'none';
-    removeBtn.textContent = (c && c.builtin) ? '🗑️ Удалить цех' : '🗑️ Удалить поставщика';
-  }
+  // Удаление цеха/поставщика теперь делается иконкой 🗑️ прямо на главной
+  // странице закупки (см. renderPurchaseHomeList) — здесь, внутри
+  // редактирования конкретной карточки, эта кнопка больше не нужна.
   if (linkBtn) linkBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
 }
 
@@ -4825,24 +4887,102 @@ function purchaseCategoriesForWorkshop(workshopCat) {
   return list;
 }
 
-function renderPurchaseCategoryChips() {
-  var holder = $('purchase-subtabs');
+/* ================================================================
+   ГЛАВНАЯ СТРАНИЦА ЗАКУПКИ (список цехов и поставщиков) И
+   ДЕТАЛЬНЫЙ ЭКРАН (позиции одного конкретного цеха/поставщика)
+   ================================================================
+   Раньше все цеха/поставщики были в одну строку чипов над общим
+   списком позиций — при большом числе поставщиков это быстро
+   становилось нечитаемым. Теперь вкладка "Закупка" — это сначала
+   главная страница со списком карточек (цеха отдельно, поставщики
+   отдельно), а сами позиции открываются на отдельном экране по клику
+   на карточку. purchaseHomeView управляет тем, какой из двух экранов
+   сейчас показан; currentPurchaseCategory — какой именно цех/поставщик
+   открыт на детальном экране (используется во всех остальных функциях
+   закупки без изменений). */
+var purchaseHomeView = true;
+
+function updatePurchaseViewVisibility() {
+  var home = $('purchase-home-view');
+  var detail = $('purchase-detail-view');
+  if (home) home.style.display = purchaseHomeView ? '' : 'none';
+  if (detail) detail.style.display = purchaseHomeView ? 'none' : '';
+}
+
+/* Единая точка входа для отрисовки всей вкладки "Закупка" — главную
+   страницу обновляем всегда (она дешёвая), детальный экран — только
+   если он сейчас показан. Используется при заходе на вкладку и после
+   фоновой синхронизации с GitHub. */
+function renderPurchaseTab() {
+  renderPurchaseHomeList();
+  if (!purchaseHomeView) renderPurchaseList();
+  updatePurchaseViewVisibility();
+}
+
+function showPurchaseHome() {
+  purchaseHomeView = true;
+  renderPurchaseHomeList();
+  updatePurchaseViewVisibility();
+}
+
+function showPurchaseDetail(cat) {
+  currentPurchaseCategory = cat;
+  purchaseHomeView = false;
+  var c = purchaseCategoryById(cat);
+  var titleEl = $('purchase-detail-title');
+  if (titleEl) titleEl.textContent = (c && c.icon || '📦') + ' Закупка на неделю + дозаказ — ' + (c ? esc(c.label) : '');
+  updatePurchaseTemplateControls();
+  renderPurchaseList();
+  updatePurchaseViewVisibility();
+}
+
+/* Открыть карточку сразу в режиме редактирования (клик по иконке ✏️ на
+   главной странице) — то же самое, что открыть карточку и затем нажать
+   "✏️ Редактировать шаблон" на детальном экране, просто одним кликом. */
+function enterPurchaseEditFor(cat) {
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  showPurchaseDetail(cat);
+  if (!purchaseTemplateEditMode) {
+    purchaseTemplateEditMode = true;
+    renderPurchaseList();
+    updatePurchaseTemplateControls();
+  }
+}
+
+function renderPurchaseHomeList() {
+  var holder = $('purchase-home-list');
   if (!holder) return;
-  holder.innerHTML = purchaseCategories.map(function(c) {
+
+  function cardHtml(c) {
     var workshopMark = '';
     if (!c.builtin && c.workshop) {
       var w = purchaseCategoryById(c.workshop);
-      if (w) workshopMark = ' <span style="opacity:.65;font-weight:500">(' + esc(w.icon || '📦') + ' ' + esc(w.label) + ')</span>';
+      if (w) workshopMark = '<div class="purchase-home-card-meta">' + esc(w.icon || '📦') + ' ' + esc(w.label) + '</div>';
     }
-    return '<span class="chip' + (c.id === currentPurchaseCategory ? ' active' : '') + '" data-cat="' + escAttr(c.id) + '" ' +
-      'onclick="selectPurchaseCategory(\'' + c.id + '\')">' + esc(c.icon || '📦') + ' Закупка на неделю + дозаказ — ' + esc(c.label) + workshopMark + '</span>';
-  }).join('');
-}
+    return '<div class="purchase-home-card">' +
+      '<div class="purchase-home-card-main" onclick="showPurchaseDetail(\'' + c.id + '\')">' +
+        '<span class="purchase-home-card-icon">' + esc(c.icon || '📦') + '</span>' +
+        '<div class="purchase-home-card-text"><strong>' + esc(c.label) + '</strong>' + workshopMark + '</div>' +
+      '</div>' +
+      '<div class="purchase-home-card-actions developer-only">' +
+        '<button type="button" class="purchase-home-icon-btn" title="Редактировать" onclick="event.stopPropagation(); enterPurchaseEditFor(\'' + c.id + '\')">✏️</button>' +
+        (c.protected ? '' : '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="event.stopPropagation(); removePurchaseCategory(\'' + c.id + '\')">🗑️</button>') +
+      '</div>' +
+    '</div>';
+  }
 
-function selectPurchaseCategory(cat) {
-  currentPurchaseCategory = cat;
-  renderPurchaseCategoryChips();
-  renderPurchaseList();
+  var workshops = purchaseCategories.filter(function(c) { return c.builtin; });
+  var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
+
+  var html = '<div class="purchase-home-group-title">🏭 Цеха</div>';
+  html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного цеха.</p>';
+  html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить цех</button>';
+
+  html += '<div class="purchase-home-group-title">🚚 Поставщики</div>';
+  html += suppliers.length ? suppliers.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного поставщика.</p>';
+  html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseSupplier()" style="width:100%;margin:6px 0 6px">➕ Добавить поставщика</button>';
+
+  holder.innerHTML = html;
 }
 
 /* "Общий список — все поставщики" и "Общий отчёт" по смыслу относятся
@@ -4871,6 +5011,7 @@ function updatePurchaseCombinedSectionVisibility() {
    Помимо двух изначальных цехов (Пицца бар / Горячий цех) администратор
    может добавить сколько угодно своих — например "Кондитерский цех"
    или "Цех заготовок". Новый цех работает точно так же, как и
+
    изначальные: у него свой список позиций с нормой на неделю, свой
    общий список/отчёт (цех + все привязанные к нему поставщики), к нему
    можно привязывать поставщиков через "🔗 Привязать к цеху". В отличие
@@ -4884,12 +5025,10 @@ function addPurchaseWorkshop() {
     var id = 'ws' + Date.now() + Math.random().toString(36).slice(2, 7);
     purchaseCategories.push({ id: id, label: val, icon: '🏭', builtin: true });
     purchaseData[id] = [];
-    currentPurchaseCategory = id;
     purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
     savePurchaseData();
-    renderPurchaseCategoryChips();
-    renderPurchaseList();
-    updatePurchaseTemplateControls();
+    renderPurchaseHomeList();
+    showPurchaseDetail(id);
     schedulePurchaseSync();
     showToast('✅ Цех «' + val + '» добавлен — теперь добавьте позиции или привяжите к нему поставщиков');
   });
@@ -4912,12 +5051,10 @@ function addPurchaseSupplier() {
       var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
       purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false, workshop: workshop });
       purchaseData[id] = [];
-      currentPurchaseCategory = id;
       purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
       savePurchaseData();
-      renderPurchaseCategoryChips();
-      renderPurchaseList();
-      updatePurchaseTemplateControls();
+      renderPurchaseHomeList();
+      showPurchaseDetail(id);
       schedulePurchaseSync();
       showToast('✅ Поставщик «' + val + '» добавлен — теперь добавьте позиции для закупки');
     });
@@ -4935,7 +5072,9 @@ function renamePurchaseCategory(cat) {
     if (!val) { showToast('⚠️ Название не может быть пустым'); return; }
     c.label = val;
     savePurchaseData();
-    renderPurchaseCategoryChips();
+    renderPurchaseHomeList();
+    var titleEl = $('purchase-detail-title');
+    if (titleEl && currentPurchaseCategory === cat) titleEl.textContent = (c.icon || '📦') + ' Закупка на неделю + дозаказ — ' + val;
     renderPurchaseList();
     schedulePurchaseSync();
     showToast('✏️ Название обновлено');
@@ -4948,7 +5087,10 @@ function renamePurchaseCategory(cat) {
    принудительно восстанавливаются в loadPurchaseData/syncPurchaseFromGithub,
    если вдруг пропадут из файла шаблона. При удалении цеха все
    поставщики, которые были к нему привязаны, не удаляются — просто
-   теряют привязку (становятся "без привязки к цеху"). */
+   теряют привязку (становятся "без привязки к цеху"). Вызывается как
+   иконкой 🗑️ на главной странице (без захода внутрь карточки), так и
+   изнутри детального экрана — в обоих случаях после удаления
+   возвращаемся на главную страницу. */
 function removePurchaseCategory(cat) {
   cat = cat || currentPurchaseCategory;
   if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
@@ -4967,8 +5109,7 @@ function removePurchaseCategory(cat) {
     }
     if (currentPurchaseCategory === cat) currentPurchaseCategory = purchaseCategories[0] ? purchaseCategories[0].id : 'pizza';
     savePurchaseData();
-    renderPurchaseCategoryChips();
-    renderPurchaseList();
+    showPurchaseHome();
     schedulePurchaseSync();
     showToast(c.builtin ? '🗑️ Цех удалён' : '🗑️ Поставщик удалён');
   });
@@ -4989,7 +5130,7 @@ function linkPurchaseSupplierWorkshop(cat) {
     if (workshop === null) return; // отменили — ничего не меняем
     c.workshop = workshop;
     savePurchaseData();
-    renderPurchaseCategoryChips();
+    renderPurchaseHomeList();
     renderPurchaseList();
     schedulePurchaseSync();
     showToast(workshop ? '🔗 Поставщик привязан к цеху «' + purchaseCategoryLabel(workshop) + '»' : '🔗 Привязка к цеху снята');
@@ -5250,7 +5391,6 @@ function purchaseResultDisplay(row) {
 function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
-  renderPurchaseCategoryChips();
   updatePurchaseCombinedSectionVisibility();
   var rows = purchaseRowsFor(currentPurchaseCategory);
   var canEditTemplate = isAdmin() && purchaseTemplateEditMode;
@@ -6058,7 +6198,7 @@ async function initApp() {
   loadRecipes();
   loadCustomSitePhotos();
   loadPurchaseData();
-  syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseList(); });
+  syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
 
   var hasDeepLink = /^#recipe=/.test(location.hash);
 
