@@ -486,6 +486,13 @@
     appearance: none;
   }
   input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,86,75,.16); }
+  /* Сам select тёмный (фон почти прозрачный + светлый текст), но
+     выпадающий список <option> браузер рисует нативно — на светлом
+     системном фоне тот же светлый цвет текста становится почти
+     нечитаемым (виден только у подсвеченного/выбранного пункта).
+     Задаём option'ам собственный тёмный фон, чтобы текст был виден
+     всегда, а не только при наведении. */
+  select option { background: #1c1c22; color: var(--text); }
 
   /* Photo upload */
   .photo-upload {
