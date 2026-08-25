@@ -110,6 +110,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787672413898669de",
+      "label": "Фиш фемели",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -496,6 +505,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787672413898669de": []
   }
 }
