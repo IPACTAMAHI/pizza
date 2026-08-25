@@ -1017,7 +1017,7 @@ function renderOnlineUsersList() {
    "участника ещё нет" оставлена как подстраховка на случай гонки
    (запись пропала из локального кэша между отрисовкой и нажатием). */
 async function toggleOnlineUserBlock(id, name) {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!hasPerm('participants')) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var p = participants.filter(function(x) { return x.id === id; })[0];
 
   if (p) {
@@ -1053,7 +1053,7 @@ async function toggleOnlineUserBlock(id, name) {
    ensureParticipantName заново, как обычный гость, и увидит "Доступ
    закрыт" благодаря только что выставленной блокировке. */
 async function removeOnlinePresence(id) {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!hasPerm('participants')) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   if (typeof firebase === 'undefined') { showToast('⚠️ Онлайн-список сейчас недоступен'); return; }
   var ok = await customConfirm('Закрыть доступ этому устройству насовсем и выкинуть его на экран входа прямо сейчас (если оно на связи)?');
   if (!ok) return;
@@ -1211,7 +1211,7 @@ async function syncPurchaseFromGithub() {
   // прийти со старой версией с GitHub (ещё без новой строки) и полностью
   // затирал purchaseData. Снаружи режима редактирования — синхронизация
   // как обычно.
-  if (isAdmin() && purchaseTemplateEditMode) return;
+  if (hasPerm('purchases') && purchaseTemplateEditMode) return;
   try {
     var res = await fetch('./' + PURCHASE_PATH + '?_=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return; // файла ещё нет (шаблон не настраивали) или открыто локально — тихий фолбэк
@@ -1219,7 +1219,7 @@ async function syncPurchaseFromGithub() {
     // Ещё одна проверка после await fetch()/await res.json(): пока мы
     // ждали ответ сети, админ мог успеть нажать "Редактировать шаблон"
     // и добавить строки — не затираем их результатом, который уже устарел.
-    if (isAdmin() && purchaseTemplateEditMode) return;
+    if (hasPerm('purchases') && purchaseTemplateEditMode) return;
     if (!data || typeof data !== 'object') return;
 
     var incomingCategories, incomingData;
@@ -1639,6 +1639,7 @@ function renderParticipantsList() {
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
         (devMode ? '<button class="btn btn-sm ' + (isRoleAdmin ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantAdmin(\'' + escAttr(p.id) + '\')" title="' + (isRoleAdmin ? 'Снять права администратора (нужно подтверждение ключом)' : 'Дать права администратора (нужно подтверждение ключом)') + '">' + (isRoleAdmin ? '👤 Снять админа' : '👑 Сделать админом') + '</button>' : '') +
+        (devMode && isRoleAdmin ? '<button class="btn btn-ghost btn-sm" onclick="openParticipantPermissions(\'' + escAttr(p.id) + '\')" title="Настроить, что именно может редактировать и сохранять этот администратор">⚙️ Права</button>' : '') +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
       '</div>' +
@@ -1692,6 +1693,101 @@ async function toggleParticipantAdmin(id) {
     );
     if (wantsFull) await prepareAdminHandoffMessage(p);
   }
+}
+
+/* ================================================================
+   МОДАЛКА НАСТРОЙКИ ПРАВ АДМИНИСТРАТОРА
+   ================================================================
+   Отдельная модалка (не через showModal(), у неё другой набор полей —
+   чекбоксы вместо одного текстового поля). Строится один раз через
+   ensurePermModalDom() по тому же принципу, что и ensureModalDom(). */
+function ensurePermModalDom() {
+  if ($('perm-modal-overlay')) return;
+  var rows = PERMISSION_DEFS.map(function(def) {
+    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--glass-border);cursor:pointer">' +
+      '<input type="checkbox" id="perm-check-' + def.key + '" style="margin-top:3px;width:18px;height:18px;flex-shrink:0">' +
+      '<span><strong style="display:block">' + def.label + '</strong>' +
+      '<span style="font-size:12px;color:var(--text-muted)">' + def.desc + '</span></span>' +
+    '</label>';
+  }).join('');
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="modal-overlay" id="perm-modal-overlay">' +
+      '<div class="modal-box">' +
+        '<h3>⚙️ Права администратора</h3>' +
+        '<p id="perm-modal-message" style="margin-bottom:4px"></p>' +
+        '<div id="perm-modal-checks">' + rows + '</div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn btn-ghost btn-sm" id="perm-modal-cancel">Отмена</button>' +
+          '<button class="btn btn-primary btn-sm" id="perm-modal-ok">💾 Сохранить</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+/* Показывает модалку с текущими правами участника p, возвращает Promise:
+   объект { recipes: bool, participants: bool, purchases: bool } при
+   нажатии "Сохранить", или null при отмене. Значения не сохраняются
+   здесь — это делает openParticipantPermissions() после подтверждения
+   ключом, как и toggleParticipantAdmin(). */
+function showPermModal(p) {
+  ensurePermModalDom();
+  return new Promise(function(resolve) {
+    var overlay = $('perm-modal-overlay');
+    var msgEl = $('perm-modal-message');
+    var okBtn = $('perm-modal-ok');
+    var cancelBtn = $('perm-modal-cancel');
+
+    msgEl.textContent = 'Что может делать «' + p.name + '» как администратор:';
+    var perms = getParticipantPermissions(p);
+    PERMISSION_DEFS.forEach(function(def) {
+      var cb = $('perm-check-' + def.key);
+      if (cb) cb.checked = !!perms[def.key];
+    });
+
+    overlay.classList.add('show');
+
+    function cleanup(result) {
+      overlay.classList.remove('show');
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+      resolve(result);
+    }
+
+    okBtn.onclick = function() {
+      var result = {};
+      PERMISSION_DEFS.forEach(function(def) {
+        var cb = $('perm-check-' + def.key);
+        result[def.key] = cb ? cb.checked : true;
+      });
+      cleanup(result);
+    };
+    cancelBtn.onclick = function() { cleanup(null); };
+  });
+}
+
+/* Открыть настройку прав для уже назначенного админа. Как и назначение/
+   снятие самого статуса админа, доступно только разработчику и требует
+   повторного подтверждения GitHub-ключом перед сохранением — чтобы
+   права нельзя было расширить, просто оказавшись рядом с чужим уже
+   разблокированным устройством. */
+async function openParticipantPermissions(id) {
+  if (!isDeveloper()) { showToast('🔒 Управлять правами администраторов может только разработчик (вход по GitHub-ключу)'); return; }
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+  if (!p || p.role !== 'admin') return;
+
+  var result = await showPermModal(p);
+  if (!result) return; // отмена
+
+  var confirmed = await confirmWithDeveloperKey('🔑 Подтверждение изменения прав');
+  if (!confirmed) return;
+
+  p.permissions = result;
+  renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var saved = await syncParticipantsToGithub();
+  if (saved) showToast('⚙️ Права обновлены');
+  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 /* ================================================================
@@ -1810,7 +1906,7 @@ async function addParticipantManually() {
 }
 
 async function toggleParticipantBlock(id) {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!hasPerm('participants')) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var p = participants.filter(function(x) { return x.id === id; })[0];
   if (!p) return;
   var willBlock = !p.blocked;
@@ -1832,7 +1928,7 @@ async function toggleParticipantBlock(id) {
 }
 
 async function removeParticipant(id) {
-  if (!isAdmin()) { showToast('🔒 Доступно только в режиме редактирования'); return; }
+  if (!hasPerm('participants')) { showToast('🔒 Доступно только в режиме редактирования'); return; }
   var ok = await customConfirm('Удалить эту запись из списка участников?');
   if (!ok) return;
   participants = participants.filter(function(x) { return x.id !== id; });
@@ -1887,6 +1983,46 @@ function isAdminByParticipantRole() {
    на случай если устройство осталось разблокированным без присмотра. */
 function isDeveloper() {
   return localStorage.getItem(ADMIN_KEY) === '1';
+}
+
+/* ================================================================
+   ГРАНУЛЯРНЫЕ ПРАВА АДМИНИСТРАТОРА
+   ================================================================
+   Разработчик (вход по GitHub-ключу) видит и может ВСЁ всегда — этот
+   список его не касается. А вот для админов, которых назначают через
+   список "Участники" (toggleParticipantAdmin), разработчик может
+   отдельно включать/выключать доступ к каждому из трёх разделов ниже
+   — например, дать доступ только к рецептам, но не к закупкам.
+
+   Хранится в participants.json как p.permissions = { recipes: true,
+   participants: false, purchases: true, ... }. Если поля permissions
+   нет вообще (старые записи, или админ, назначенный до появления этой
+   функции) — считаем, что разрешено ВСЁ: это сохраняет прежнее
+   поведение и ничего не ломает для уже выданных прав. Явно записанное
+   false — это единственный способ что-то запретить. */
+var PERMISSION_DEFS = [
+  { key: 'recipes', label: '📖 Рецепты', desc: 'Редактировать и сохранять уже существующие карточки рецептов' },
+  { key: 'participants', label: '👥 Участники', desc: 'Блокировать / открывать доступ и удалять записи участников' },
+  { key: 'purchases', label: '🛒 Закупки', desc: 'Редактировать шаблон закупки: цеха, поставщиков, позиции, загрузку прайсов' }
+];
+
+function getParticipantPermissions(p) {
+  var perms = {};
+  PERMISSION_DEFS.forEach(function(def) {
+    perms[def.key] = !(p && p.permissions && p.permissions[def.key] === false);
+  });
+  return perms;
+}
+
+/* Проверка конкретного права. Разработчик проходит всегда. Обычный
+   админ (роль 'admin' у своей записи участника) — по значению
+   permissions, с запасным вариантом "разрешено", если поле не задано.
+   Не-админы и заблокированные всегда получают false. */
+function hasPerm(key) {
+  if (isDeveloper()) return true;
+  var me = getMyParticipantRecord();
+  if (!me || me.blocked || me.role !== 'admin') return false;
+  return getParticipantPermissions(me)[key];
 }
 
 /* ================================================================
@@ -2964,7 +3100,7 @@ function resetForm() {
 }
 
 async function saveRecipe() {
-  if (!isAdmin()) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
+  if (!hasPerm('recipes')) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
   if (!editingRecipe && !isDeveloper()) { showToast('🔒 Создавать новые рецепты может только разработчик'); return; }
   var name = $('f-name').value.trim();
   if (!name) { showToast('⚠️ Укажите название рецепта'); return; }
@@ -3373,7 +3509,7 @@ var currentPurchaseCategory = 'pizza';
 var purchaseTemplateEditMode = false;
 
 async function togglePurchaseTemplateEdit() {
-  if (!isAdmin()) { showToast('🔒 Редактировать шаблон может только владелец или администратор'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Редактировать шаблон может только владелец или администратор'); return; }
   if (purchaseTemplateEditMode) {
     // Выход из режима редактирования: сначала пытаемся сохранить то, что
     // успели поправить (минуя debounce), и выходим из режима ТОЛЬКО если
@@ -3408,7 +3544,7 @@ function updatePurchaseTemplateControls() {
   // постоянно: иначе было бы не очевидно, в какую именно категорию
   // упадут позиции из файла.
   if (importBtn) importBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
-  var canManage = isAdmin() && purchaseTemplateEditMode;
+  var canManage = hasPerm('purchases') && purchaseTemplateEditMode;
   var c = purchaseCategoryById(currentPurchaseCategory);
   if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
   // Удаление цеха/поставщика теперь делается иконкой 🗑️ прямо на главной
@@ -3425,7 +3561,7 @@ function updatePurchaseTemplateControls() {
    Возвращает true/false — вызывающий код (например, togglePurchaseTemplateEdit)
    использует это, чтобы решить, можно ли считать сохранение завершённым. */
 async function savePurchaseTemplateNow(silent) {
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return false; }
+  if (!hasPerm('purchases')) { showToast('🔒 Доступно только владельцу или администратору'); return false; }
   clearTimeout(purchaseSyncDebounceTimer);
   if (!silent) showToast('⏳ Сохраняю шаблон...');
   var ok = await syncPurchaseToGithub();
@@ -3575,7 +3711,7 @@ function showPurchaseDetail(cat) {
    главной странице) — то же самое, что открыть карточку и затем нажать
    "✏️ Редактировать шаблон" на детальном экране, просто одним кликом. */
 function enterPurchaseEditFor(cat) {
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   showPurchaseDetail(cat);
   if (!purchaseTemplateEditMode) {
     purchaseTemplateEditMode = true;
@@ -3653,7 +3789,7 @@ function updatePurchaseCombinedSectionVisibility() {
    от Пицца бар/Горячего цеха, новый цех не помечен protected — его
    можно переименовать и удалить (см. removePurchaseCategory). */
 function addPurchaseWorkshop() {
-  if (!isAdmin()) { showToast('🔒 Добавлять цеха может только владелец или администратор'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Добавлять цеха может только владелец или администратор'); return; }
   customPrompt('Название нового цеха, например: Кондитерский цех', '', 'Новый цех').then(function(val) {
     val = (val || '').trim();
     if (!val) return;
@@ -3677,7 +3813,7 @@ function addPurchaseWorkshop() {
    расчёт "сколько докупить", копирование/выгрузка результата — просто
    в заголовке результата вместо "Пицца бар" будет название поставщика. */
 function addPurchaseSupplier() {
-  if (!isAdmin()) { showToast('🔒 Добавлять поставщиков может только владелец или администратор'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Добавлять поставщиков может только владелец или администратор'); return; }
   customPrompt('Название поставщика, например: ООО «Метро» или ФЛП Иванов', '', 'Новый поставщик').then(function(val) {
     val = (val || '').trim();
     if (!val) return;
@@ -3698,7 +3834,7 @@ function addPurchaseSupplier() {
 
 function renamePurchaseCategory(cat) {
   cat = cat || currentPurchaseCategory;
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
   customPrompt('Новое название:', c.label, 'Переименовать').then(function(val) {
@@ -3728,7 +3864,7 @@ function renamePurchaseCategory(cat) {
    возвращаемся на главную страницу. */
 function removePurchaseCategory(cat) {
   cat = cat || currentPurchaseCategory;
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
   if (c.protected) { showToast('🔒 Эту категорию удалить нельзя'); return; }
@@ -3757,7 +3893,7 @@ function removePurchaseCategory(cat) {
    purchaseCategoriesForWorkshop(). */
 function linkPurchaseSupplierWorkshop(cat) {
   cat = cat || currentPurchaseCategory;
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  if (!hasPerm('purchases')) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
   if (c.builtin) { showToast('🔒 Цех уже сам является цехом — привязка не нужна'); return; }
@@ -3773,7 +3909,7 @@ function linkPurchaseSupplierWorkshop(cat) {
 }
 
 function addPurchaseRow(cat) {
-  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы добавлять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
+  if (!(hasPerm('purchases') && purchaseTemplateEditMode)) { showToast('🔒 Чтобы добавлять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   cat = cat || currentPurchaseCategory;
   var rows = purchaseRowsFor(cat);
   var row = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: '', unit: 'кг', norm: '', residual: '', reorder: '', reorderUnit: 'кг' };
@@ -3806,14 +3942,14 @@ function addPurchaseRow(cat) {
    затирать уже вписанные недельные нормы у существующих строк. */
 
 function triggerPurchaseImport() {
-  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы загрузить прайс, сначала нажмите «✏️ Редактировать шаблон»'); return; }
+  if (!(hasPerm('purchases') && purchaseTemplateEditMode)) { showToast('🔒 Чтобы загрузить прайс, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   var input = $('purchase-import-file');
   if (input) input.click();
 }
 
 async function handlePurchaseImportFile(file) {
   if (!file) return;
-  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы загрузить прайс, сначала нажмите «✏️ Редактировать шаблон»'); return; }
+  if (!(hasPerm('purchases') && purchaseTemplateEditMode)) { showToast('🔒 Чтобы загрузить прайс, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   showToast('⏳ Читаю файл...');
   var pairs;
   try {
@@ -3974,7 +4110,7 @@ async function extractPdfText(file) {
 }
 
 function removePurchaseRow(cat, id) {
-  if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы удалять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
+  if (!(hasPerm('purchases') && purchaseTemplateEditMode)) { showToast('🔒 Чтобы удалять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   purchaseData[cat] = purchaseRowsFor(cat).filter(function(r) { return r.id !== id; });
   savePurchaseData();
   renderPurchaseList();
@@ -3987,7 +4123,7 @@ function removePurchaseRow(cat, id) {
 // доступно всем и никуда, кроме этого браузера, не сохраняется.
 var PURCHASE_TEMPLATE_FIELDS = { name: true, unit: true, norm: true };
 function updatePurchaseField(cat, id, field, value) {
-  if (PURCHASE_TEMPLATE_FIELDS[field] && !(isAdmin() && purchaseTemplateEditMode)) {
+  if (PURCHASE_TEMPLATE_FIELDS[field] && !(hasPerm('purchases') && purchaseTemplateEditMode)) {
     showToast('🔒 Чтобы менять список и норму, сначала нажмите «✏️ Редактировать шаблон»');
     renderPurchaseList(); // откатываем поле в UI к сохранённому значению
     return;
@@ -4028,7 +4164,7 @@ function renderPurchaseList() {
   if (!holder) return;
   updatePurchaseCombinedSectionVisibility();
   var rows = purchaseRowsFor(currentPurchaseCategory);
-  var canEditTemplate = isAdmin() && purchaseTemplateEditMode;
+  var canEditTemplate = hasPerm('purchases') && purchaseTemplateEditMode;
 
   updatePurchaseTemplateControls();
 
@@ -4038,7 +4174,7 @@ function renderPurchaseList() {
   if (hint) {
     hint.textContent = canEditTemplate
       ? '🧮 Режим редактирования включён: правьте название/ед./норму — изменения сохранятся автоматически, а кнопка «💾 Сохранить шаблон» отправит их в GitHub сразу. Впишите также норму на неделю, чтобы калькулятор посчитал, сколько докупить.'
-      : (isAdmin()
+      : (hasPerm('purchases')
         ? '🧮 Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить. Чтобы поменять список позиций или норму, нажмите «✏️ Редактировать шаблон» выше.'
         : '🧮 Список составлен администратором. Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).');
   }
@@ -4614,7 +4750,7 @@ function openDetail(id, autoplayVideo) {
     '</div>' +
 
     '<!-- Actions (только для администратора) -->\n'
-    + (isAdmin() ?
+    + (hasPerm('recipes') ?
       '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">' +
         '<button class="btn btn-primary" onclick="editFromDetail(\'' + r.id + '\')">✏️ Редактировать</button>' +
         (isDeveloper() ? '<button class="btn btn-danger" onclick="deleteRecipe(\'' + r.id + '\')">🗑 Удалить</button>' : '') +
@@ -4697,7 +4833,7 @@ window.addEventListener('popstate', function() {
 });
 
 function editFromDetail(id) {
-  if (!isAdmin()) { showToast('🔒 Редактирование доступно только в режиме редактирования'); return; }
+  if (!hasPerm('recipes')) { showToast('🔒 Редактирование доступно только в режиме редактирования'); return; }
   var r = null;
   for (var i = 0; i < recipes.length; i++) {
     if (recipes[i].id === id) { r = recipes[i]; break; }
