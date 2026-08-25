@@ -152,6 +152,22 @@
   .search-clear:hover { background: var(--accent); color: #fff; }
   .search-clear:active { transform: translateY(-50%) scale(.9); }
 
+  /* Компактная кнопка "назад" на детальном экране закупки — круглая
+     иконка рядом с заголовком (в потоке документа, ничего не перекрывает
+     и не смещает соседние элементы), а не широкая кнопка с текстом. */
+  .purchase-detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .purchase-detail-header h3 { margin: 0; flex: 1; min-width: 0; }
+  .purchase-back-btn {
+    flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--glass-border); background: rgba(255,255,255,.06);
+    color: var(--text); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .purchase-back-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .purchase-back-btn:hover { background: rgba(255,255,255,.12); }
+  .purchase-back-btn:active { transform: scale(.92); }
+
   /* Чипы категорий (вкладка "Категории") */
   .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
