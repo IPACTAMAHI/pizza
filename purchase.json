@@ -16,7 +16,8 @@
       "id": "sup1787604624058905f0",
       "label": "ООО «Метро",
       "icon": "🚚",
-      "builtin": false
+      "builtin": false,
+      "workshop": "pizza"
     },
     {
       "id": "sup1787612463309uaumc",
