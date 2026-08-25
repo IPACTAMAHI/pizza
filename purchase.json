@@ -11,10 +11,20 @@
       "label": "Горячий цех",
       "icon": "🔥",
       "builtin": true
+    },
+    {
+      "id": "sup1787670070254dxeg2",
+      "label": "Хорека",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
     "pizza": [],
-    "hot": []
+    "hot": [],
+    "sup1787670070254dxeg2": []
   }
 }
