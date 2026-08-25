@@ -29,6 +29,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup17876716788179g8x0",
+      "label": "Сыры милк/поинт",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -235,6 +244,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup17876716788179g8x0": []
   }
 }
