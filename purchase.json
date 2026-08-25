@@ -83,6 +83,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787672144988vzact",
+      "label": "Молочник",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -439,6 +448,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787672144988vzact": []
   }
 }
