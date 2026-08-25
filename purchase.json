@@ -65,6 +65,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787671985818hw5g8",
+      "label": "Мясо",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -369,6 +378,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787671985818hw5g8": []
   }
 }
