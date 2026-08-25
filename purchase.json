@@ -56,6 +56,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787671937952jumnp",
+      "label": "Хлеб/чиабата",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -346,6 +355,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787671937952jumnp": []
   }
 }
