@@ -23,7 +23,8 @@
       "id": "sup1787612463309uaumc",
       "label": "ФЛП Иванов",
       "icon": "🚚",
-      "builtin": false
+      "builtin": false,
+      "workshop": "hot"
     }
   ],
   "data": {
