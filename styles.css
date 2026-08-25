@@ -1,0 +1,962 @@
+  :root {
+    --bg: #0b0b0d;
+    --surface: #18171a;
+    --card: #1c1b1e;
+    --accent: #e2564b;
+    --accent-2: #d9a54e;
+    --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 55%, #b23a30);
+    --text: #f7f4ef;
+    --text-muted: #b9b3ab;
+    --success: #3fb579;
+    --warning: #d9a54e;
+
+    --font-display: 'Fraunces', 'Georgia', serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Тёмные, почти непрозрачные поверхности — читаемость важнее эффекта стекла */
+    --glass-bg: rgba(24, 23, 26, .92);
+    --glass-bg-strong: rgba(28, 27, 30, .98);
+    --glass-border: rgba(255, 255, 255, .1);
+    --glass-blur: 18px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, .45);
+    --shadow-accent: 0 10px 26px rgba(226, 86, 75, .35);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+  body {
+    font-family: var(--font-body);
+    background:
+      linear-gradient(rgba(10,10,12,.92), rgba(8,8,10,.97)),
+      url(images/site-background.jpg);
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh; /* учитывает адресную строку/панели браузера на iOS и Android */
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+  ::selection { background: var(--accent); color: #fff; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: .035;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.26); }
+  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: .1px; }
+
+  /* ===== HEADER ===== */
+  .header {
+    background:
+      linear-gradient(180deg, rgba(10,8,10,.35) 0%, rgba(10,8,10,.55) 55%, rgba(15,12,18,.88) 100%),
+      url(images/site-header.jpg);
+    background-size: cover;
+    background-position: center 30%;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 34px 20px 30px;
+    padding-top: calc(34px + env(safe-area-inset-top, 0px));
+    text-align: center;
+    position: relative;
+    z-index: 100;
+    box-shadow: 0 4px 24px rgba(0,0,0,.22);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: 34px; margin-bottom: 6px; letter-spacing: .2px; font-weight: 700;
+    font-style: italic;
+    color: #fff;
+    text-shadow: 0 2px 14px rgba(0,0,0,.75);
+  }
+  .header p {
+    opacity: .9; font-size: 12px; letter-spacing: 4px; text-transform: uppercase;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 6px rgba(0,0,0,.7);
+    position: relative;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .header p::before, .header p::after {
+    content: ''; width: 22px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.5));
+  }
+  .header p::after { transform: rotate(180deg); }
+  /* Кнопки в углах шапки — стиль "тёмный квадрат, иконка + подпись" как в макете */
+  .header-corner-btn {
+    position: absolute;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    width: 56px; height: 56px;
+    border-radius: var(--radius-md);
+    background: rgba(15,15,20,.4);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.12);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .15s ease, background .2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .header-corner-btn:active { transform: scale(.94); background: rgba(15,15,20,.6); }
+  .header-corner-btn span.label {
+    font-size: 10px; line-height: 1; opacity: .9; letter-spacing: .3px;
+  }
+  .header-corner-btn span.icon { line-height: 1; display: flex; }
+  .header-corner-btn span.icon svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .admin-toggle { right: 14px; }
+  .export-toggle { left: 14px; }
+
+  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-wrap .search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px;
+    stroke: var(--text-muted); fill: none; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .search-wrap .search-input { margin-bottom: 0; padding-left: 42px; padding-right: 38px; }
+  .search-clear {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: rgba(255,255,255,.06);
+    color: var(--text-muted); font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease, color .15s ease;
+  }
+  .search-clear:hover { background: var(--accent); color: #fff; }
+  .search-clear:active { transform: translateY(-50%) scale(.9); }
+
+  /* Чипы категорий (вкладка "Категории") */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 9px 15px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--glass-border);
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+  .chip:active { transform: scale(.94); }
+  .chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
+
+  /* Админ-панель */
+  .admin-panel-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-soft);
+  }
+  .admin-panel-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+  }
+  .admin-panel-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+
+  /* Карточка участника в списке — раньше это была просто строка с
+     нижней границей и всё сливалось в один серый список; теперь у
+     каждой записи свой фон + скруглённая обводка, чтобы участники
+     визуально отделялись друг от друга и от фона панели. Админы и
+     заблокированные дополнительно подсвечены своим цветом. */
+  .participant-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .participant-item:last-child { margin-bottom: 0; }
+  .participant-item.is-admin {
+    border-color: rgba(217, 165, 78, .55);
+    background: rgba(217, 165, 78, .08);
+  }
+  .participant-item.is-blocked {
+    border-color: rgba(226, 86, 75, .55);
+    background: rgba(226, 86, 75, .08);
+  }
+
+  /* Главная страница вкладки "Закупка" — список цехов и поставщиков
+     карточками (вместо строки чипов), с иконками правки/удаления
+     напротив каждого. Клик по самой карточке открывает список позиций
+     этого цеха/поставщика; иконки справа — отдельные действия и клик
+     по ним не должен "провалиться" в открытие карточки (event.stopPropagation
+     в разметке). */
+  .purchase-home-group-title {
+    font-size: 13px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .04em;
+    margin: 18px 0 8px;
+  }
+  .purchase-home-group-title:first-child { margin-top: 0; }
+  .purchase-home-card {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 6px 6px 6px 14px;
+    margin-bottom: 8px;
+    transition: border-color .15s ease;
+  }
+  .purchase-home-card:hover { border-color: rgba(255,255,255,.25); }
+  .purchase-home-card-main {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .purchase-home-card-icon { font-size: 20px; flex-shrink: 0; }
+  .purchase-home-card-text { min-width: 0; }
+  .purchase-home-card-text strong { display: block; font-size: 15px; }
+  .purchase-home-card-meta { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .purchase-home-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .purchase-home-icon-btn {
+    width: 36px; height: 36px; border-radius: 9px; border: none;
+    background: rgba(255,255,255,.06); color: var(--text-muted);
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .purchase-home-icon-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+  .purchase-home-icon-btn:active { transform: scale(.92); }
+  .purchase-home-icon-btn-danger { color: #e2564b; background: rgba(226,86,75,.14); }
+  .purchase-home-icon-btn-danger:hover { background: rgba(226,86,75,.22); }
+  .purchase-home-empty { color: var(--text-muted); font-size: 13px; padding: 10px 2px 4px; }
+
+  /* Карточка "живого" посетителя в блоке "Онлайн" — тот же стиль,
+     что у участников, плюс цветной индикатор (зелёный — онлайн
+     прямо сейчас, серый — просто был(а) недавно). */
+  .online-item.is-live {
+    border-color: rgba(63, 181, 121, .55);
+    background: rgba(63, 181, 121, .08);
+  }
+  .online-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted); margin-right: 6px; flex-shrink: 0;
+  }
+  .online-item.is-live .online-dot { background: var(--success); box-shadow: 0 0 0 3px rgba(63,181,121,.25); }
+  .online-dot.is-live { background: var(--success); box-shadow: 0 0 0 3px rgba(63,181,121,.25); }
+  .online-member-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .3px;
+    padding: 2px 7px; border-radius: 20px;
+    background: rgba(217, 165, 78, .18); color: var(--accent-2);
+    margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Цветные бейджи типа/категории на карточках */
+  .type-badge { color: #fff; font-weight: 600; }
+  .type-pizza { background: #b23a45; }
+  .type-pinsa { background: #8a6033; }
+  .type-dough { background: #5b6b85; }
+  .type-sauce { background: #3d7a5c; }
+  .type-prep { background: #7c5aa3; }
+  .type-focaccia { background: #a3821f; }
+  .type-burger { background: #94502a; }
+
+  /* Подвал */
+  .app-footer {
+    text-align: center;
+    padding: 18px 12px calc(18px + env(safe-area-inset-bottom, 0px));
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: .5px;
+  }
+
+  /* По умолчанию (обычный посетитель) все элементы редактирования скрыты */
+  .admin-only { display: none !important; }
+  body.is-admin .admin-only { display: revert !important; }
+  body.is-admin .nav-tab.admin-only { display: block !important; }
+  body.is-admin button.admin-only,
+  body.is-admin .btn.admin-only { display: inline-flex !important; }
+  body.is-admin .guest-only { display: none !important; }
+  /* "developer-only" — как и .admin-only, но видно ТОЛЬКО настоящему
+     разработчику (вход по GitHub-ключу), а не обычному админу,
+     которому права выданы через список участников. Обычному админу
+     доступно ТОЛЬКО редактирование карточек рецептов (вкладки
+     "Категории"/"Добавить") — вкладка "⚙️ Админ-панель" (включая
+     раздел "Участники"), управление шаблоном закупки (цеха/поставщики
+     во вкладке "Закупка") и кнопка экспорта в шапке скрыты этим
+     классом и видны только настоящему разработчику. */
+  .developer-only { display: none !important; }
+  body.is-developer .developer-only { display: revert !important; }
+  body.is-developer .nav-tab.developer-only { display: block !important; }
+  body.is-developer button.developer-only,
+  body.is-developer .btn.developer-only { display: inline-flex !important; }
+  .admin-login-hint {
+    margin: 0 16px 14px; padding: 12px 14px;
+    background: var(--glass-bg); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md); font-size: 13px; color: var(--text-muted);
+    line-height: 1.5; cursor: pointer;
+  }
+  .admin-login-hint:active { opacity: .8; }
+
+  /* ===== NAV TABS ===== */
+  .nav-tabs {
+    display: flex;
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-bottom: 1px solid var(--glass-border);
+    position: sticky; top: 0; z-index: 90;
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    padding: 12px 6px 10px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color .25s ease, transform .15s ease;
+    border-bottom: 3px solid transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  .nav-tab .nav-icon {
+    line-height: 1; display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 12px;
+    transition: transform .25s ease, background .25s ease;
+  }
+  .nav-tab .nav-icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-tab .nav-label {
+    font-size: 11px; line-height: 1; letter-spacing: .2px; font-weight: 600;
+    border-bottom: 2px solid transparent; padding-bottom: 3px;
+    transition: border-color .25s ease;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab:active { transform: scale(.94); }
+  .nav-tab[data-tab="admin"] { color: var(--accent); }
+  .nav-tab.active { color: var(--accent); }
+  .nav-tab.active .nav-icon { background: rgba(226,86,75,.13); transform: translateY(-1px); }
+  .nav-tab.active .nav-label { border-bottom-color: var(--accent); }
+
+  /* ===== CONTENT AREA ===== */
+  .tab-content { display: none; padding: 16px; max-width: 800px; margin: 0 auto; }
+  .tab-content.active { display: block; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ===== CARD LIST ===== */
+  .recipe-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 11px 12px;
+    margin-bottom: 9px;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    animation: cardIn .35s ease backwards;
+  }
+  .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); background: var(--glass-bg-strong); border-color: rgba(226,86,75,.28); }
+  .recipe-card:active { transform: translateY(-1px) scale(.99); }
+
+  /* Цветная полоска слева по типу рецепта — для быстрого сканирования списка */
+  .recipe-card { border-left: 3px solid transparent; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-thumb {
+    width: 76px; height: 76px; border-radius: 12px;
+    object-fit: cover; flex-shrink: 0;
+    background: var(--surface);
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .card-info { flex: 1; min-width: 0; }
+  .card-info h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; line-height: 1.25; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 18px; padding-left: 4px; }
+  .card-share-btn {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,.05);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .card-share-btn svg {
+    width: 16px; height: 16px;
+    stroke: var(--text-muted); fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .card-share-btn:hover { background: rgba(226,86,75,.16); }
+  .card-share-btn:hover svg { stroke: var(--accent); }
+  .badge {
+    font-size: 11px; padding: 3px 9px;
+    border-radius: 20px; background: rgba(255,255,255,.09);
+    color: var(--text);
+  }
+  .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
+  .badge-video-active {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent) !important;
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 13px !important;
+    padding: 9px 16px !important;
+    min-height: 40px;
+    border-radius: 22px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform .1s, background .15s;
+    box-shadow: 0 3px 10px rgba(226,86,75,.32);
+  }
+  .badge-video-active svg { width: 16px; height: 16px; fill: #fff; flex-shrink: 0; }
+  .badge-video-active:hover { background: #d9645a !important; }
+  .badge-video-active:active { transform: scale(0.95); }
+
+  /* Бейдж категории/стиля рецепта — единый нейтральный цвет на всех карточках */
+  .badge-style { background: rgba(217,165,78,.2); color: #ecd4a0; }
+
+  /* ===== FORMS ===== */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(255,255,255,.035);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 16px; /* >=16px обязательно: иначе Safari iOS зумит страницу при фокусе */
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,86,75,.16); }
+
+  /* Photo upload */
+  .photo-upload {
+    width: 100%; height: 160px;
+    background: var(--surface);
+    border: 2px dashed rgba(255,255,255,.18);
+    border-radius: 14px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer; transition: all .2s;
+    position: relative;
+  }
+  .photo-upload:hover { border-color: var(--accent); background: rgba(226,86,75,.05); }
+  .photo-upload img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .photo-upload .placeholder-icon { font-size: 40px; margin-bottom: 6px; opacity: .5; }
+  .photo-upload .placeholder-text { font-size: 13px; color: var(--text-muted); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: transform .15s ease, filter .2s ease, box-shadow .2s ease;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn-primary { background: var(--accent-grad); box-shadow: var(--shadow-accent); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-success { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; box-shadow: 0 8px 22px rgba(46,204,113,.25); }
+  .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+  .btn-ghost {
+    background: rgba(255,255,255,.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,.08); color: var(--text); }
+  .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+  /* Ingredients list in form */
+  .ingredient-row {
+    display: flex; gap: 8px; align-items: center;
+    margin-bottom: 8px;
+  }
+  .ingredient-row input { flex: 1; }
+  .ingredient-row button { flex-shrink: 0; }
+
+  /* ===== ЗАКУПКА (калькулятор недельной закупки) ===== */
+  .purchase-row {
+    background: var(--card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .purchase-row-top .purchase-name { flex: 1; }
+  .purchase-remove {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; border: none;
+    background: rgba(231,76,60,.14); color: #e2564b; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .purchase-remove:active { transform: scale(.92); }
+  .purchase-row-fields {
+    display: grid; grid-template-columns: 60px 1fr 1fr 1fr 1fr; gap: 6px;
+  }
+  .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
+  .purchase-reorder-group { display: flex; gap: 4px; }
+  .purchase-reorder-group input { min-width: 0; flex: 1 1 auto; }
+  .purchase-reorder-group select { flex: 0 0 58px; padding: 8px 2px; }
+  .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  .purchase-field select, .purchase-field input {
+    padding: 8px 6px; font-size: 14px; width: 100%;
+  }
+  .purchase-result {
+    padding: 8px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    text-align: center; min-height: 34px; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.05); color: var(--text-muted);
+  }
+  .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
+  .purchase-result-ok { background: rgba(63,181,121,.14); color: var(--success); }
+  /* Кратковременная подсветка только что добавленной строки — чтобы
+     после нажатия "+ Добавить ингредиент" было явно видно, что строка
+     появилась (особенно когда она пустая и визуально мало отличается
+     от остальных). */
+  .purchase-row.is-new {
+    border-color: var(--accent);
+    animation: purchaseRowNew 1.6s ease;
+  }
+  @keyframes purchaseRowNew {
+    0% { background: rgba(226,86,75,.22); }
+    100% { background: var(--card); }
+  }
+  @media (max-width: 480px) {
+    .purchase-row-fields { grid-template-columns: 1fr 1fr; }
+    .purchase-field-unit { order: -1; }
+    .purchase-field-reorder { grid-column: span 2; }
+  }
+  /* Общий список закупки (все поставщики сразу, для обхода цеха) —
+     та же карточка .purchase-row, только имя/ед./норма — просто текст
+     (шаблон правится в разделе поставщика выше), редактируется только
+     остаток. Список сплошной, без разбивки по поставщику. */
+  .purchase-row-readonly-name { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+  .purchase-row-readonly-name .purchase-row-meta { font-weight: 500; font-size: 12px; color: var(--text-muted); margin-left: 6px; }
+
+  /* Videos list in form */
+  .video-row { margin-bottom: 10px; }
+  .video-row-inputs { display: flex; gap: 8px; align-items: center; }
+  .video-row-inputs input { flex: 1; }
+  .video-row-inputs button { flex-shrink: 0; }
+  .video-row-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+  .row-move-btns { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+  .row-move-btns button {
+    width: 28px; height: 19px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.06); border: none; border-radius: 5px;
+    color: var(--text-muted); cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .row-move-btns button svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .row-move-btns button:active:not(:disabled) { background: var(--accent); color: #fff; }
+  .row-move-btns button:disabled { opacity: .3; cursor: default; }
+
+  /* Steps list in form */
+  .step-row {
+    display: flex; gap: 8px; align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .step-num {
+    min-width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    margin-top: 4px;
+  }
+
+  /* ===== DETAIL VIEW ===== */
+  .detail-back { margin-bottom: 16px; }
+
+  /* Плавающая компактная кнопка "Назад" — дублирует обычную "← Назад"
+     наверху рецепта, но остаётся доступной при прокрутке вниз. Не
+     занимает место в потоке (position:fixed), маленькая и полупрозрачная,
+     чтобы не перекрывать контент; появляется плавно через opacity/transform,
+     а не display:none/block, чтобы переход был мягким. pointer-events
+     выключены, пока кнопка скрыта, — иначе invisible-кнопка мешала бы
+     кликам по контенту под ней. */
+  .detail-back-floating {
+    position: fixed;
+    left: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    z-index: 80;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    box-shadow: var(--shadow-soft);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(10px) scale(.9);
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .detail-back-floating svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .detail-back-floating.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+  .detail-back-floating:active { transform: scale(.92); }
+
+  .detail-photo {
+    width: 100%; max-height: 320px; object-fit: cover;
+    border-radius: var(--radius-lg); margin-bottom: 18px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .video-embed-wrap {
+    position: relative;
+    border-radius: 14px; overflow: hidden; margin: 0 auto 20px;
+    background: #000;
+  }
+  /* Горизонтальное видео (обычный YouTube, Vimeo, Facebook, Google Диск) */
+  .video-embed-wrap.ratio-16-9 { width: 100%; aspect-ratio: 16 / 9; }
+  /* Вертикальное видео (Shorts, TikTok, Reels) — ограничиваем по высоте,
+     чтобы видео целиком помещалось на экране без прокрутки вверх/вниз */
+  .video-embed-wrap.ratio-9-16 { aspect-ratio: 9 / 16; max-height: 68vh; width: auto; max-width: 100%; }
+  /* Обычный пост Instagram (часто квадратный/почти квадратный) */
+  .video-embed-wrap.ratio-4-5 { aspect-ratio: 4 / 5; max-height: 68vh; width: auto; max-width: 100%; }
+  .video-embed-wrap iframe,
+  .video-embed-wrap video {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
+  }
+  .video-fallback-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 18px; margin-bottom: 20px;
+    background: var(--card); border: 1px solid var(--glass-border); border-radius: 12px;
+    color: var(--accent); text-decoration: none; font-size: 14px;
+  }
+  .qr-share-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 20px; margin-top: 24px;
+    text-align: center;
+    box-shadow: var(--shadow-soft);
+  }
+  .qr-share-card h3 { font-size: 16px; margin-bottom: 4px; }
+  .qr-share-card p { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
+  .qr-canvas-holder {
+    display: inline-block; border-radius: 10px; background: #fff; padding: 10px;
+    min-width: 180px; min-height: 180px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.14);
+  }
+  .qr-canvas-holder img, .qr-canvas-holder canvas { display: block; }
+  .qr-share-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .btn-telegram {
+    background: #29a9eb; color: #fff;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-telegram svg { width: 16px; height: 16px; fill: #fff; }
+  .detail-title { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 29px; margin-bottom: 10px; }
+  .detail-meta {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .detail-badge {
+    padding: 7px 14px; border-radius: 20px;
+    background: var(--card); font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    border: 1px solid var(--glass-border);
+  }
+
+  .section-title {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: 20px; margin: 26px 0 14px;
+    padding-bottom: 8px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 2px solid rgba(226,86,75,.3);
+  }
+  .section-title::before {
+    content: '';
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-grad);
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px rgba(226,86,75,.14);
+  }
+
+  .ingredients-list li,
+  .steps-list li {
+    margin-bottom: 8px; font-size: 15px;
+  }
+
+  /* ===== ИНГРЕДИЕНТЫ-КАЛЬКУЛЯТОР ===== */
+  .ingr-calc-hint {
+    font-size: 12.5px; color: var(--text-muted);
+    margin-bottom: 10px; line-height: 1.4;
+  }
+  .ingr-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 10px 10px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    font-size: 15px;
+    transition: background .15s ease;
+  }
+  .ingr-row:hover { background: rgba(255,255,255,.03); }
+  .ingr-row:last-of-type { border-bottom: none; }
+  .ingr-row-plain {
+    color: var(--text-muted); font-size: 13.5px;
+    padding: 6px 0; border-bottom: none;
+  }
+  .ingr-name { flex: 1; min-width: 0; word-break: break-word; }
+  .ingr-suffix { color: var(--text-muted); font-size: 12.5px; }
+  .ingr-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .ingr-input {
+    width: 74px; padding: 7px 8px; border-radius: 10px;
+    border: 1px solid var(--glass-border); background: var(--card);
+    color: var(--text); font-size: 14.5px; text-align: right;
+    -moz-appearance: textfield;
+  }
+  .ingr-input:focus { outline: none; border-color: var(--accent); }
+  .ingr-input::-webkit-outer-spin-button,
+  .ingr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .ingr-unit, .ingr-unit-static {
+    font-size: 13.5px; color: var(--text-muted); min-width: 30px;
+  }
+  .ingr-unit {
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--glass-border); border-radius: 8px;
+    padding: 6px 4px;
+  }
+  .ingr-calc-reset { margin-top: 14px; }
+  .steps-list { padding-left: 0; counter-reset: step; }
+  .steps-list li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 42px;
+    padding-top: 2px;
+    margin-bottom: 16px; font-size: 15px;
+    min-height: 28px;
+  }
+  .steps-list li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent-grad);
+    box-shadow: 0 4px 10px rgba(226,86,75,.3);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 13px; font-weight: 700;
+  }
+  .steps-list li:not(:last-child)::after {
+    content: '';
+    position: absolute; left: 13px; top: 30px; bottom: -14px;
+    width: 2px;
+    background: linear-gradient(rgba(226,86,75,.3), rgba(226,86,75,0));
+  }
+  .steps-list li { cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: opacity .2s ease; }
+  .steps-list li.step-done { opacity: .5; text-decoration: line-through; text-decoration-color: var(--text-muted); }
+  .steps-list li.step-done::before { content: '✓'; background: var(--success); box-shadow: 0 4px 10px rgba(46,204,113,.3); }
+
+  /* ===== SKELETON LOADING ===== */
+  .skeleton {
+    background: linear-gradient(100deg, rgba(255,255,255,.06) 30%, rgba(255,255,255,.13) 50%, rgba(255,255,255,.06) 70%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 10px;
+  }
+  @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+  .skeleton-photo { width: 100%; height: 240px; border-radius: var(--radius-lg); margin-bottom: 18px; }
+  .skeleton-title { width: 65%; height: 30px; margin-bottom: 14px; border-radius: 8px; }
+  .skeleton-badges { display: flex; gap: 8px; background: none; animation: none; margin-bottom: 22px; }
+  .skeleton-chip { width: 90px; height: 26px; border-radius: 20px; }
+  .skeleton-line { height: 15px; margin-bottom: 10px; width: 100%; }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 60px; margin-bottom: 14px; opacity: .55; filter: drop-shadow(0 6px 14px rgba(0,0,0,.2)); }
+  .empty-state h3 { font-family: var(--font-display); font-style: italic; }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    padding: 14px 28px;
+    background: rgba(39, 174, 96, .9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #fff;
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    box-shadow: var(--shadow-soft);
+    opacity: 0; transition: opacity .3s ease, transform .3s ease;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== MODAL (замена prompt()/confirm() — на iOS в режиме "На экран Домой" они не работают) ===== */
+  .photo-lightbox {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.92);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 2100;
+    padding: 20px;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .photo-lightbox.show { display: flex; }
+  .photo-lightbox img {
+    max-width: 100%; max-height: 100%;
+    border-radius: 8px;
+    object-fit: contain;
+  }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100000;
+    padding: 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,.28);
+    animation: modalIn .2s ease;
+  }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  /* Раньше использовалось для плашки-предупреждения на шаге "вступите
+     в группу" в многошаговом сценарии отправки заявки — сейчас этот
+     шаг убран (см. requireTelegramSend), класс оставлен неиспользуемым
+     на случай, если понадобится похожая плашка где-то ещё. */
+  .group-join-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(217, 165, 78, .14);
+    border: 1.5px solid var(--warning);
+    color: var(--warning);
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    animation: pulseWarn 1.8s ease-in-out infinite;
+  }
+  .group-join-warning .gjw-icon { font-size: 18px; line-height: 1.3; flex: none; }
+  .group-join-warning strong { color: #fff; }
+  @keyframes pulseWarn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 165, 78, .38); }
+    50% { box-shadow: 0 0 0 7px rgba(217, 165, 78, 0); }
+  }
+  .modal-box h3 { margin-bottom: 8px; font-size: 18px; }
+  .modal-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 14px; white-space: pre-line; line-height: 1.5; }
+  .modal-box input {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    background: var(--surface); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 10px; color: var(--text); margin-bottom: 4px;
+  }
+  .modal-box select {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    background: var(--surface); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 10px; color: var(--text); margin-bottom: 4px;
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 500px) {
+    .header h1 { font-size: 22px; }
+    .card-thumb { width: 70px; height: 70px; }
+    .nav-tab { padding: 10px 4px; font-size: 13px; }
+  }
+  @media (min-width: 901px) {
+    .header { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  }
