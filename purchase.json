@@ -32,6 +32,13 @@
       "icon": "🚚",
       "builtin": false,
       "workshop": "pizza"
+    },
+    {
+      "id": "sup1787619819731xgnzb",
+      "label": "ыыыыфффввв",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "pizza"
     }
   ],
   "data": {
@@ -77,6 +84,7 @@
         "norm": ""
       }
     ],
-    "sup17876198116888gh33": []
+    "sup17876198116888gh33": [],
+    "sup1787619819731xgnzb": []
   }
 }
