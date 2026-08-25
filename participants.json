@@ -42,14 +42,5 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
-  },
-  {
-    "id": "OFII-CQD5",
-    "fingerprint": "",
-    "name": "",
-    "addedAt": 1787616043792,
-    "blocked": true,
-    "role": "viewer",
-    "claimed": false
   }
 ]
