@@ -101,6 +101,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup17876723783847w4ii",
+      "label": "Айсберг/фиш",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -479,6 +488,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup17876723783847w4ii": []
   }
 }
