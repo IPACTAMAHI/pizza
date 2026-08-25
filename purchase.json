@@ -1,12 +1,6 @@
 {
   "categories": [
     {
-      "id": "pizza",
-      "label": "Пицца бар",
-      "icon": "🍕",
-      "builtin": true
-    },
-    {
       "id": "hot",
       "label": "Горячий цех",
       "icon": "🔥",
@@ -131,7 +125,6 @@
     }
   ],
   "data": {
-    "pizza": [],
     "hot": [],
     "sup1787670070254dxeg2": [
       {
