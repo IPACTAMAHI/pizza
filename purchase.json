@@ -20,6 +20,15 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787670377069itgby",
+      "label": "Чп смак",
+      "icon": "🚚",
+      "builtin": false,
+      "workshops": [
+        "__general__"
+      ]
     }
   ],
   "data": {
@@ -86,6 +95,7 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787670377069itgby": []
   }
 }
