@@ -3688,14 +3688,21 @@ function renderPurchaseHomeList() {
   var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
 
   // Кнопка "Отправить всё" видна только пока есть что реально заказывать —
-  // категория должна иметь ссылку для отправки И хотя бы одну позицию,
-  // требующую покупки/дозаказа (см. buildPurchaseReportLines). После
+  // категория должна иметь ссылку для отправки, содержать хотя бы одну
+  // РЕАЛЬНО ЗАПОЛНЕННУЮ пользователем позицию (purchaseCategoryHasTouchedData
+  // — остаток или дозаказ не пустые) И хотя бы одну позицию, требующую
+  // покупки/дозаказа (см. buildPurchaseReportLines). Второе условие
+  // (наличие заполненных полей) обязательно: buildPurchaseReportLines
+  // сама по себе трактует ПУСТОЙ остаток как "на складе 0" и потому
+  // требует докупить всю норму — без явной проверки "тронутости" кнопка
+  // была бы видна даже сразу после "🧹 Сбросить остатки", когда все поля
+  // ещё пустые и пользователь просто не успел ничего вписать. После
   // "✅ Завершить закупку" (finishSendAllPurchase) все обработанные позиции
   // "закрываются", и, если больше нигде ничего не нужно, кнопка сама
   // пропадает — без этого она осталась бы висеть просто из-за наличия
   // ссылки у поставщика, даже когда заказывать уже нечего.
   var sendableCount = purchaseCategories.filter(function(c) {
-    return (c.link || '').trim() && buildPurchaseReportLines(c.id).length > 0;
+    return (c.link || '').trim() && purchaseCategoryHasTouchedData(c.id) && buildPurchaseReportLines(c.id).length > 0;
   }).length;
   var html = '';
 
@@ -4151,9 +4158,7 @@ async function resetAllPurchaseStock() {
   allCats.forEach(function(cat) {
     purchaseRowsFor(cat).forEach(function(r) {
       totalRows++;
-      var hasResidual = r.residual !== undefined && r.residual !== null && String(r.residual) !== '';
-      var hasReorder = r.reorder !== undefined && r.reorder !== null && String(r.reorder) !== '';
-      if (hasResidual || hasReorder) rowsWithData++;
+      if (purchaseRowIsTouched(r)) rowsWithData++;
     });
   });
   if (!rowsWithData) { showToast('Остатки и дозаказ уже пусты везде — сбрасывать нечего'); return; }
@@ -4377,6 +4382,25 @@ function computeToBuy(row) {
   var diff = norm - residual;
   if (diff <= 0) return 0;
   return roundToBuy(diff);
+}
+
+// Была ли позиция реально "тронута" пользователем — вписан остаток или
+// дозаказ. В отличие от computeToBuy() (который трактует пустой "Остаток"
+// как 0 и потому сразу требует докупить всю норму), это НЕ учитывает
+// норму вовсе: пустые поля здесь не значат "нужно купить всё". Используется
+// как единый критерий вместе с resetAllPurchaseStock() — чтобы кнопка
+// "📤 Отправить всё поставщикам" пропадала сразу после "🧹 Сбросить
+// остатки" (когда все поля пустые) и появлялась заново только тогда,
+// когда в остаток/дозаказ реально что-то вписали, а не просто из-за того,
+// что где-то задана норма.
+function purchaseRowIsTouched(r) {
+  var hasResidual = r.residual !== undefined && r.residual !== null && String(r.residual) !== '';
+  var hasReorder = r.reorder !== undefined && r.reorder !== null && String(r.reorder) !== '';
+  return hasResidual || hasReorder;
+}
+
+function purchaseCategoryHasTouchedData(cat) {
+  return purchaseRowsFor(cat).some(purchaseRowIsTouched);
 }
 
 function purchaseResultDisplay(row) {
@@ -5218,7 +5242,7 @@ function clearSendAllPurchaseProgress() {
 
 function startSendAllPurchase() {
   var candidates = purchaseCategories.filter(function(c) {
-    return (c.link || '').trim() && buildPurchaseReportLines(c.id).length > 0;
+    return (c.link || '').trim() && purchaseCategoryHasTouchedData(c.id) && buildPurchaseReportLines(c.id).length > 0;
   });
   if (!candidates.length) {
     showToast('⚠️ Нет ни одного поставщика/цеха со ссылкой для отправки и заполненными позициями');
