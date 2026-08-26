@@ -1589,7 +1589,7 @@ function renderParticipantsList() {
           '<strong>🔑 ' + esc(p.id) + '</strong>' +
           '<br><span style="font-size:12px;color:var(--text-muted)">ещё не использован' + (dateStr ? ' · создан ' + dateStr : '') + '</span>' +
         '</div>' +
-        '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
+        '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
           '<button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard(\'' + escAttr(p.id) + '\', \'📋 Ключ скопирован\')" title="Скопировать ключ, чтобы отправить человеку">📋 Копировать</button>' +
           '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить неиспользованный ключ">✕</button>' +
         '</div>' +
@@ -1641,7 +1641,7 @@ function renderParticipantsList() {
         (statusHtml ? '<br>' + statusHtml : '') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
-      '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
+      '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
         (devMode ? '<button class="btn btn-sm ' + (isRoleAdmin ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantAdmin(\'' + escAttr(p.id) + '\')" title="' + (isRoleAdmin ? 'Снять права администратора (нужно подтверждение ключом)' : 'Дать права администратора (нужно подтверждение ключом)') + '">' + (isRoleAdmin ? '👤 Снять админа' : '👑 Сделать админом') + '</button>' : '') +
         (!isRoleAdmin ? '<button class="btn btn-sm ' + (isRolePurchase ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantPurchaseRole(\'' + escAttr(p.id) + '\')" title="' + (isRolePurchase ? 'Убрать роль «Закупка» — вкладка снова станет недоступна' : 'Дать доступ только к вкладке «Закупка», без прав администратора') + '">' + (isRolePurchase ? '🛒 Убрать закупку' : '🛒 Сделать закупщиком') + '</button>' : '') +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
