@@ -133,7 +133,8 @@
       "builtin": false,
       "workshops": [
         "__general__"
-      ]
+      ],
+      "workshop": "hot"
     }
   ],
   "data": {
