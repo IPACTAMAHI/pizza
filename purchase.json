@@ -1,6 +1,13 @@
 {
   "categories": [
     {
+      "id": "pizza",
+      "label": "Пицца бар",
+      "icon": "🍕",
+      "builtin": true,
+      "protected": true
+    },
+    {
       "id": "hot",
       "label": "Римские пекарни",
       "icon": "🔥",
@@ -135,9 +142,17 @@
         "__general__"
       ],
       "workshop": "hot"
+    },
+    {
+      "id": "sup1787747778816rlnpj",
+      "label": "Метро",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "hot"
     }
   ],
   "data": {
+    "pizza": [],
     "hot": [],
     "sup1787670070254dxeg2": [
       {
@@ -548,6 +563,7 @@
         "unit": "вед",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787747778816rlnpj": []
   }
 }
