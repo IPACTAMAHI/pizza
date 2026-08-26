@@ -1616,8 +1616,7 @@ function renderParticipantsList() {
   holder.innerHTML = shown.map(function(p) {
     var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
     var isRoleAdmin = p.role === 'admin';
-    var isRolePurchase = p.role === 'purchase';
-    var itemClass = 'participant-item' + (isRoleAdmin ? ' is-admin' : '') + (isRolePurchase ? ' is-purchase' : '') + (p.blocked ? ' is-blocked' : '');
+    var itemClass = 'participant-item' + (isRoleAdmin ? ' is-admin' : '') + (p.blocked ? ' is-blocked' : '');
     // Статус "онлайн" берём из того же источника, что и вкладка "Онлайн" —
     // Firebase presence (см. subscribeOnlineUsers): её id совпадает с id
     // участника (см. requireAccessKey — после входа id устройства = ключ).
@@ -1634,14 +1633,12 @@ function renderParticipantsList() {
       '<div style="min-width:0">' +
         '<strong>' + esc(p.name) + '</strong>' +
         (isRoleAdmin ? ' <span style="color:var(--accent-2);font-size:12px">· 👑 админ</span>' : '') +
-        (isRolePurchase ? ' <span style="color:#6ea8d6;font-size:12px">· 🛒 закупка</span>' : '') +
         (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
         (statusHtml ? '<br>' + statusHtml : '') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">' +
         (devMode ? '<button class="btn btn-sm ' + (isRoleAdmin ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantAdmin(\'' + escAttr(p.id) + '\')" title="' + (isRoleAdmin ? 'Снять права администратора (нужно подтверждение ключом)' : 'Дать права администратора (нужно подтверждение ключом)') + '">' + (isRoleAdmin ? '👤 Снять админа' : '👑 Сделать админом') + '</button>' : '') +
-        (!isRoleAdmin ? '<button class="btn btn-sm ' + (isRolePurchase ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantPurchaseRole(\'' + escAttr(p.id) + '\')" title="' + (isRolePurchase ? 'Убрать роль «Закупка» — вкладка снова станет недоступна' : 'Дать доступ только к вкладке «Закупка», без прав администратора') + '">' + (isRolePurchase ? '🛒 Убрать закупку' : '🛒 Сделать закупщиком') + '</button>' : '') +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
       '</div>' +
@@ -1695,35 +1692,6 @@ async function toggleParticipantAdmin(id) {
     );
     if (wantsFull) await prepareAdminHandoffMessage(p);
   }
-}
-
-/* Роль "Закупка" — в отличие от полноценного админа, даёт доступ ровно
-   к одной вкладке "Закупка" (см. hasPurchaseAccess/.purchase-access-only)
-   и ничего больше сверх обычного гостя. Так как это заметно менее
-   чувствительное право, чем admin, назначать/снимать её может любой
-   admin (isAdmin()), а не только настоящий разработчик — без
-   дополнительного подтверждения GitHub-ключом. Недоступна для тех, кто
-   уже admin — у админа и так есть доступ к "Закупке" через isAdmin(). */
-async function toggleParticipantPurchaseRole(id) {
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
-  var p = participants.filter(function(x) { return x.id === id; })[0];
-  if (!p) return;
-  if (p.role === 'admin') { showToast('🔒 У администратора и так есть доступ к «Закупке»'); return; }
-  var willGrant = p.role !== 'purchase';
-
-  var ok = await customConfirm(
-    willGrant
-      ? 'Дать «' + p.name + '» доступ к вкладке «Закупка»?\n\nОн увидит только эту вкладку (плюс всё, что видно обычному гостю) — без прав администратора и без доступа к рецептам или настройкам сайта.'
-      : 'Убрать у «' + p.name + '» доступ к вкладке «Закупка»?'
-  );
-  if (!ok) return;
-
-  p.role = willGrant ? 'purchase' : 'viewer';
-  renderParticipantsList();
-  showToast('⏳ Сохраняю...');
-  var saved = await syncParticipantsToGithub();
-  if (saved) showToast(willGrant ? '🛒 Доступ к «Закупке» выдан' : '🛒 Доступ к «Закупке» снят');
-  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 /* ================================================================
@@ -1921,21 +1889,6 @@ function isDeveloper() {
   return localStorage.getItem(ADMIN_KEY) === '1';
 }
 
-/* "Закупка" — отдельная, более узкая роль участника (наравне с
-   'viewer'/'admin' в поле participant.role): такой человек видит ровно
-   то же, что обычный гость, ПЛЮС вкладку "Закупка" (см. .purchase-access-only
-   в CSS и проверку ниже в switchTab). Права редактирования шаблона
-   закупки (переименование, ссылки, позиции и т.п.) у него при этом нет —
-   те остаются за isAdmin(), как и раньше. Админ/разработчик и так видят
-   "Закупку" через isAdmin(), поэтому эта функция нужна только для
-   отдельного, невидимого больше нигде случая — участника именно с
-   ролью 'purchase'. */
-function hasPurchaseAccess() {
-  if (isAdmin()) return true;
-  var me = getMyParticipantRecord();
-  return !!(me && !me.blocked && me.role === 'purchase');
-}
-
 /* ================================================================
    ПРОВЕРКА ФЛАГА АДМИНА ПРИ ЗАГРУЗКЕ
    ================================================================
@@ -2032,12 +1985,6 @@ const UNLOCK_ICON_SVG = '<svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" 
 function applyAdminUI() {
   document.body.classList.toggle('is-admin', isAdmin());
   document.body.classList.toggle('is-developer', isDeveloper());
-  // Отдельная роль "Закупка" (participant.role === 'purchase') — не
-  // путать с is-admin: у обычного админа/разработчика доступ и так уже
-  // раскрыт через is-admin, этот класс включается только для реального
-  // участника с ролью 'purchase' и открывает ему ровно вкладку "Закупка".
-  var meForPurchase = getMyParticipantRecord();
-  document.body.classList.toggle('is-purchase-role', !!(meForPurchase && !meForPurchase.blocked && meForPurchase.role === 'purchase'));
   if (!isAdmin()) purchaseTemplateEditMode = false; // выход из режима — сбрасываем и режим редактирования шаблона закупки
   var btn = $('admin-toggle-btn');
   if (btn) {
@@ -2577,10 +2524,6 @@ function switchTab(name) {
   // из editFromDetail ДО вызова switchTab) этим правилом не затрагивается.
   if (name === 'add' && isAdmin() && !isDeveloper() && !editingRecipe) {
     showToast('🔒 Добавлять новые рецепты может только разработчик — обычный админ может редактировать уже существующие карточки');
-    return;
-  }
-  if (name === 'purchase' && !hasPurchaseAccess()) {
-    showToast('🔒 Вкладка «Закупка» доступна только администратору и участникам с ролью «Закупка»');
     return;
   }
   if (location.hash.indexOf('#recipe=') === 0) {
@@ -3457,8 +3400,6 @@ function updatePurchaseTemplateControls() {
   var importBtn = $('purchase-import-btn');
   var renameBtn = $('purchase-rename-btn');
   var linkBtn = $('purchase-link-workshop-btn');
-  var linkContactBtn = $('purchase-link-contact-btn');
-  var deleteBtn = $('purchase-delete-btn');
   if (toggleBtn) toggleBtn.textContent = purchaseTemplateEditMode ? '🔒 Завершить редактирование' : '✏️ Редактировать шаблон';
   if (saveBtn) saveBtn.style.display = purchaseTemplateEditMode ? '' : 'none';
   // Загрузка прайса привязана к тому поставщику/цеху, который сейчас
@@ -3470,18 +3411,10 @@ function updatePurchaseTemplateControls() {
   var canManage = isAdmin() && purchaseTemplateEditMode;
   var c = purchaseCategoryById(currentPurchaseCategory);
   if (renameBtn) renameBtn.style.display = canManage ? '' : 'none';
+  // Удаление цеха/поставщика теперь делается иконкой 🗑️ прямо на главной
+  // странице закупки (см. renderPurchaseHomeList) — здесь, внутри
+  // редактирования конкретной карточки, эта кнопка больше не нужна.
   if (linkBtn) linkBtn.style.display = (canManage && c && !c.builtin) ? '' : 'none';
-  if (linkContactBtn) linkContactBtn.style.display = canManage ? '' : 'none';
-  if (linkContactBtn) linkContactBtn.textContent = (c && c.link) ? '🔗 Ссылка для отправки ✓' : '🔗 Ссылка для отправки';
-  // Удаление также доступно иконкой 🗑️ прямо на главной странице закупки
-  // (см. renderPurchaseHomeList), а теперь ещё и прямо внутри режима
-  // редактирования конкретной карточки — чтобы не приходилось возвращаться
-  // на главную. Защищённые категории (изначальные Пицца бар/Горячий цех)
-  // удалить нельзя — кнопка для них скрыта, как и раньше на главной.
-  if (deleteBtn) {
-    deleteBtn.style.display = (canManage && c && !c.protected) ? '' : 'none';
-    deleteBtn.textContent = (c && !c.builtin) ? '🗑️ Удалить поставщика' : '🗑️ Удалить цех';
-  }
 }
 
 /* Ручное сохранение шаблона в GitHub сразу, минуя обычную задержку
@@ -3548,13 +3481,6 @@ function purchaseRowsFor(cat) {
   });
   return purchaseData[cat];
 }
-
-/* Единицы измерения, доступные для поля "🔁 Дозаказ" в закупке —
-   отдельно от основной единицы позиции (row.unit, которая остаётся
-   только "кг"/"шт", см. renderPurchaseList). Список подобран под то,
-   как реально заказывают у поставщиков: вес/объём россыпью (кг, г, л,
-   мл) и штучная/тарная фасовка (шт, банка, ведро, бут). */
-var PURCHASE_REORDER_UNITS = ['кг', 'г', 'л', 'шт', 'банка', 'ведро', 'мл', 'бут'];
 
 function purchaseCategoryById(cat) {
   return purchaseCategories.find(function(c) { return c.id === cat; }) || null;
@@ -3632,7 +3558,6 @@ function showPurchaseHome() {
   purchaseHomeView = true;
   renderPurchaseHomeList();
   updatePurchaseViewVisibility();
-  if (window.refreshFloatingBackButton) window.refreshFloatingBackButton();
 }
 
 function showPurchaseDetail(cat) {
@@ -3644,8 +3569,6 @@ function showPurchaseDetail(cat) {
   updatePurchaseTemplateControls();
   renderPurchaseList();
   updatePurchaseViewVisibility();
-  window.scrollTo(0, 0);
-  if (window.refreshFloatingBackButton) window.refreshFloatingBackButton();
 }
 
 /* Открыть карточку сразу в режиме редактирования (клик по иконке ✏️ на
@@ -3671,11 +3594,10 @@ function renderPurchaseHomeList() {
       var w = purchaseCategoryById(c.workshop);
       if (w) workshopMark = '<div class="purchase-home-card-meta">' + esc(w.icon || '📦') + ' ' + esc(w.label) + '</div>';
     }
-    var linkMark = c.link ? '<div class="purchase-home-card-link-badge">🔗 ссылка для отправки настроена</div>' : '';
     return '<div class="purchase-home-card">' +
       '<div class="purchase-home-card-main" onclick="showPurchaseDetail(\'' + c.id + '\')">' +
         '<span class="purchase-home-card-icon">' + esc(c.icon || '📦') + '</span>' +
-        '<div class="purchase-home-card-text"><strong>' + esc(c.label) + '</strong>' + workshopMark + linkMark + '</div>' +
+        '<div class="purchase-home-card-text"><strong>' + esc(c.label) + '</strong>' + workshopMark + '</div>' +
       '</div>' +
       '<div class="purchase-home-card-actions developer-only">' +
         '<button type="button" class="purchase-home-icon-btn" title="Редактировать" onclick="event.stopPropagation(); enterPurchaseEditFor(\'' + c.id + '\')">✏️</button>' +
@@ -3687,19 +3609,7 @@ function renderPurchaseHomeList() {
   var workshops = purchaseCategories.filter(function(c) { return c.builtin; });
   var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
 
-  var sendableCount = purchaseCategories.filter(function(c) { return (c.link || '').trim(); }).length;
-  var sendProgress = getSendPurchaseProgress();
-  var sendProgressLine = '';
-  if (sendProgress.candidates.length && sendProgress.sentIds.length) {
-    sendProgressLine = sendProgress.sentIds.length >= sendProgress.candidates.length
-      ? '<div class="purchase-home-send-progress">✅ Уже отправлено всё: ' + sendProgress.sentIds.length + ' из ' + sendProgress.candidates.length + '</div>'
-      : '<div class="purchase-home-send-progress">↩️ Отправлено ' + sendProgress.sentIds.length + ' из ' + sendProgress.candidates.length + ' — нажмите, чтобы продолжить</div>';
-  }
-  var html = sendableCount
-    ? '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:' + (sendProgressLine ? '4px' : '18px') + '">📤 Отправить всё поставщикам (' + sendableCount + ')</button>' + sendProgressLine
-    : '';
-
-  html += '<div class="purchase-home-group-title">🏭 Цеха</div>';
+  var html = '<div class="purchase-home-group-title">🏭 Цеха</div>';
   html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного цеха.</p>';
   html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить цех</button>';
 
@@ -3803,37 +3713,6 @@ function renamePurchaseCategory(cat) {
     renderPurchaseList();
     schedulePurchaseSync();
     showToast('✏️ Название обновлено');
-  });
-}
-
-/* Ссылка на чат/группу/личку поставщика или цеха (Telegram, Viber,
-   WhatsApp, любой другой сервис — принимаем как есть, ссылка не
-   проверяется на конкретный формат конкретного мессенджера). Используется
-   кнопкой "📤 Отправить всё" на главной странице "Закупки" — см.
-   startSendAllPurchase(): по ней открывается чат, а в буфер обмена
-   заранее копируется текст отчёта именно этой категории. Если ссылка
-   введена без схемы (например просто "t.me/moya_gruppa" или
-   "wa.me/79991234567") — по умолчанию подставляем "https://", чтобы
-   window.open() не пытался открыть её как относительный адрес на самом
-   сайте. */
-function setPurchaseContactLink(cat) {
-  cat = cat || currentPurchaseCategory;
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
-  var c = purchaseCategoryById(cat);
-  if (!c) return;
-  customPrompt(
-    'Ссылка на группу или личный чат для отправки закупки — Telegram, Viber, WhatsApp и т.п. (можно оставить пустым, чтобы убрать):',
-    c.link || '', '🔗 Ссылка для отправки — ' + c.label
-  ).then(function(val) {
-    if (val === null) return;
-    val = (val || '').trim();
-    if (val && !/^[a-z][a-z0-9+.-]*:/i.test(val)) val = 'https://' + val; // без схемы — считаем обычной https-ссылкой
-    c.link = val;
-    savePurchaseData();
-    updatePurchaseTemplateControls();
-    renderPurchaseHomeList();
-    schedulePurchaseSync();
-    showToast(val ? '🔗 Ссылка сохранена' : '🔗 Ссылка убрана');
   });
 }
 
@@ -4120,21 +3999,6 @@ function updatePurchaseField(cat, id, field, value) {
   if (PURCHASE_TEMPLATE_FIELDS[field]) schedulePurchaseSync();
 }
 
-/* Единица для поля "🔁 Дозаказ" теперь выбирается кликом по одной из
-   всегда видимых кнопок (а не через нативный <select>, где остальные
-   варианты было видно только открыв список) — см. PURCHASE_REORDER_UNITS.
-   Обновляем только подсветку активной кнопки внутри своей группы,
-   без перерисовки всего списка, чтобы не сбивать фокус/ввод в других
-   полях строки. */
-function setPurchaseReorderUnit(cat, id, unit, btn) {
-  updatePurchaseField(cat, id, 'reorderUnit', unit);
-  var group = btn.closest('.purchase-reorder-unit-chips');
-  if (group) {
-    group.querySelectorAll('.reorder-unit-chip').forEach(function(b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-  }
-}
-
 // Округление "в выгодную сторону" = до ближайшего целого числа:
 // 12,1 → 12 (округление вниз), 12,6 → 13 (округление вверх).
 function roundToBuy(value) {
@@ -4203,7 +4067,14 @@ function renderPurchaseList() {
         '<label class="purchase-field purchase-field-unit"><span>Ед.</span>' +
           '<select class="purchase-unit"' + dis + ' onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
             '<option value="кг"' + (row.unit === 'кг' ? ' selected' : '') + '>кг</option>' +
+            '<option value="г"' + (row.unit === 'г' ? ' selected' : '') + '>г</option>' +
+            '<option value="л"' + (row.unit === 'л' ? ' selected' : '') + '>л</option>' +
+            '<option value="мл"' + (row.unit === 'мл' ? ' selected' : '') + '>мл</option>' +
             '<option value="шт"' + (row.unit === 'шт' ? ' selected' : '') + '>шт</option>' +
+            '<option value="банка"' + (row.unit === 'банка' ? ' selected' : '') + '>банка</option>' +
+            '<option value="ведро"' + (row.unit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
+            '<option value="бутылка"' + (row.unit === 'бутылка' ? ' selected' : '') + '>бутылка</option>' +
+            '<option value="упаковка"' + (row.unit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
@@ -4221,11 +4092,17 @@ function renderPurchaseList() {
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
-            '<div class="purchase-reorder-unit-chips">' +
-              PURCHASE_REORDER_UNITS.map(function(u) {
-                return '<button type="button" class="reorder-unit-chip' + (reorderUnit === u ? ' active' : '') + '" onclick="setPurchaseReorderUnit(\'' + cat + '\',\'' + row.id + '\',\'' + u + '\',this)">' + u + '</button>';
-              }).join('') +
-            '</div>' +
+            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
+              '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
+              '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
+              '<option value="л"' + (reorderUnit === 'л' ? ' selected' : '') + '>л</option>' +
+              '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
+              '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+              '<option value="банка"' + (reorderUnit === 'банка' ? ' selected' : '') + '>банка</option>' +
+              '<option value="ведро"' + (reorderUnit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
+              '<option value="бутылка"' + (reorderUnit === 'бутылка' ? ' selected' : '') + '>бутылка</option>' +
+              '<option value="упаковка"' + (reorderUnit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
+            '</select>' +
           '</div>' +
         '</label>' +
       '</div>' +
@@ -4292,11 +4169,17 @@ function renderPurchaseCombinedList() {
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
-            '<div class="purchase-reorder-unit-chips">' +
-              PURCHASE_REORDER_UNITS.map(function(u) {
-                return '<button type="button" class="reorder-unit-chip' + (reorderUnit === u ? ' active' : '') + '" onclick="setPurchaseReorderUnit(\'' + catId + '\',\'' + row.id + '\',\'' + u + '\',this)">' + u + '</button>';
-              }).join('') +
-            '</div>' +
+            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
+              '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
+              '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
+              '<option value="л"' + (reorderUnit === 'л' ? ' selected' : '') + '>л</option>' +
+              '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
+              '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+              '<option value="банка"' + (reorderUnit === 'банка' ? ' selected' : '') + '>банка</option>' +
+              '<option value="ведро"' + (reorderUnit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
+              '<option value="бутылка"' + (reorderUnit === 'бутылка' ? ' selected' : '') + '>бутылка</option>' +
+              '<option value="упаковка"' + (reorderUnit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
+            '</select>' +
           '</div>' +
         '</label>' +
       '</div>' +
@@ -4886,172 +4769,6 @@ async function deleteRecipe(id) {
 }
 
 /* ================================================================
-   ОТПРАВКА ВСЕХ ОТЧЁТОВ ПОСТАВЩИКАМ/ЦЕХАМ ("📤 Отправить всё")
-   ================================================================
-   По кнопке на главной странице "Закупки" собираем все категории
-   (цеха и поставщики), у которых указана ссылка (c.link) И есть хотя бы
-   одна заполненная позиция, — и проводим по ним пошагово, одну за
-   другой: копируем в буфер обмена текст отчёта именно этой категории и
-   открываем её ссылку в новой вкладке. Полностью автоматическая отправка
-   невозможна — ни Telegram, ни WhatsApp, ни Viber не позволяют сайту
-   нажать "отправить" за человека, — поэтому после вставки текста в
-   открывшемся чате человек сам жмёт отправить, возвращается сюда и жмёт
-   "Отправил(а) → Далее", чтобы перейти к следующему.
-
-   ПРОГРЕСС ОТПРАВКИ сохраняется в localStorage (SEND_PURCHASE_PROGRESS_KEY):
-   список id категорий, которые уже подтверждены как отправленные
-   ("Отправил(а) → Далее"). Это позволяет не терять прогресс при случайном
-   закрытии вкладки/окна — при следующем заходе (или прямо на главной
-   странице "Закупки", даже не открывая пошаговую отправку) видно, сколько
-   уже отправлено, а сама отправка продолжится с первого неотправленного
-   поставщика/цеха. Прогресс очищается только после полного завершения
-   рассылки (finishSendAllPurchase) — "Пропустить" и "Отмена" прогресс
-   не стирают, чтобы уже подтверждённая отправка не потерялась. */
-var SEND_PURCHASE_PROGRESS_KEY = 'r20_send_purchase_progress_v1';
-var sendAllPurchaseQueue = [];
-var sendAllPurchaseIndex = 0;
-var sendAllPurchaseSentIds = [];
-
-function loadSendPurchaseSentIds() {
-  try {
-    var raw = localStorage.getItem(SEND_PURCHASE_PROGRESS_KEY);
-    var arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) { return []; }
-}
-
-function saveSendPurchaseSentIds(ids) {
-  try { localStorage.setItem(SEND_PURCHASE_PROGRESS_KEY, JSON.stringify(ids)); } catch (e) {}
-}
-
-function clearSendPurchaseProgress() {
-  try { localStorage.removeItem(SEND_PURCHASE_PROGRESS_KEY); } catch (e) {}
-}
-
-/* Возвращает { candidates, sentIds } — какие поставщики/цеха сейчас готовы
-   к отправке (есть ссылка и заполненные позиции) и какие из них уже
-   отмечены отправленными в сохранённом прогрессе. Используется и на
-   главной странице "Закупки" (renderPurchaseHomeList), и внутри самой
-   пошаговой отправки. */
-function getSendPurchaseProgress() {
-  var candidates = purchaseCategories.filter(function(c) {
-    return (c.link || '').trim() && buildPurchaseReportLines(c.id).length > 0;
-  });
-  var candidateIds = candidates.map(function(c) { return c.id; });
-  var sentIds = loadSendPurchaseSentIds().filter(function(id) { return candidateIds.indexOf(id) !== -1; });
-  return { candidates: candidates, sentIds: sentIds };
-}
-
-function startSendAllPurchase() {
-  var progress = getSendPurchaseProgress();
-  var candidates = progress.candidates;
-  if (!candidates.length) {
-    showToast('⚠️ Нет ни одного поставщика/цеха со ссылкой для отправки и заполненными позициями');
-    return;
-  }
-  sendAllPurchaseQueue = candidates;
-  sendAllPurchaseSentIds = progress.sentIds;
-  // сохраняем прогресс сразу же, отфильтрованным от уже неактуальных id
-  saveSendPurchaseSentIds(sendAllPurchaseSentIds);
-  // начинаем с первого ещё не отправленного — уже отправленные пропускаем автоматически
-  var firstPending = 0;
-  while (firstPending < sendAllPurchaseQueue.length && sendAllPurchaseSentIds.indexOf(sendAllPurchaseQueue[firstPending].id) !== -1) {
-    firstPending++;
-  }
-  sendAllPurchaseIndex = firstPending;
-  if (sendAllPurchaseSentIds.length) {
-    showToast('↩️ Продолжаем — уже отправлено: ' + sendAllPurchaseSentIds.length + ' из ' + sendAllPurchaseQueue.length);
-  }
-  renderSendAllPurchaseStep();
-}
-
-function renderSendAllPurchaseStep() {
-  var overlay = $('send-purchase-overlay');
-  if (!overlay) return;
-  if (sendAllPurchaseIndex >= sendAllPurchaseQueue.length) {
-    finishSendAllPurchase();
-    return;
-  }
-  var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
-  var titleEl = $('send-purchase-title');
-  var textEl = $('send-purchase-text');
-  var nextBtn = $('send-purchase-next-btn');
-  var progressEl = $('send-purchase-progress');
-  if (titleEl) titleEl.textContent = '📤 Отправка ' + (sendAllPurchaseIndex + 1) + ' из ' + sendAllPurchaseQueue.length + ' — ' + (c.icon || '📦') + ' ' + c.label;
-  if (progressEl) {
-    progressEl.textContent = sendAllPurchaseSentIds.length
-      ? '✅ Уже отправлено: ' + sendAllPurchaseSentIds.length + ' из ' + sendAllPurchaseQueue.length
-      : '';
-  }
-  if (textEl) textEl.value = buildPurchaseReportText(c.id);
-  if (nextBtn) nextBtn.disabled = true; // сначала нужно нажать "Скопировать и открыть чат"
-  overlay.classList.add('show');
-}
-
-/* Копирует отчёт текущего шага в буфер обмена и открывает ссылку
-   поставщика/цеха в новой вкладке — оба действия одним нажатием, чтобы
-   в открывшемся чате сразу можно было вставить (Ctrl+V) готовый текст. */
-function sendAllPurchaseOpenAndCopy() {
-  var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
-  if (!c) return;
-  var text = buildPurchaseReportText(c.id);
-  copyTextToClipboard(text, '📋 Текст скопирован — вставьте его в открывшемся чате');
-  window.open(c.link, '_blank', 'noopener');
-  var nextBtn = $('send-purchase-next-btn');
-  if (nextBtn) nextBtn.disabled = false;
-}
-
-function sendAllPurchaseNext() {
-  var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
-  if (c && sendAllPurchaseSentIds.indexOf(c.id) === -1) {
-    sendAllPurchaseSentIds.push(c.id);
-    saveSendPurchaseSentIds(sendAllPurchaseSentIds);
-    refreshPurchaseHomeProgressIfVisible();
-  }
-  sendAllPurchaseIndex++;
-  renderSendAllPurchaseStep();
-}
-
-function sendAllPurchaseSkip() {
-  // "Пропустить" НЕ отмечает поставщика/цех как отправленного — прогресс
-  // не сохраняем, чтобы при следующем заходе (в том числе после случайного
-  // закрытия окна) он снова предлагался к отправке.
-  sendAllPurchaseIndex++;
-  renderSendAllPurchaseStep();
-}
-
-function finishSendAllPurchase() {
-  closeSendAllPurchaseModal();
-  showToast('✅ Рассылка завершена — обработано поставщиков/цехов: ' + sendAllPurchaseQueue.length);
-  sendAllPurchaseQueue = [];
-  sendAllPurchaseIndex = 0;
-  sendAllPurchaseSentIds = [];
-  clearSendPurchaseProgress();
-  refreshPurchaseHomeProgressIfVisible();
-}
-
-function cancelSendAllPurchase() {
-  closeSendAllPurchaseModal();
-  sendAllPurchaseQueue = [];
-  sendAllPurchaseIndex = 0;
-  sendAllPurchaseSentIds = [];
-  showToast('Рассылка отменена');
-  refreshPurchaseHomeProgressIfVisible();
-}
-
-function closeSendAllPurchaseModal() {
-  var overlay = $('send-purchase-overlay');
-  if (overlay) overlay.classList.remove('show');
-}
-
-/* Если сейчас открыта главная страница "Закупки" — перерисовывает её,
-   чтобы строка прогресса под кнопкой "Отправить всё" сразу обновилась
-   после отметки очередного поставщика/цеха отправленным. */
-function refreshPurchaseHomeProgressIfVisible() {
-  if ($('purchase-home-list')) renderPurchaseHomeList();
-}
-
-/* ================================================================
    UTILITY
    ================================================================ */
 function esc(str) {
@@ -5066,55 +4783,25 @@ function escAttr(str) {
   return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/* Плавающая компактная кнопка "Назад" — ОДНА на всё приложение, общая для
-   любого длинного экрана с обычной кнопкой "← Назад" (класс
-   .floating-back-anchor: сейчас это экран рецепта и экран цеха/поставщика
-   в "Закупке" — при добавлении новых экранов достаточно повесить этот
-   класс на их кнопку "Назад", отдельный код не нужен).
-
-   Логика: из всех .floating-back-anchor в любой момент реально виден
-   (offsetParent !== null) максимум один — тот, что относится к сейчас
-   открытому экрану (остальные скрыты через display:none у неактивной
-   вкладки/подэкрана). Как только ЕГО кнопка прокручена за пределы экрана,
-   показываем плавающую копию и копируем в неё то же действие (onclick) —
-   так гостю не нужно прокручивать длинный экран наверх, чтобы вернуться
-   назад. Срабатывает и на скролл, и на переключение вкладок/подэкранов
-   (через IntersectionObserver — он видит изменения display у элементов,
-   а не только скролл). */
-function initFloatingBackButton() {
-  var anchors = document.querySelectorAll('.floating-back-anchor');
+/* Плавающая компактная кнопка "Назад" на экране рецепта: показывается,
+   когда обычная кнопка "← Назад" в начале рецепта прокручена за пределы
+   видимой области, и прячется обратно, как только она снова видна —
+   так гостю не нужно прокручивать длинный рецепт наверх, чтобы вернуться
+   к списку. Один IntersectionObserver на всё приложение: сам элемент
+   .detail-back не пересоздаётся при открытии рецептов (openDetail
+   переписывает только #detail-body), поэтому достаточно настроить
+   слежение один раз при загрузке страницы. */
+function initDetailBackFloatingButton() {
+  var staticBtn = document.querySelector('.detail-back');
   var floatingBtn = $('detail-back-floating');
-  if (!anchors.length || !floatingBtn || typeof IntersectionObserver === 'undefined') return;
-
-  function refresh() {
-    var visibleAnchor = null;
-    for (var i = 0; i < anchors.length; i++) {
-      if (anchors[i].offsetParent !== null) { visibleAnchor = anchors[i]; break; }
-    }
-    if (!visibleAnchor) { floatingBtn.classList.remove('show'); return; }
-    var rect = visibleAnchor.getBoundingClientRect();
-    var scrolledAway = rect.bottom < 0; // ушла вверх за пределы экрана при прокрутке вниз
-    if (scrolledAway) {
-      var action = visibleAnchor.getAttribute('onclick');
-      if (action) floatingBtn.setAttribute('onclick', action);
-      floatingBtn.classList.add('show');
-    } else {
-      floatingBtn.classList.remove('show');
-    }
-  }
-
-  var observer = new IntersectionObserver(refresh, { threshold: 0 });
-  anchors.forEach(function(a) { observer.observe(a); });
-  window.refreshFloatingBackButton = refresh; // на случай, если понадобится дёрнуть вручную из других функций
-
-  // Подстраховка: переключение вкладок само по себе не всегда скроллит
-  // страницу, но может сразу же открыть уже прокрученный вниз экран —
-  // на такой случай проверяем ещё и по скроллу, и сразу после клика по
-  // вкладке.
-  window.addEventListener('scroll', refresh, { passive: true });
-  document.querySelectorAll('.nav-tab').forEach(function(t) {
-    t.addEventListener('click', function() { requestAnimationFrame(refresh); });
-  });
+  if (!staticBtn || !floatingBtn || typeof IntersectionObserver === 'undefined') return;
+  var observer = new IntersectionObserver(function(entries) {
+    var entry = entries[entries.length - 1];
+    var detailTab = $('tab-detail');
+    var isDetailActive = !!(detailTab && detailTab.classList.contains('active'));
+    floatingBtn.classList.toggle('show', isDetailActive && !entry.isIntersecting);
+  }, { threshold: 0 });
+  observer.observe(staticBtn);
 }
 
 /* ================================================================
@@ -5122,7 +4809,7 @@ function initFloatingBackButton() {
    ================================================================ */
 document.addEventListener('DOMContentLoaded', function() {
   initApp();
-  initFloatingBackButton();
+  initDetailBackFloatingButton();
 });
 
 async function initApp() {
