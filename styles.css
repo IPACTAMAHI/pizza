@@ -517,6 +517,11 @@
     appearance: none;
   }
   input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,86,75,.16); }
+  /* Без этого правила выпадающий список <option> отрисовывается системным
+     (обычно белым) фоном, а цвет текста наследуется от select (светлый) —
+     в итоге буквы читаются только на подсвеченном при наведении пункте.
+     Задаём фон/цвет самим <option>, чтобы весь список был читаем сразу. */
+  select option { background: var(--card); color: var(--text); }
 
   /* Photo upload */
   .photo-upload {
