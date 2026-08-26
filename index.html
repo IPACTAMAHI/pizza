@@ -153,6 +153,12 @@
       округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
     </div>
 
+    <div class="search-wrap" id="purchase-search-wrap" style="display:none">
+      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" class="search-input" id="purchase-search-positions" placeholder="Поиск позиции по названию..." oninput="handlePurchaseSearchInput()">
+      <button type="button" class="search-clear" id="purchase-search-positions-clear" onclick="clearPurchaseSearchInput()" title="Очистить" style="display:none">✕</button>
+    </div>
+
     <div id="purchase-list"></div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px">
