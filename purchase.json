@@ -13,7 +13,8 @@
       "builtin": false,
       "workshops": [
         "__general__"
-      ]
+      ],
+      "workshop": "hot"
     },
     {
       "id": "sup1787670377069itgby",
@@ -122,13 +123,6 @@
       "workshops": [
         "__general__"
       ]
-    },
-    {
-      "id": "sup1787742748785ixavt",
-      "label": "Метро",
-      "icon": "🚚",
-      "builtin": false,
-      "workshop": ""
     }
   ],
   "data": {
@@ -540,14 +534,6 @@
         "id": "p1787672464750i4a7x",
         "name": "Янтарь",
         "unit": "вед",
-        "norm": ""
-      }
-    ],
-    "sup1787742748785ixavt": [
-      {
-        "id": "p17877427825889uclq",
-        "name": "Сливки 30%",
-        "unit": "кг",
         "norm": ""
       }
     ]
