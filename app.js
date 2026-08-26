@@ -3642,6 +3642,12 @@ function showPurchaseDetail(cat) {
   var titleEl = $('purchase-detail-title');
   if (titleEl) titleEl.textContent = (c && c.icon || '📦') + ' Закупка на неделю + дозаказ — ' + (c ? esc(c.label) : '');
   updatePurchaseTemplateControls();
+  // Сбрасываем поиск позиций при переходе в другую категорию — иначе
+  // список открывался бы уже отфильтрованным по запросу из предыдущего
+  // цеха/поставщика, что выглядело бы как баг ("почему тут пусто").
+  var searchInput = $('purchase-search-positions');
+  if (searchInput) searchInput.value = '';
+  toggleSearchClear('purchase-search-positions');
   renderPurchaseList();
   updatePurchaseViewVisibility();
   window.scrollTo(0, 0);
@@ -4437,6 +4443,34 @@ function autosizeAllPurchaseInputs(root) {
   (root || document).querySelectorAll('.purchase-field input[type="number"]').forEach(autosizePurchaseInput);
 }
 
+// Проверяет, подходит ли название позиции под поисковый запрос —
+// ищем ТОЛЬКО по началу слова ("по первым буквам"), а не по любому
+// вхождению внутри названия, поэтому "как" не найдёт "Сахар".
+// Проверяем и начало всего названия целиком, и начало каждого его
+// слова отдельно — так многословные названия ("Сыр Пармезан")
+// находятся по началу любого из слов, а не только первого.
+function purchaseNameMatchesSearch(name, query) {
+  if (!query) return true;
+  var n = (name || '').trim().toLowerCase();
+  if (!n) return false;
+  if (n.indexOf(query) === 0) return true;
+  return n.split(/\s+/).some(function(word) { return word.indexOf(query) === 0; });
+}
+
+function handlePurchaseSearchInput() {
+  toggleSearchClear('purchase-search-positions');
+  renderPurchaseList();
+}
+
+function clearPurchaseSearchInput() {
+  var input = $('purchase-search-positions');
+  if (!input) return;
+  input.value = '';
+  toggleSearchClear('purchase-search-positions');
+  input.focus();
+  renderPurchaseList();
+}
+
 function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
@@ -4457,6 +4491,9 @@ function renderPurchaseList() {
         : '🧮 Список составлен администратором. Впишите остаток, который взвесили на месте, — калькулятор посчитает, сколько докупить, округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).');
   }
 
+  var searchWrap = $('purchase-search-wrap');
+  if (searchWrap) searchWrap.style.display = rows.length ? '' : 'none';
+
   if (!rows.length) {
     holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">' +
       (canEditTemplate ? 'Пока нет ни одного ингредиента. Нажмите «+ Добавить ингредиент», чтобы начать закупку на неделю.' : 'Список пока пуст — дождитесь, пока администратор его составит.') + '</p>';
@@ -4465,8 +4502,26 @@ function renderPurchaseList() {
     return;
   }
 
+  // Поиск позиции по названию — ищет по первым буквам (например, "мол"
+  // найдёт "Молоко", но не "Пармезан"), проверяя как начало всего
+  // названия, так и начало каждого отдельного слова в нём (чтобы
+  // "Сыр Пармезан" находился и по "сыр", и по "пар"). Сам расчёт
+  // (updatePurchaseSummary и т.д.) считается по ПОЛНОМУ списку rows —
+  // фильтр влияет только на то, что видно на экране.
+  var searchQuery = (($('purchase-search-positions') || {}).value || '').trim().toLowerCase();
+  var visibleRows = searchQuery
+    ? rows.filter(function(r) { return purchaseNameMatchesSearch(r.name, searchQuery); })
+    : rows;
+
+  if (searchQuery && !visibleRows.length) {
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Ничего не найдено по запросу «' + esc($('purchase-search-positions').value.trim()) + '».</p>';
+    updatePurchaseSummary();
+    renderPurchaseCombinedList();
+    return;
+  }
+
   var cat = currentPurchaseCategory;
-  holder.innerHTML = rows.map(function(row) {
+  holder.innerHTML = visibleRows.map(function(row) {
     var res = purchaseResultDisplay(row);
     var ro = canEditTemplate ? '' : ' readonly';
     var dis = canEditTemplate ? '' : ' disabled';
