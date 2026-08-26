@@ -152,7 +152,10 @@
 
     <div id="purchase-list"></div>
 
-    <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="margin:4px 0 18px;width:100%">+ Добавить ингредиент</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px">
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="flex:1;min-width:160px">+ Добавить ингредиент</button>
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetPurchaseResiduals()" title="Очистить поле «Остаток» у всех позиций сразу во всех цехах и у всех поставщиков">🧹 Сбросить остатки везде</button>
+    </div>
 
     <div style="margin-bottom:14px">
       <span id="purchase-summary" style="font-size:13px;color:var(--text-muted)"></span>
@@ -509,13 +512,21 @@
 <div class="modal-overlay" id="send-purchase-overlay">
   <div class="modal-box" style="max-width:440px">
     <h3 id="send-purchase-title"></h3>
-    <p>Текст уже скопирован в буфер обмена — откройте чат и вставьте его (Ctrl+V / зажать и «Вставить»), затем нажмите «Отправил(а) → Далее».</p>
+    <p id="send-purchase-message">Текст уже скопирован в буфер обмена — откройте чат и вставьте его (Ctrl+V / зажать и «Вставить»), затем нажмите «Отправил(а) → Далее».</p>
     <textarea class="send-purchase-text" id="send-purchase-text" readonly onclick="this.select()"></textarea>
-    <div class="modal-actions">
+    <div class="modal-actions" id="send-purchase-step-actions">
       <button class="btn btn-ghost btn-sm" onclick="cancelSendAllPurchase()">Отмена</button>
-      <button class="btn btn-ghost btn-sm" onclick="sendAllPurchaseSkip()">Пропустить</button>
-      <button class="btn btn-primary btn-sm" onclick="sendAllPurchaseOpenAndCopy()">📋 Скопировать и открыть чат</button>
+      <button class="btn btn-ghost btn-sm" id="send-purchase-skip-btn" onclick="sendAllPurchaseSkip()">Пропустить</button>
+      <button class="btn btn-primary btn-sm" id="send-purchase-copy-btn" onclick="sendAllPurchaseOpenAndCopy()">📋 Скопировать и открыть чат</button>
       <button class="btn btn-success btn-sm" id="send-purchase-next-btn" onclick="sendAllPurchaseNext()" disabled>Отправил(а) → Далее</button>
+    </div>
+    <!-- Финальный шаг рассылки — показывается вместо шага выше, когда все
+         поставщики/цеха из очереди обработаны. Пока не нажата эта кнопка,
+         закупка формально не считается завершённой: позиции остаются как
+         есть, а кнопку "Отправить всё" можно нажать заново. См.
+         finishSendAllPurchase() в JS. -->
+    <div class="modal-actions" id="send-purchase-finish-actions" style="display:none">
+      <button class="btn btn-success btn-sm" id="send-purchase-finish-btn" onclick="finishSendAllPurchase()">✅ Завершить закупку</button>
     </div>
   </div>
 </div>
