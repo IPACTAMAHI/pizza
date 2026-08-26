@@ -4229,7 +4229,14 @@ function registerCustomUnit(unit) {
   if (purchaseCustomUnits.indexOf(unit) === -1) {
     purchaseCustomUnits.push(unit);
     savePurchaseData();
-    schedulePurchaseSync();
+    // Единицу дозаказа (см. handlePurchaseReorderUnitChange) может добавить
+    // ЛЮБОЙ сотрудник, не только администратор в режиме редактирования
+    // шаблона, — а GitHub-синхронизация настроена только у администратора.
+    // Поэтому пробуем отправить в общий список только если синхронизация
+    // вообще настроена на этом устройстве; иначе просто оставляем единицу
+    // локально (без пугающего тоста "настройте GitHub" на чужом устройстве).
+    var cfg = getGithubConfig();
+    if (cfg && cfg.token) schedulePurchaseSync();
   }
 }
 
@@ -4240,7 +4247,11 @@ function registerCustomUnit(unit) {
 function purchaseUnitUsageCount(unit) {
   var count = 0;
   purchaseCategories.forEach(function(c) {
-    purchaseRowsFor(c.id).forEach(function(r) { if (r.unit === unit) count++; });
+    // Считаем и основную единицу позиции (unit), и единицу дозаказа
+    // (reorderUnit, см. handlePurchaseReorderUnitChange) — единица,
+    // которая ещё где-то выбрана как единица дозаказа, тоже не должна
+    // пропасть из общего списка молча.
+    purchaseRowsFor(c.id).forEach(function(r) { if (r.unit === unit || r.reorderUnit === unit) count++; });
   });
   return count;
 }
@@ -4312,6 +4323,43 @@ async function handlePurchaseUnitChange(select, cat, id) {
   registerCustomUnit(custom);
   updatePurchaseField(cat, id, 'unit', custom);
   renderPurchaseList(); // перерисовываем, чтобы select показал новую единицу как опцию
+}
+
+// Обработчик выбора в селекте единицы "🔁 Дозаказ" (reorderUnit) — полный
+// аналог handlePurchaseUnitChange выше, но пишет в отдельное поле
+// reorderUnit и, в отличие от единицы позиции (unit), доступен ВСЕМ
+// сотрудникам, а не только администратору в режиме редактирования шаблона
+// (сам инпут "Дозаказ" и так редактируется всеми — см. renderPurchaseList).
+// Единица берётся из того же общего списка purchaseCustomUnits, что и для
+// "Ед." — так единица, добавленная через любую из двух колонок, сразу
+// становится доступна в обеих, а не только там, где её ввели.
+async function handlePurchaseReorderUnitChange(select, cat, id) {
+  var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
+  var prevUnit = row ? (row.reorderUnit || 'кг') : 'кг';
+  if (select.value === '__manage_units__') {
+    select.value = prevUnit;
+    await manageCustomUnitsModal();
+    renderPurchaseList();
+    return;
+  }
+  if (select.value !== '__custom_unit__') {
+    updatePurchaseField(cat, id, 'reorderUnit', select.value);
+    return;
+  }
+  var custom = await showModal({
+    title: 'Своя единица измерения',
+    message: 'Введите свою единицу измерения (например: л, уп, банка):',
+    withInput: true,
+    placeholder: 'например: л'
+  });
+  custom = (custom || '').trim();
+  if (!custom) {
+    select.value = prevUnit;
+    return;
+  }
+  registerCustomUnit(custom);
+  updatePurchaseField(cat, id, 'reorderUnit', custom);
+  renderPurchaseList(); // перерисовываем, чтобы select показал новую единицу как опцию (в т.ч. в общем списке цеха)
 }
 
 // Округление "в выгодную сторону" = до ближайшего целого числа:
@@ -4419,10 +4467,8 @@ function renderPurchaseList() {
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
-            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
-              PURCHASE_BASE_UNITS.map(function(u) {
-                return '<option value="' + escAttr(u) + '"' + (reorderUnit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
-              }).join('') +
+            '<select class="purchase-reorder-unit" onchange="handlePurchaseReorderUnitChange(this,\'' + cat + '\',\'' + row.id + '\')">' +
+              purchaseUnitOptionsHtml(reorderUnit) +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -4491,10 +4537,8 @@ function renderPurchaseCombinedList() {
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
-            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
-              PURCHASE_BASE_UNITS.map(function(u) {
-                return '<option value="' + escAttr(u) + '"' + (reorderUnit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
-              }).join('') +
+            '<select class="purchase-reorder-unit" onchange="handlePurchaseReorderUnitChange(this,\'' + catId + '\',\'' + row.id + '\')">' +
+              purchaseUnitOptionsHtml(reorderUnit) +
             '</select>' +
           '</div>' +
         '</label>' +
