@@ -119,6 +119,9 @@
        иконки ✏️/🗑️ (видны только разработчику) — редактирование и удаление
        прямо отсюда, без захода внутрь. -->
   <div id="purchase-home-view">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
+    </div>
     <div id="purchase-home-list"></div>
   </div>
 
@@ -154,7 +157,7 @@
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px">
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="flex:1;min-width:160px">+ Добавить ингредиент</button>
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetPurchaseResiduals()" title="Очистить поле «Остаток» у всех позиций сразу во всех цехах и у всех поставщиков">🧹 Сбросить остатки везде</button>
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки везде</button>
     </div>
 
     <div style="margin-bottom:14px">
