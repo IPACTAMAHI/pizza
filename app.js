@@ -3578,7 +3578,7 @@ function purchaseWorkshopOptions() {
   var opts = purchaseCategories.filter(function(c) { return c.builtin; }).map(function(c) {
     return { value: c.id, label: (c.icon || '📦') + ' ' + c.label };
   });
-  opts.push({ value: '', label: '— без привязки к цеху —' });
+  opts.push({ value: '', label: '— без привязки к заведению —' });
   return opts;
 }
 
@@ -3729,9 +3729,9 @@ function renderPurchaseHomeList() {
     html += '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>';
   }
 
-  html += '<div class="purchase-home-group-title">🏭 Цеха</div>';
-  html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного цеха.</p>';
-  html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить цех</button>';
+  html += '<div class="purchase-home-group-title">🏭 Заведения</div>';
+  html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного заведения.</p>';
+  html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить заведение</button>';
 
   html += '<div class="purchase-home-group-title">🚚 Поставщики</div>';
   html += suppliers.length ? suppliers.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного поставщика.</p>';
@@ -3772,8 +3772,8 @@ function updatePurchaseCombinedSectionVisibility() {
    переименовать и удалить (см. removePurchaseCategory) точно так же,
    как и Пицца бар/Горячий цех — никакой цех ничем не защищён. */
 function addPurchaseWorkshop() {
-  if (!isAdmin()) { showToast('🔒 Добавлять цеха может только владелец или администратор'); return; }
-  customPrompt('Название нового цеха, например: Кондитерский цех', '', 'Новый цех').then(function(val) {
+  if (!isAdmin()) { showToast('🔒 Добавлять заведения может только владелец или администратор'); return; }
+  customPrompt('Название нового заведения, например: Римские пекарни', '', 'Новое заведение').then(function(val) {
     val = (val || '').trim();
     if (!val) return;
     var id = 'ws' + Date.now() + Math.random().toString(36).slice(2, 7);
@@ -3784,7 +3784,7 @@ function addPurchaseWorkshop() {
     renderPurchaseHomeList();
     showPurchaseDetail(id);
     schedulePurchaseSync();
-    showToast('✅ Цех «' + val + '» добавлен — теперь добавьте позиции или привяжите к нему поставщиков');
+    showToast('✅ Заведение «' + val + '» добавлено — теперь добавьте позиции или привяжите к нему поставщиков');
   });
 }
 
@@ -3800,8 +3800,8 @@ function addPurchaseSupplier() {
   customPrompt('Название поставщика, например: ООО «Метро» или ФЛП Иванов', '', 'Новый поставщик').then(function(val) {
     val = (val || '').trim();
     if (!val) return;
-    customSelect('К какому цеху относится поставщик «' + val + '»? Его позиции появятся в общем списке и отчёте этого цеха.', purchaseWorkshopOptions(), '', 'Привязать к цеху').then(function(workshop) {
-      if (workshop === null) workshop = ''; // отменили выбор цеха — сам поставщик всё равно добавляем, просто без привязки
+    customSelect('К какому заведению относится поставщик «' + val + '»? Его позиции появятся в общем списке и отчёте этого заведения.', purchaseWorkshopOptions(), '', 'Привязать к заведению').then(function(workshop) {
+      if (workshop === null) workshop = ''; // отменили выбор заведения — сам поставщик всё равно добавляем, просто без привязки
       var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
       purchaseCategories.push({ id: id, label: val, icon: '🚚', builtin: false, workshop: workshop });
       purchaseData[id] = [];
@@ -3885,9 +3885,9 @@ function removePurchaseCategory(cat) {
   if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
-  var kind = c.builtin ? 'цех' : 'поставщика';
-  var kindTitle = c.builtin ? 'Удалить цех' : 'Удалить поставщика';
-  var extraWarning = c.builtin ? ' Все поставщики, привязанные к этому цеху, не удалятся — просто потеряют привязку.' : '';
+  var kind = c.builtin ? 'заведение' : 'поставщика';
+  var kindTitle = c.builtin ? 'Удалить заведение' : 'Удалить поставщика';
+  var extraWarning = c.builtin ? ' Все поставщики, привязанные к этому заведению, не удалятся — просто потеряют привязку.' : '';
   customConfirm('Удалить ' + kind + ' «' + c.label + '» вместе со всеми его позициями?' + extraWarning + ' Это действие нельзя отменить.', kindTitle).then(function(ok) {
     if (!ok) return;
     purchaseCategories = purchaseCategories.filter(function(x) { return x.id !== cat; });
@@ -3905,29 +3905,28 @@ function removePurchaseCategory(cat) {
     savePurchaseData();
     showPurchaseHome();
     schedulePurchaseSync();
-    showToast(c.builtin ? '🗑️ Цех удалён' : '🗑️ Поставщик удалён');
+    showToast(c.builtin ? '🗑️ Заведение удалено' : '🗑️ Поставщик удалён');
   });
 }
 
-/* Изменить (или снять) привязку уже существующего поставщика к цеху —
+/* Изменить (или снять) привязку уже существующего поставщика к заведению —
    доступно в любой момент, не только при создании. От этой привязки
-   зависит, в общем списке и отчёте какого цеха («Пицца бар» /
-   «Горячий цех») появятся позиции этого поставщика — см.
-   purchaseCategoriesForWorkshop(). */
+   зависит, в общем списке и отчёте какого заведения появятся позиции
+   этого поставщика — см. purchaseCategoriesForWorkshop(). */
 function linkPurchaseSupplierWorkshop(cat) {
   cat = cat || currentPurchaseCategory;
   if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
-  if (c.builtin) { showToast('🔒 Цех уже сам является цехом — привязка не нужна'); return; }
-  customSelect('К какому цеху относится поставщик «' + c.label + '»?', purchaseWorkshopOptions(), c.workshop || '', 'Привязать к цеху').then(function(workshop) {
+  if (c.builtin) { showToast('🔒 Заведение уже само является заведением — привязка не нужна'); return; }
+  customSelect('К какому заведению относится поставщик «' + c.label + '»?', purchaseWorkshopOptions(), c.workshop || '', 'Привязать к заведению').then(function(workshop) {
     if (workshop === null) return; // отменили — ничего не меняем
     c.workshop = workshop;
     savePurchaseData();
     renderPurchaseHomeList();
     renderPurchaseList();
     schedulePurchaseSync();
-    showToast(workshop ? '🔗 Поставщик привязан к цеху «' + purchaseCategoryLabel(workshop) + '»' : '🔗 Привязка к цеху снята');
+    showToast(workshop ? '🔗 Поставщик привязан к заведению «' + purchaseCategoryLabel(workshop) + '»' : '🔗 Привязка к заведению снята');
   });
 }
 
@@ -4168,14 +4167,14 @@ async function resetAllPurchaseStock() {
     });
   });
   if (!rowsWithData) { showToast('Остатки и дозаказ уже пусты везде — сбрасывать нечего'); return; }
-  var ok = await customConfirm('Полностью обнулить «Остаток» и «Дозаказ» у ВСЕХ позиций во ВСЕХ цехах и у ВСЕХ поставщиков (' + rowsWithData + ' из ' + totalRows + ' позиций)? Названия, единицы измерения и нормы останутся без изменений. Действие нельзя отменить.', '🧹 Сбросить остатки');
+  var ok = await customConfirm('Полностью обнулить «Остаток» и «Дозаказ» у ВСЕХ позиций во ВСЕХ заведениях и у ВСЕХ поставщиков (' + rowsWithData + ' из ' + totalRows + ' позиций)? Названия, единицы измерения и нормы останутся без изменений. Действие нельзя отменить.', '🧹 Сбросить остатки');
   if (!ok) return;
   allCats.forEach(function(cat) {
     purchaseRowsFor(cat).forEach(function(r) { r.residual = ''; r.reorder = ''; r.reorderUnit = 'кг'; });
   });
   savePurchaseData();
   renderPurchaseTab();
-  showToast('✅ Остаток и дозаказ обнулены во всех цехах и у всех поставщиков — можно вписывать новые остатки');
+  showToast('✅ Остаток и дозаказ обнулены во всех заведениях и у всех поставщиков — можно вписывать новые остатки');
 }
 
 function removePurchaseRow(cat, id) {
@@ -4597,7 +4596,7 @@ function renderPurchaseCombinedList() {
   });
 
   if (!allRows.length) {
-    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у этого цеха, ни у привязанных к нему поставщиков — добавьте позиции выше или привяжите поставщика к этому цеху («🔗 Привязать к цеху» в режиме редактирования шаблона).</p>';
+    holder.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:26px 10px">Пока нет ни одной позиции ни у этого заведения, ни у привязанных к нему поставщиков — добавьте позиции выше или привяжите поставщика к этому заведению («🔗 Привязать к заведению» в режиме редактирования шаблона).</p>';
     updatePurchaseCombinedSummary();
     return;
   }
@@ -4646,7 +4645,7 @@ function updatePurchaseCombinedSummary() {
   });
   var needCount = 0;
   all.forEach(function(r) { var t = computeToBuy(r); if (t !== null && t > 0) needCount++; });
-  el.textContent = all.length ? ('Нужно докупить: ' + needCount + ' из ' + all.length + ' позиций (цех + его поставщики)') : '';
+  el.textContent = all.length ? ('Нужно докупить: ' + needCount + ' из ' + all.length + ' позиций (заведение + его поставщики)') : '';
 }
 
 /* Находит строку по её id независимо от того, в какой категории/у
@@ -4893,13 +4892,13 @@ function buildAllPurchaseReorderReportText() {
     return (c.icon || '📦') + ' ' + c.label + ':\n' + lines.join('\n');
   }).filter(function(s) { return s; });
   var header = '🔁 Дозаказ — ' + purchaseCategoryLabel(currentPurchaseCategory) + ' и его поставщики (' + today + ')';
-  if (!sections.length) return header + '\n\nНет ни одной позиции с указанным дозаказом ни у цеха, ни у его поставщиков.';
+  if (!sections.length) return header + '\n\nНет ни одной позиции с указанным дозаказом ни у заведения, ни у его поставщиков.';
   return header + '\n\n' + sections.join('\n\n');
 }
 
 function copyAllPurchaseReorder() {
   var text = buildAllPurchaseReorderReportText();
-  copyTextToClipboard(text, '🔁 Дозаказ по цеху и его поставщикам скопирован');
+  copyTextToClipboard(text, '🔁 Дозаказ по заведению и его поставщикам скопирован');
 }
 
 function downloadAllPurchaseReorderText() {
@@ -4908,7 +4907,7 @@ function downloadAllPurchaseReorderText() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'Дозаказ - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).txt';
+  a.download = 'Дозаказ - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (заведение и поставщики).txt';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -4936,7 +4935,7 @@ function downloadAllPurchaseReorderExcel() {
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
   });
   if (!any) {
-    showToast('⚠️ Нет ни одной позиции с указанным дозаказом ни у цеха, ни у его поставщиков');
+    showToast('⚠️ Нет ни одной позиции с указанным дозаказом ни у заведения, ни у его поставщиков');
     return;
   }
   XLSX.writeFile(wb, 'Дозаказ - все поставщики.xlsx');
@@ -5012,13 +5011,13 @@ function buildAllPurchaseReportText() {
     return (c.icon || '📦') + ' ' + c.label + ':\n' + lines.join('\n');
   }).filter(function(s) { return s; });
   var header = '📦 Общая закупка на неделю — ' + purchaseCategoryLabel(currentPurchaseCategory) + ' и его поставщики (' + today + ')';
-  if (!sections.length) return header + '\n\nНет ни одной позиции ни у цеха, ни у его поставщиков.';
+  if (!sections.length) return header + '\n\nНет ни одной позиции ни у заведения, ни у его поставщиков.';
   return header + '\n\n' + sections.join('\n\n');
 }
 
 function copyAllPurchaseResults() {
   var text = buildAllPurchaseReportText();
-  copyTextToClipboard(text, '📋 Общий список по цеху и его поставщикам скопирован');
+  copyTextToClipboard(text, '📋 Общий список по заведению и его поставщикам скопирован');
 }
 
 function downloadAllPurchaseText() {
@@ -5027,7 +5026,7 @@ function downloadAllPurchaseText() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).txt';
+  a.download = 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (заведение и поставщики).txt';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -5057,10 +5056,10 @@ function downloadAllPurchaseExcel() {
     XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
   });
   if (!any) {
-    showToast('⚠️ Нет ни одной позиции ни у цеха, ни у его поставщиков');
+    showToast('⚠️ Нет ни одной позиции ни у заведения, ни у его поставщиков');
     return;
   }
-  XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).xlsx');
+  XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (заведение и поставщики).xlsx');
 }
 
 /* ================================================================
@@ -5331,7 +5330,7 @@ function startSendAllPurchase() {
     return (c.link || '').trim() && purchaseCategoryHasTouchedData(c.id) && buildPurchaseReportLines(c.id).length > 0;
   });
   if (!candidates.length) {
-    showToast('⚠️ Нет ни одного поставщика/цеха со ссылкой для отправки и заполненными позициями');
+    showToast('⚠️ Нет ни одного поставщика/заведения со ссылкой для отправки и заполненными позициями');
     return;
   }
   sendAllPurchaseQueue = candidates;
@@ -5378,7 +5377,7 @@ function renderSendAllPurchaseStep() {
   // модалку крестиком/вне окна — прогресс останется сохранён (баннер
   // "Рассылка не завершена" на главной странице предложит вернуться сюда).
   if (sendAllPurchaseIndex >= sendAllPurchaseQueue.length) {
-    if (titleEl) titleEl.textContent = '✅ Все поставщики и цеха обработаны (' + sendAllPurchaseQueue.length + ')';
+    if (titleEl) titleEl.textContent = '✅ Все поставщики и заведения обработаны (' + sendAllPurchaseQueue.length + ')';
     if (msgEl) msgEl.style.display = 'none';
     if (textEl) textEl.style.display = 'none';
     if (stepActions) stepActions.style.display = 'none';
@@ -5515,7 +5514,7 @@ function finishSendAllPurchase() {
   });
   savePurchaseData();
   closeSendAllPurchaseModal();
-  showToast('✅ Закупка завершена — обработано поставщиков/цехов: ' + processedCount);
+  showToast('✅ Закупка завершена — обработано поставщиков/заведений: ' + processedCount);
   sendAllPurchaseQueue = [];
   sendAllPurchaseIndex = 0;
   clearSendAllPurchaseProgress();
