@@ -51,5 +51,14 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "35D1-1B2D",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787739056024,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
