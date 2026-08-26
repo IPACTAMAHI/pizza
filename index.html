@@ -8,6 +8,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
 <title>🍕 Route 20 — Римские пекарни</title>
+<!-- Критический стиль ПРЯМО в head, ДО подключения шрифтов и styles.css:
+     красит фон страницы в тот же тёмный цвет, что и экран проверки
+     доступа ниже, мгновенно, ещё до того как успеют загрузиться внешние
+     файлы (шрифты Google, styles.css). Без этого на медленной сети или
+     в некоторых встроенных браузерах (Telegram/WhatsApp-webview) первый
+     кадр мог быть белым/непокрашенным на долю секунды, прежде чем
+     подключится основной CSS, — то есть перед экраном "Загрузка…" мог
+     мелькнуть пустой белый экран. Сам экран проверки (#access-gate-overlay
+     чуть ниже) при этом уже красится этим же встроенным стилем в фон
+     страницы, а не ждёт var(--bg) из styles.css, — поэтому он гарантированно
+     непрозрачный с первого кадра и полностью перекрывает контент под
+     собой (шапку, вкладки, список рецептов), пока JS (см. initApp() в
+     app.js) не завершит все проверки доступа и не уберёт его. -->
+<style>html,body{background:#0b0b0d;margin:0}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
@@ -15,8 +29,20 @@
 </head>
 <body>
 
-<!-- ПРОВЕРКА ДОСТУПА — короткий экран, пока проверяем, не заблокирован ли этот телефон -->
-<div id="access-gate-overlay" style="position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;align-items:center;justify-content:center;">
+<!-- ПРОВЕРКА ДОСТУПА — короткий экран, пока проверяем, не заблокирован ли
+     этот телефон и не истёк ли сохранённый ключ разработчика. Стоит
+     ПЕРВЫМ элементом в <body>, до шапки/вкладок/контента, и держит
+     сплошной непрозрачный фон (жёстко заданным цветом — совпадает с
+     inline-стилем html/body выше, а не зависит от var(--bg) из
+     styles.css, которая могла ещё не подгрузиться к моменту первого
+     кадра). Контент под ним (recipes/categories и т.п.) до самого конца
+     проверки даже не начинает отрисовываться — см. initApp() в app.js:
+     это происходит СНАЧАЛА (verifyStoredAdminSession → проверка
+     блокировки участника → ввод имени/ключа доступа при необходимости),
+     и только когда все проверки пройдены, этот экран убирается
+     (gateOverlay.remove()) и лишь ПОСЛЕ этого запускается отрисовка
+     самой книги рецептов (loadRecipes/renderCategoriesList и т.д.). -->
+<div id="access-gate-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b0b0d;display:flex;align-items:center;justify-content:center;">
   <div style="text-align:center;color:var(--text-muted);font-family:var(--font-body)">
     <div style="font-size:32px;margin-bottom:10px">🍕</div>
     Загрузка…
