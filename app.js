@@ -3688,8 +3688,15 @@ function renderPurchaseHomeList() {
   var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
 
   var sendableCount = purchaseCategories.filter(function(c) { return (c.link || '').trim(); }).length;
+  var sendProgress = getSendPurchaseProgress();
+  var sendProgressLine = '';
+  if (sendProgress.candidates.length && sendProgress.sentIds.length) {
+    sendProgressLine = sendProgress.sentIds.length >= sendProgress.candidates.length
+      ? '<div class="purchase-home-send-progress">✅ Уже отправлено всё: ' + sendProgress.sentIds.length + ' из ' + sendProgress.candidates.length + '</div>'
+      : '<div class="purchase-home-send-progress">↩️ Отправлено ' + sendProgress.sentIds.length + ' из ' + sendProgress.candidates.length + ' — нажмите, чтобы продолжить</div>';
+  }
   var html = sendableCount
-    ? '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>'
+    ? '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:' + (sendProgressLine ? '4px' : '18px') + '">📤 Отправить всё поставщикам (' + sendableCount + ')</button>' + sendProgressLine
     : '';
 
   html += '<div class="purchase-home-group-title">🏭 Цеха</div>';
@@ -4113,6 +4120,21 @@ function updatePurchaseField(cat, id, field, value) {
   if (PURCHASE_TEMPLATE_FIELDS[field]) schedulePurchaseSync();
 }
 
+/* Единица для поля "🔁 Дозаказ" теперь выбирается кликом по одной из
+   всегда видимых кнопок (а не через нативный <select>, где остальные
+   варианты было видно только открыв список) — см. PURCHASE_REORDER_UNITS.
+   Обновляем только подсветку активной кнопки внутри своей группы,
+   без перерисовки всего списка, чтобы не сбивать фокус/ввод в других
+   полях строки. */
+function setPurchaseReorderUnit(cat, id, unit, btn) {
+  updatePurchaseField(cat, id, 'reorderUnit', unit);
+  var group = btn.closest('.purchase-reorder-unit-chips');
+  if (group) {
+    group.querySelectorAll('.reorder-unit-chip').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+}
+
 // Округление "в выгодную сторону" = до ближайшего целого числа:
 // 12,1 → 12 (округление вниз), 12,6 → 13 (округление вверх).
 function roundToBuy(value) {
@@ -4199,9 +4221,11 @@ function renderPurchaseList() {
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
-            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
-              PURCHASE_REORDER_UNITS.map(function(u) { return '<option value="' + u + '"' + (reorderUnit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
-            '</select>' +
+            '<div class="purchase-reorder-unit-chips">' +
+              PURCHASE_REORDER_UNITS.map(function(u) {
+                return '<button type="button" class="reorder-unit-chip' + (reorderUnit === u ? ' active' : '') + '" onclick="setPurchaseReorderUnit(\'' + cat + '\',\'' + row.id + '\',\'' + u + '\',this)">' + u + '</button>';
+              }).join('') +
+            '</div>' +
           '</div>' +
         '</label>' +
       '</div>' +
@@ -4268,9 +4292,11 @@ function renderPurchaseCombinedList() {
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
-            '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
-              PURCHASE_REORDER_UNITS.map(function(u) { return '<option value="' + u + '"' + (reorderUnit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') +
-            '</select>' +
+            '<div class="purchase-reorder-unit-chips">' +
+              PURCHASE_REORDER_UNITS.map(function(u) {
+                return '<button type="button" class="reorder-unit-chip' + (reorderUnit === u ? ' active' : '') + '" onclick="setPurchaseReorderUnit(\'' + catId + '\',\'' + row.id + '\',\'' + u + '\',this)">' + u + '</button>';
+              }).join('') +
+            '</div>' +
           '</div>' +
         '</label>' +
       '</div>' +
@@ -4870,20 +4896,72 @@ async function deleteRecipe(id) {
    невозможна — ни Telegram, ни WhatsApp, ни Viber не позволяют сайту
    нажать "отправить" за человека, — поэтому после вставки текста в
    открывшемся чате человек сам жмёт отправить, возвращается сюда и жмёт
-   "Отправил(а) → Далее", чтобы перейти к следующему. */
+   "Отправил(а) → Далее", чтобы перейти к следующему.
+
+   ПРОГРЕСС ОТПРАВКИ сохраняется в localStorage (SEND_PURCHASE_PROGRESS_KEY):
+   список id категорий, которые уже подтверждены как отправленные
+   ("Отправил(а) → Далее"). Это позволяет не терять прогресс при случайном
+   закрытии вкладки/окна — при следующем заходе (или прямо на главной
+   странице "Закупки", даже не открывая пошаговую отправку) видно, сколько
+   уже отправлено, а сама отправка продолжится с первого неотправленного
+   поставщика/цеха. Прогресс очищается только после полного завершения
+   рассылки (finishSendAllPurchase) — "Пропустить" и "Отмена" прогресс
+   не стирают, чтобы уже подтверждённая отправка не потерялась. */
+var SEND_PURCHASE_PROGRESS_KEY = 'r20_send_purchase_progress_v1';
 var sendAllPurchaseQueue = [];
 var sendAllPurchaseIndex = 0;
+var sendAllPurchaseSentIds = [];
 
-function startSendAllPurchase() {
+function loadSendPurchaseSentIds() {
+  try {
+    var raw = localStorage.getItem(SEND_PURCHASE_PROGRESS_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+function saveSendPurchaseSentIds(ids) {
+  try { localStorage.setItem(SEND_PURCHASE_PROGRESS_KEY, JSON.stringify(ids)); } catch (e) {}
+}
+
+function clearSendPurchaseProgress() {
+  try { localStorage.removeItem(SEND_PURCHASE_PROGRESS_KEY); } catch (e) {}
+}
+
+/* Возвращает { candidates, sentIds } — какие поставщики/цеха сейчас готовы
+   к отправке (есть ссылка и заполненные позиции) и какие из них уже
+   отмечены отправленными в сохранённом прогрессе. Используется и на
+   главной странице "Закупки" (renderPurchaseHomeList), и внутри самой
+   пошаговой отправки. */
+function getSendPurchaseProgress() {
   var candidates = purchaseCategories.filter(function(c) {
     return (c.link || '').trim() && buildPurchaseReportLines(c.id).length > 0;
   });
+  var candidateIds = candidates.map(function(c) { return c.id; });
+  var sentIds = loadSendPurchaseSentIds().filter(function(id) { return candidateIds.indexOf(id) !== -1; });
+  return { candidates: candidates, sentIds: sentIds };
+}
+
+function startSendAllPurchase() {
+  var progress = getSendPurchaseProgress();
+  var candidates = progress.candidates;
   if (!candidates.length) {
     showToast('⚠️ Нет ни одного поставщика/цеха со ссылкой для отправки и заполненными позициями');
     return;
   }
   sendAllPurchaseQueue = candidates;
-  sendAllPurchaseIndex = 0;
+  sendAllPurchaseSentIds = progress.sentIds;
+  // сохраняем прогресс сразу же, отфильтрованным от уже неактуальных id
+  saveSendPurchaseSentIds(sendAllPurchaseSentIds);
+  // начинаем с первого ещё не отправленного — уже отправленные пропускаем автоматически
+  var firstPending = 0;
+  while (firstPending < sendAllPurchaseQueue.length && sendAllPurchaseSentIds.indexOf(sendAllPurchaseQueue[firstPending].id) !== -1) {
+    firstPending++;
+  }
+  sendAllPurchaseIndex = firstPending;
+  if (sendAllPurchaseSentIds.length) {
+    showToast('↩️ Продолжаем — уже отправлено: ' + sendAllPurchaseSentIds.length + ' из ' + sendAllPurchaseQueue.length);
+  }
   renderSendAllPurchaseStep();
 }
 
@@ -4898,7 +4976,13 @@ function renderSendAllPurchaseStep() {
   var titleEl = $('send-purchase-title');
   var textEl = $('send-purchase-text');
   var nextBtn = $('send-purchase-next-btn');
+  var progressEl = $('send-purchase-progress');
   if (titleEl) titleEl.textContent = '📤 Отправка ' + (sendAllPurchaseIndex + 1) + ' из ' + sendAllPurchaseQueue.length + ' — ' + (c.icon || '📦') + ' ' + c.label;
+  if (progressEl) {
+    progressEl.textContent = sendAllPurchaseSentIds.length
+      ? '✅ Уже отправлено: ' + sendAllPurchaseSentIds.length + ' из ' + sendAllPurchaseQueue.length
+      : '';
+  }
   if (textEl) textEl.value = buildPurchaseReportText(c.id);
   if (nextBtn) nextBtn.disabled = true; // сначала нужно нажать "Скопировать и открыть чат"
   overlay.classList.add('show');
@@ -4918,11 +5002,20 @@ function sendAllPurchaseOpenAndCopy() {
 }
 
 function sendAllPurchaseNext() {
+  var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
+  if (c && sendAllPurchaseSentIds.indexOf(c.id) === -1) {
+    sendAllPurchaseSentIds.push(c.id);
+    saveSendPurchaseSentIds(sendAllPurchaseSentIds);
+    refreshPurchaseHomeProgressIfVisible();
+  }
   sendAllPurchaseIndex++;
   renderSendAllPurchaseStep();
 }
 
 function sendAllPurchaseSkip() {
+  // "Пропустить" НЕ отмечает поставщика/цех как отправленного — прогресс
+  // не сохраняем, чтобы при следующем заходе (в том числе после случайного
+  // закрытия окна) он снова предлагался к отправке.
   sendAllPurchaseIndex++;
   renderSendAllPurchaseStep();
 }
@@ -4932,18 +5025,30 @@ function finishSendAllPurchase() {
   showToast('✅ Рассылка завершена — обработано поставщиков/цехов: ' + sendAllPurchaseQueue.length);
   sendAllPurchaseQueue = [];
   sendAllPurchaseIndex = 0;
+  sendAllPurchaseSentIds = [];
+  clearSendPurchaseProgress();
+  refreshPurchaseHomeProgressIfVisible();
 }
 
 function cancelSendAllPurchase() {
   closeSendAllPurchaseModal();
   sendAllPurchaseQueue = [];
   sendAllPurchaseIndex = 0;
+  sendAllPurchaseSentIds = [];
   showToast('Рассылка отменена');
+  refreshPurchaseHomeProgressIfVisible();
 }
 
 function closeSendAllPurchaseModal() {
   var overlay = $('send-purchase-overlay');
   if (overlay) overlay.classList.remove('show');
+}
+
+/* Если сейчас открыта главная страница "Закупки" — перерисовывает её,
+   чтобы строка прогресса под кнопкой "Отправить всё" сразу обновилась
+   после отметки очередного поставщика/цеха отправленным. */
+function refreshPurchaseHomeProgressIfVisible() {
+  if ($('purchase-home-list')) renderPurchaseHomeList();
 }
 
 /* ================================================================
