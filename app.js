@@ -3691,21 +3691,25 @@ function renderPurchaseHomeList() {
     '</div>';
   }
 
-  // Поиск по названию ИНГРЕДИЕНТА — ищем не по названию самого заведения/
-  // поставщика, а по позициям (ингредиентам) внутри его списка (см.
-  // purchaseRowsFor + purchaseNameMatchesSearch — тот же принцип "по первым
-  // буквам", что и в поиске позиций на детальном экране). Карточка
-  // заведения/поставщика остаётся видна, если хотя бы один её ингредиент
-  // подходит под запрос.
+  // Поиск по названию ИНГРЕДИЕНТА. Раньше запрос только отфильтровывал
+  // карточки заведений/поставщиков, оставляя видимой карточку целиком —
+  // чтобы внести остаток, приходилось ещё и открывать её, найдя внутри
+  // уже нужную позицию (среди чужих). Теперь, пока в поиске что-то
+  // введено, главная страница вместо карточек показывает сразу САМИ
+  // найденные позиции (у какого бы заведения/поставщика они ни были) —
+  // с полями "Остаток"/"Дозаказ" прямо тут, как в общем списке цеха (см.
+  // renderPurchaseCombinedList). Внесли остаток → очистили поиск →
+  // список карточек вернулся как был → можно искать следующий ингредиент.
   var homeSearchInput = $('purchase-home-search');
   var homeSearchQuery = homeSearchInput ? homeSearchInput.value.trim().toLowerCase() : '';
-  function matchesHomeSearch(c) {
-    if (!homeSearchQuery) return true;
-    return purchaseRowsFor(c.id).some(function(row) { return purchaseNameMatchesSearch(row.name, homeSearchQuery); });
+
+  if (homeSearchQuery) {
+    renderPurchaseHomeSearchResults(holder, homeSearchQuery, homeSearchInput.value.trim());
+    return;
   }
 
-  var workshops = purchaseCategories.filter(function(c) { return c.builtin && matchesHomeSearch(c); });
-  var suppliers = purchaseCategories.filter(function(c) { return !c.builtin && matchesHomeSearch(c); });
+  var workshops = purchaseCategories.filter(function(c) { return c.builtin; });
+  var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
 
   // Кнопка "Отправить всё" видна только пока есть что реально заказывать —
   // категория должна иметь ссылку для отправки, содержать хотя бы одну
@@ -3743,17 +3747,77 @@ function renderPurchaseHomeList() {
     html += '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>';
   }
 
-  var noMatchMsg = '<p class="purchase-home-empty">Ничего не найдено по запросу «' + esc(homeSearchInput ? homeSearchInput.value.trim() : '') + '».</p>';
-
   html += '<div class="purchase-home-group-title">🏭 Заведения</div>';
-  html += workshops.length ? workshops.map(cardHtml).join('') : (homeSearchQuery ? noMatchMsg : '<p class="purchase-home-empty">Пока нет ни одного заведения.</p>');
+  html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного заведения.</p>';
   html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить заведение</button>';
 
   html += '<div class="purchase-home-group-title">🚚 Поставщики</div>';
-  html += suppliers.length ? suppliers.map(cardHtml).join('') : (homeSearchQuery ? noMatchMsg : '<p class="purchase-home-empty">Пока нет ни одного поставщика.</p>');
+  html += suppliers.length ? suppliers.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного поставщика.</p>';
   html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseSupplier()" style="width:100%;margin:6px 0 6px">➕ Добавить поставщика</button>';
 
   holder.innerHTML = html;
+}
+
+/* Режим поиска на главной странице "Закупка": пока в поле что-то введено,
+   вместо карточек заведений/поставщиков показываем сразу найденные
+   позиции (ингредиенты) — у какого бы заведения/поставщика они ни
+   числились — с полями "Остаток"/"Дозаказ" прямо здесь, точно как в
+   общем списке цеха (см. renderPurchaseCombinedList). Так пользователь
+   может: ввести название ингредиента → сразу увидеть его и внести
+   остаток/дозаказ → очистить поиск → искать следующий, не открывая
+   карточки поставщиков вручную. Один и тот же id позиции обновляется
+   через updatePurchaseField/recomputePurchaseRow — они не привязаны к
+   тому, где именно строка отрисована, поэтому значение корректно
+   сохранится и отразится, если эта же позиция где-то ещё видна на
+   экране (например, в открытой карточке или в общем списке цеха). */
+function renderPurchaseHomeSearchResults(holder, query, rawQuery) {
+  var matches = [];
+  purchaseCategories.forEach(function(c) {
+    purchaseRowsFor(c.id).forEach(function(row) {
+      if ((row.name || '').trim() && purchaseNameMatchesSearch(row.name, query)) {
+        matches.push({ cat: c, row: row });
+      }
+    });
+  });
+
+  if (!matches.length) {
+    holder.innerHTML = '<p class="purchase-home-empty">Ничего не найдено по запросу «' + esc(rawQuery) + '».</p>';
+    return;
+  }
+
+  holder.innerHTML = matches.map(function(entry) {
+    var c = entry.cat;
+    var row = entry.row;
+    var res = purchaseResultDisplay(row);
+    var reorderUnit = row.reorderUnit || 'кг';
+    return '<div class="purchase-row" data-id="' + row.id + '">' +
+      '<div class="purchase-row-readonly-name">' + esc(row.name) +
+        '<span class="purchase-row-meta">' + esc(c.icon || '📦') + ' ' + esc(c.label) +
+          (row.norm === '' || row.norm == null ? '' : ' · норма: ' + esc(String(row.norm)) + ' ' + esc(row.unit)) +
+        '</span>' +
+      '</div>' +
+      '<div class="purchase-row-fields purchase-row-fields-combined">' +
+        '<label class="purchase-field"><span>Остаток</span>' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
+            'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + c.id + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+        '</label>' +
+        '<div class="purchase-field"><span>Докупить</span>' +
+          '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
+        '</div>' +
+        '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
+          '<div class="purchase-reorder-group">' +
+            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
+              'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + c.id + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+            '<select class="purchase-reorder-unit" onchange="handlePurchaseReorderUnitChange(this,\'' + c.id + '\',\'' + row.id + '\')">' +
+              purchaseUnitOptionsHtml(reorderUnit) +
+            '</select>' +
+          '</div>' +
+        '</label>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  autosizeAllPurchaseInputs(holder);
 }
 
 /* "Общий список — все поставщики" и "Общий отчёт" по смыслу относятся
@@ -4446,12 +4510,20 @@ function purchaseResultDisplay(row) {
    при каждом нажатии клавиши — так поле остаётся компактным, но растёт
    по мере набора более длинного числа. Вызывается как из oninput каждого
    такого поля, так и один раз после отрисовки списка (для уже
-   заполненных значений). */
+   заполненных значений).
+   Ширина ставится через calc(...ch + 16px), а не просто в "ch", потому
+   что у всего приложения box-sizing: border-box (см. styles.css) — при
+   нём "width" уже включает в себя padding поля (8px слева + 8px справа
+   = 16px), и если посчитать только под цифры, эти 16px откусывались бы
+   от места для самих цифр (двузначная норма "14" превращалась в
+   умещающуюся едва ли на одну цифру — видно было только "1"). Добавляя
+   16px сверх ch, гарантируем, что под сами символы всегда остаётся
+   ровно ch — вне зависимости от box-sizing. */
 function autosizePurchaseInput(el) {
   if (!el) return;
   var val = (el.value !== '' && el.value != null) ? String(el.value) : (el.getAttribute('placeholder') || '');
   var ch = Math.max(2, Math.min(val.length + 1, 10));
-  el.style.width = ch + 'ch';
+  el.style.width = 'calc(' + ch + 'ch + 16px)';
 }
 
 function autosizeAllPurchaseInputs(root) {
