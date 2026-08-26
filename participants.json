@@ -23,14 +23,5 @@
     "addedAt": 1787571064635,
     "blocked": false,
     "role": "viewer"
-  },
-  {
-    "id": "35D1-1B2D",
-    "fingerprint": "",
-    "name": "",
-    "addedAt": 1787739056024,
-    "blocked": true,
-    "role": "viewer",
-    "claimed": true
   }
 ]
