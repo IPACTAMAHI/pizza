@@ -4074,6 +4074,7 @@ function renderPurchaseList() {
             '<option value="ведро"' + (row.unit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
             '<option value="мл"' + (row.unit === 'мл' ? ' selected' : '') + '>мл</option>' +
             '<option value="бут"' + (row.unit === 'бут' ? ' selected' : '') + '>бут</option>' +
+            '<option value="упаковка"' + (row.unit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
@@ -4100,6 +4101,7 @@ function renderPurchaseList() {
               '<option value="ведро"' + (reorderUnit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
               '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
               '<option value="бут"' + (reorderUnit === 'бут' ? ' selected' : '') + '>бут</option>' +
+              '<option value="упаковка"' + (reorderUnit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -4176,6 +4178,7 @@ function renderPurchaseCombinedList() {
               '<option value="ведро"' + (reorderUnit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
               '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
               '<option value="бут"' + (reorderUnit === 'бут' ? ' selected' : '') + '>бут</option>' +
+              '<option value="упаковка"' + (reorderUnit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
