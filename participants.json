@@ -42,5 +42,14 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "DDD2-7154",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787739053557,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
