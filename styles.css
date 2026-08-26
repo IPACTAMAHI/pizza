@@ -264,6 +264,21 @@
   .purchase-home-card-text strong { display: block; font-size: 15px; }
   .purchase-home-card-meta { font-size: 12px; color: var(--text-muted); font-weight: 500; }
   .purchase-home-card-link-badge { font-size: 12px; color: var(--success); font-weight: 500; }
+
+  /* Баннер незавершённой рассылки ("📤 Отправить всё") — появляется на
+     главной странице "Закупки", если сайт был случайно закрыт посреди
+     рассылки (прогресс хранится в localStorage). Позволяет продолжить
+     с того же места или начать заново. */
+  .purchase-send-progress-banner {
+    background: rgba(217, 165, 78, .12);
+    border: 1.5px solid rgba(217, 165, 78, .4);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 18px;
+  }
+  .purchase-send-progress-banner-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .purchase-send-progress-banner-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .purchase-send-progress-banner-actions { display: flex; gap: 8px; margin-top: 10px; }
   .purchase-home-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
   .purchase-home-icon-btn {
     width: 36px; height: 36px; border-radius: 9px; border: none;
@@ -576,20 +591,33 @@
   }
   .purchase-remove:active { transform: scale(.92); }
   .purchase-row-fields {
-    display: grid; grid-template-columns: 60px 1fr 1fr 1fr 1fr; gap: 6px;
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px;
   }
   .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
-  .purchase-reorder-group { display: flex; gap: 4px; }
-  .purchase-reorder-group input { min-width: 0; flex: 1 1 auto; }
-  .purchase-reorder-group select { flex: 0 0 58px; padding: 8px 2px; }
-  .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .purchase-reorder-group { display: flex; gap: 4px; align-items: center; }
+  .purchase-field { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; }
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
-    padding: 8px 6px; font-size: 14px; width: 100%;
+    padding: 8px 8px; font-size: 14px;
+  }
+  /* Поля "Норма"/"Остаток"/"Дозаказ" — короткие числа, поэтому ширина
+     считается по факту введённого текста в JS (см. autosizePurchaseInput
+     в app.js) через свойство ch — так поле остаётся компактным для
+     "12", но само расширяется, если ввести более длинное число.
+     field-sizing: content — нативный аналог для браузеров, которые его
+     поддерживают, на случай если JS почему-то не отработал. */
+  .purchase-field input[type="number"] {
+    width: 4ch; min-width: 40px; max-width: 100%;
+    field-sizing: content;
+    text-align: left;
+  }
+  .purchase-field select {
+    width: auto; min-width: 56px;
   }
   .purchase-result {
-    padding: 8px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
-    text-align: center; min-height: 34px; display: flex; align-items: center; justify-content: center;
+    padding: 8px 10px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    text-align: center; min-height: 34px; min-width: 64px; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,.05); color: var(--text-muted);
   }
   .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
@@ -605,11 +633,6 @@
   @keyframes purchaseRowNew {
     0% { background: rgba(226,86,75,.22); }
     100% { background: var(--card); }
-  }
-  @media (max-width: 480px) {
-    .purchase-row-fields { grid-template-columns: 1fr 1fr; }
-    .purchase-field-unit { order: -1; }
-    .purchase-field-reorder { grid-column: span 2; }
   }
   /* Общий список закупки (все поставщики сразу, для обхода цеха) —
      та же карточка .purchase-row, только имя/ед./норма — просто текст
