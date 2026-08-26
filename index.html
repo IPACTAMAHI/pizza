@@ -119,6 +119,11 @@
        иконки ✏️/🗑️ (видны только разработчику) — редактирование и удаление
        прямо отсюда, без захода внутрь. -->
   <div id="purchase-home-view">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" class="search-input" id="purchase-home-search" placeholder="Поиск по названию ингредиента..." oninput="renderPurchaseHomeList(); toggleSearchClear('purchase-home-search')">
+      <button type="button" class="search-clear" id="purchase-home-search-clear" onclick="clearSearchInput('purchase-home-search')" title="Очистить" style="display:none">✕</button>
+    </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
       <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех заведениях и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
     </div>
