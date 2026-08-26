@@ -633,6 +633,21 @@
     field-sizing: content;
     text-align: left;
   }
+  /* Стрелки-степпер у числовых полей занимают ~20px внутри поля, но
+     ширина считается в JS (autosizePurchaseInput) только по длине текста
+     — поэтому при вводе 2-3 цифр они упирались в стрелки и оказывались
+     под ними, невидимые (см. скриншот с "4" под стрелками). Убираем
+     стрелки — вводить дозаказ на телефоне всё равно удобнее просто
+     цифрами, чем щёлкать по крошечным стрелкам, — и теперь вся ширина
+     поля уходит на сами цифры. */
+  .purchase-field input[type="number"]::-webkit-outer-spin-button,
+  .purchase-field input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .purchase-field input[type="number"] {
+    -moz-appearance: textfield;
+  }
   .purchase-field select {
     width: auto; min-width: 56px;
   }
