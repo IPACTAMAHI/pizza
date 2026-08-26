@@ -1,4 +1,4 @@
-  :root {
+ :root {
     --bg: #0b0b0d;
     --surface: #18171a;
     --card: #1c1b1e;
@@ -570,15 +570,6 @@
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
     padding: 8px 6px; font-size: 14px; width: 100%;
-  }
-  /* Нативный список опций браузера не наследует тёмную тему страницы —
-     без явного цвета текст (светлый, как у закрытого select) оказывается
-     светлым на светлом фоне списка и виден только у подсвеченной строки.
-     Задаём тёмный текст/светлый фон явно, чтобы все единицы измерения
-     были отчётливо видны, а не только та, что под курсором. */
-  .purchase-unit option, .purchase-reorder-unit option {
-    color: #1c1b1e;
-    background: #fff;
   }
   .purchase-result {
     padding: 8px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
