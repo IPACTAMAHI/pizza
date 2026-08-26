@@ -4120,6 +4120,45 @@ function updatePurchaseField(cat, id, field, value) {
   if (PURCHASE_TEMPLATE_FIELDS[field]) schedulePurchaseSync();
 }
 
+// Базовый набор единиц измерения для позиции закупки. Раньше был жёстко
+// зашит только "кг"/"шт" — теперь администратор/разработчик (только в
+// режиме редактирования шаблона, см. canEditTemplate) может добавить
+// свою через пункт "+ своя…". Уже сохранённая нестандартная единица
+// (например, "л" или "уп") всегда попадает в список, чтобы <select>
+// корректно её отображал, даже если она не входит в базовый набор.
+var PURCHASE_BASE_UNITS = ['кг', 'шт'];
+function purchaseUnitOptionsHtml(currentUnit) {
+  var units = PURCHASE_BASE_UNITS.slice();
+  if (currentUnit && units.indexOf(currentUnit) === -1) units.push(currentUnit);
+  var html = units.map(function(u) {
+    return '<option value="' + escAttr(u) + '"' + (u === currentUnit ? ' selected' : '') + '>' + esc(u) + '</option>';
+  }).join('');
+  html += '<option value="__custom_unit__">+ своя…</option>';
+  return html;
+}
+
+// Обработчик выбора в селекте "Ед." строки закупки. При выборе "+ своя…"
+// запрашивает текст через prompt() и сохраняет его как единицу измерения
+// этой позиции; при отмене/пустом вводе откатывает select к прежнему
+// значению, ничего не сохраняя.
+function handlePurchaseUnitChange(select, cat, id) {
+  if (select.value !== '__custom_unit__') {
+    updatePurchaseField(cat, id, 'unit', select.value);
+    recomputePurchaseRow(id);
+    return;
+  }
+  var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
+  var prevUnit = row ? row.unit : 'кг';
+  var custom = prompt('Введите свою единицу измерения (например: л, уп, банка):', '');
+  custom = (custom || '').trim();
+  if (!custom) {
+    select.value = prevUnit;
+    return;
+  }
+  updatePurchaseField(cat, id, 'unit', custom);
+  renderPurchaseList(); // перерисовываем, чтобы select показал новую единицу как опцию
+}
+
 // Округление "в выгодную сторону" = до ближайшего целого числа:
 // 12,1 → 12 (округление вниз), 12,6 → 13 (округление вверх).
 function roundToBuy(value) {
@@ -4206,9 +4245,8 @@ function renderPurchaseList() {
       '</div>' +
       '<div class="purchase-row-fields">' +
         '<label class="purchase-field purchase-field-unit"><span>Ед.</span>' +
-          '<select class="purchase-unit"' + dis + ' onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
-            '<option value="кг"' + (row.unit === 'кг' ? ' selected' : '') + '>кг</option>' +
-            '<option value="шт"' + (row.unit === 'шт' ? ' selected' : '') + '>шт</option>' +
+          '<select class="purchase-unit"' + dis + ' onchange="handlePurchaseUnitChange(this,\'' + cat + '\',\'' + row.id + '\')">' +
+            purchaseUnitOptionsHtml(row.unit) +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
@@ -4363,14 +4401,41 @@ function updatePurchaseSummary() {
   el.textContent = withName.length ? ('Нужно докупить: ' + needCount + ' из ' + withName.length + ' позиций') : '';
 }
 
+// Текст для поставщика должен содержать только то, что ему реально нужно —
+// позицию и количество к заказу. Раньше сюда попадали служебные пометки
+// ("норма не указана", "✅ хватает") и расчёт вёлся отдельно от дозаказа —
+// поставщику это не нужно и только засоряет сообщение. Теперь:
+//  - позиции, по которым ничего заказывать не нужно (норма не задана и
+//    дозаказ не вписан, либо остатка достаточно и дозаказа нет), в отчёт
+//    вообще не попадают;
+//  - если норма/остаток дают количество к покупке И вписан дозаказ в той
+//    же единице — они складываются в одно число;
+//  - если единицы разные — показываются оба количества через "+".
 function buildPurchaseReportLines(cat) {
-  return purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); }).map(function(row) {
-    var res = purchaseResultDisplay(row);
-    var line = row.name.trim() + ' — ' + (res.cls === 'purchase-result-need' ? res.text : (res.text === '—' ? 'норма не указана' : res.text));
-    var reorder = String(row.reorder == null ? '' : row.reorder).trim();
-    if (reorder) line += ' (🔁 дозаказ: ' + reorder + ' ' + (row.reorderUnit || 'кг') + ')';
-    return line;
+  var lines = [];
+  purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); }).forEach(function(row) {
+    var toBuy = computeToBuy(row); // null = норма не задана, 0 = хватает
+    var needQty = (toBuy && toBuy > 0) ? toBuy : 0;
+    var needUnit = row.unit;
+    var reorderQty = parseFloat(String(row.reorder == null ? '' : row.reorder).replace(',', '.'));
+    var hasReorder = isFinite(reorderQty) && reorderQty > 0;
+    var reorderUnit = row.reorderUnit || 'кг';
+
+    var qtyText;
+    if (needQty > 0 && hasReorder) {
+      qtyText = (needUnit === reorderUnit)
+        ? (needQty + reorderQty) + ' ' + needUnit
+        : needQty + ' ' + needUnit + ' + ' + reorderQty + ' ' + reorderUnit;
+    } else if (needQty > 0) {
+      qtyText = needQty + ' ' + needUnit;
+    } else if (hasReorder) {
+      qtyText = reorderQty + ' ' + reorderUnit;
+    } else {
+      return; // нечего заказывать — поставщику эта строка не нужна
+    }
+    lines.push(row.name.trim() + ' — ' + qtyText);
   });
+  return lines;
 }
 
 function buildPurchaseReportText(cat) {
