@@ -1,4 +1,4 @@
- :root {
+  :root {
     --bg: #0b0b0d;
     --surface: #18171a;
     --card: #1c1b1e;
@@ -211,10 +211,25 @@
     border-color: rgba(217, 165, 78, .55);
     background: rgba(217, 165, 78, .08);
   }
+  .participant-item.is-purchase {
+    border-color: rgba(110, 168, 214, .55);
+    background: rgba(110, 168, 214, .08);
+  }
   .participant-item.is-blocked {
     border-color: rgba(226, 86, 75, .55);
     background: rgba(226, 86, 75, .08);
   }
+
+  /* "Закупка" как отдельная РОЛЬ участника (в отличие от админа) — видит
+     вкладку "Закупка" (и ничего больше сверх обычного гостя). Как и
+     .admin-only/.developer-only, скрыт по умолчанию и раскрывается через
+     класс на <body>: is-admin (админ/разработчик и так видят всё) ИЛИ
+     is-purchase-role (именно этот участник назначен на закупку). */
+  .purchase-access-only { display: none !important; }
+  body.is-admin .purchase-access-only { display: block !important; }
+  body.is-purchase-role .purchase-access-only { display: block !important; }
+  body.is-admin .nav-tab.purchase-access-only,
+  body.is-purchase-role .nav-tab.purchase-access-only { display: block !important; }
 
   /* Главная страница вкладки "Закупка" — список цехов и поставщиков
      карточками (вместо строки чипов), с иконками правки/удаления
@@ -248,6 +263,22 @@
   .purchase-home-card-text { min-width: 0; }
   .purchase-home-card-text strong { display: block; font-size: 15px; }
   .purchase-home-card-meta { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .purchase-home-card-link-badge { font-size: 12px; color: var(--success); font-weight: 500; }
+
+  /* Баннер незавершённой рассылки ("📤 Отправить всё") — появляется на
+     главной странице "Закупки", если сайт был случайно закрыт посреди
+     рассылки (прогресс хранится в localStorage). Позволяет продолжить
+     с того же места или начать заново. */
+  .purchase-send-progress-banner {
+    background: rgba(217, 165, 78, .12);
+    border: 1.5px solid rgba(217, 165, 78, .4);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 18px;
+  }
+  .purchase-send-progress-banner-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .purchase-send-progress-banner-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .purchase-send-progress-banner-actions { display: flex; gap: 8px; margin-top: 10px; }
   .purchase-home-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
   .purchase-home-icon-btn {
     width: 36px; height: 36px; border-radius: 9px; border: none;
@@ -560,20 +591,33 @@
   }
   .purchase-remove:active { transform: scale(.92); }
   .purchase-row-fields {
-    display: grid; grid-template-columns: 60px 1fr 1fr 1fr 1fr; gap: 6px;
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px;
   }
   .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
-  .purchase-reorder-group { display: flex; gap: 4px; }
-  .purchase-reorder-group input { min-width: 0; flex: 1 1 auto; }
-  .purchase-reorder-group select { flex: 0 0 58px; padding: 8px 2px; }
-  .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .purchase-reorder-group { display: flex; gap: 4px; align-items: center; }
+  .purchase-field { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; }
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
-    padding: 8px 6px; font-size: 14px; width: 100%;
+    padding: 8px 8px; font-size: 14px;
+  }
+  /* Поля "Норма"/"Остаток"/"Дозаказ" — короткие числа, поэтому ширина
+     считается по факту введённого текста в JS (см. autosizePurchaseInput
+     в app.js) через свойство ch — так поле остаётся компактным для
+     "12", но само расширяется, если ввести более длинное число.
+     field-sizing: content — нативный аналог для браузеров, которые его
+     поддерживают, на случай если JS почему-то не отработал. */
+  .purchase-field input[type="number"] {
+    width: 4ch; min-width: 40px; max-width: 100%;
+    field-sizing: content;
+    text-align: left;
+  }
+  .purchase-field select {
+    width: auto; min-width: 56px;
   }
   .purchase-result {
-    padding: 8px 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
-    text-align: center; min-height: 34px; display: flex; align-items: center; justify-content: center;
+    padding: 8px 10px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    text-align: center; min-height: 34px; min-width: 64px; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,.05); color: var(--text-muted);
   }
   .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
@@ -589,11 +633,6 @@
   @keyframes purchaseRowNew {
     0% { background: rgba(226,86,75,.22); }
     100% { background: var(--card); }
-  }
-  @media (max-width: 480px) {
-    .purchase-row-fields { grid-template-columns: 1fr 1fr; }
-    .purchase-field-unit { order: -1; }
-    .purchase-field-reorder { grid-column: span 2; }
   }
   /* Общий список закупки (все поставщики сразу, для обхода цеха) —
      та же карточка .purchase-row, только имя/ед./норма — просто текст
@@ -950,6 +989,18 @@
     border-radius: 10px; color: var(--text); margin-bottom: 4px;
   }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+
+  /* Модалка пошаговой рассылки отчётов поставщикам (см. "📤 Отправить
+     всё" в "Закупке") — текст сообщения только для чтения (его копируют
+     в буфер и вставляют в открывшемся чате), поэтому оформлен как
+     textarea, а не input. */
+  .send-purchase-text {
+    width: 100%; min-height: 160px; resize: vertical;
+    padding: 12px 14px; font-size: 13px; line-height: 1.5;
+    background: var(--surface); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 10px; color: var(--text); font-family: inherit;
+    margin-bottom: 4px;
+  }
 
   /* ===== RESPONSIVE ===== */
   @media (max-width: 500px) {
