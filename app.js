@@ -4067,14 +4067,7 @@ function renderPurchaseList() {
         '<label class="purchase-field purchase-field-unit"><span>Ед.</span>' +
           '<select class="purchase-unit"' + dis + ' onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'unit\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
             '<option value="кг"' + (row.unit === 'кг' ? ' selected' : '') + '>кг</option>' +
-            '<option value="г"' + (row.unit === 'г' ? ' selected' : '') + '>г</option>' +
-            '<option value="л"' + (row.unit === 'л' ? ' selected' : '') + '>л</option>' +
-            '<option value="мл"' + (row.unit === 'мл' ? ' selected' : '') + '>мл</option>' +
             '<option value="шт"' + (row.unit === 'шт' ? ' selected' : '') + '>шт</option>' +
-            '<option value="банка"' + (row.unit === 'банка' ? ' selected' : '') + '>банка</option>' +
-            '<option value="ведро"' + (row.unit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
-            '<option value="бутылка"' + (row.unit === 'бутылка' ? ' selected' : '') + '>бутылка</option>' +
-            '<option value="упаковка"' + (row.unit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
           '</select>' +
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
@@ -4095,13 +4088,7 @@ function renderPurchaseList() {
             '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
               '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
               '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
-              '<option value="л"' + (reorderUnit === 'л' ? ' selected' : '') + '>л</option>' +
-              '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
               '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
-              '<option value="банка"' + (reorderUnit === 'банка' ? ' selected' : '') + '>банка</option>' +
-              '<option value="ведро"' + (reorderUnit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
-              '<option value="бутылка"' + (reorderUnit === 'бутылка' ? ' selected' : '') + '>бутылка</option>' +
-              '<option value="упаковка"' + (reorderUnit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -4172,13 +4159,7 @@ function renderPurchaseCombinedList() {
             '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
               '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
               '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
-              '<option value="л"' + (reorderUnit === 'л' ? ' selected' : '') + '>л</option>' +
-              '<option value="мл"' + (reorderUnit === 'мл' ? ' selected' : '') + '>мл</option>' +
               '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
-              '<option value="банка"' + (reorderUnit === 'банка' ? ' selected' : '') + '>банка</option>' +
-              '<option value="ведро"' + (reorderUnit === 'ведро' ? ' selected' : '') + '>ведро</option>' +
-              '<option value="бутылка"' + (reorderUnit === 'бутылка' ? ' selected' : '') + '>бутылка</option>' +
-              '<option value="упаковка"' + (reorderUnit === 'упаковка' ? ' selected' : '') + '>упаковка</option>' +
             '</select>' +
           '</div>' +
         '</label>' +
