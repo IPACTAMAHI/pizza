@@ -3173,6 +3173,7 @@ function clearSearchInput(inputId) {
   toggleSearchClear(inputId);
   input.focus();
   if (inputId === 'search-categories') renderCategoriesList();
+  if (inputId === 'purchase-home-search') renderPurchaseHomeList();
 }
 
 /* ================================================================
@@ -3690,8 +3691,21 @@ function renderPurchaseHomeList() {
     '</div>';
   }
 
-  var workshops = purchaseCategories.filter(function(c) { return c.builtin; });
-  var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
+  // Поиск по названию ИНГРЕДИЕНТА — ищем не по названию самого заведения/
+  // поставщика, а по позициям (ингредиентам) внутри его списка (см.
+  // purchaseRowsFor + purchaseNameMatchesSearch — тот же принцип "по первым
+  // буквам", что и в поиске позиций на детальном экране). Карточка
+  // заведения/поставщика остаётся видна, если хотя бы один её ингредиент
+  // подходит под запрос.
+  var homeSearchInput = $('purchase-home-search');
+  var homeSearchQuery = homeSearchInput ? homeSearchInput.value.trim().toLowerCase() : '';
+  function matchesHomeSearch(c) {
+    if (!homeSearchQuery) return true;
+    return purchaseRowsFor(c.id).some(function(row) { return purchaseNameMatchesSearch(row.name, homeSearchQuery); });
+  }
+
+  var workshops = purchaseCategories.filter(function(c) { return c.builtin && matchesHomeSearch(c); });
+  var suppliers = purchaseCategories.filter(function(c) { return !c.builtin && matchesHomeSearch(c); });
 
   // Кнопка "Отправить всё" видна только пока есть что реально заказывать —
   // категория должна иметь ссылку для отправки, содержать хотя бы одну
@@ -3729,12 +3743,14 @@ function renderPurchaseHomeList() {
     html += '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>';
   }
 
+  var noMatchMsg = '<p class="purchase-home-empty">Ничего не найдено по запросу «' + esc(homeSearchInput ? homeSearchInput.value.trim() : '') + '».</p>';
+
   html += '<div class="purchase-home-group-title">🏭 Заведения</div>';
-  html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного заведения.</p>';
+  html += workshops.length ? workshops.map(cardHtml).join('') : (homeSearchQuery ? noMatchMsg : '<p class="purchase-home-empty">Пока нет ни одного заведения.</p>');
   html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить заведение</button>';
 
   html += '<div class="purchase-home-group-title">🚚 Поставщики</div>';
-  html += suppliers.length ? suppliers.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного поставщика.</p>';
+  html += suppliers.length ? suppliers.map(cardHtml).join('') : (homeSearchQuery ? noMatchMsg : '<p class="purchase-home-empty">Пока нет ни одного поставщика.</p>');
   html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseSupplier()" style="width:100%;margin:6px 0 6px">➕ Добавить поставщика</button>';
 
   holder.innerHTML = html;
