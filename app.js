@@ -5318,15 +5318,86 @@ function renderSendAllPurchaseStep() {
   overlay.classList.add('show');
 }
 
-/* Копирует отчёт текущего шага в буфер обмена и открывает ссылку
-   поставщика/цеха в новой вкладке — оба действия одним нажатием, чтобы
-   в открывшемся чате сразу можно было вставить (Ctrl+V) готовый текст. */
+/* Простое определение телефона (а не десктопа) — на телефоне нужно
+   переходить по ссылке поставщика в ЭТОЙ ЖЕ вкладке (см. ниже, почему),
+   на десктопе — по-прежнему открывать в новой, чтобы не терять текущую
+   страницу закупки. iPad с iPadOS 13+ представляется как Macintosh, но
+   при этом имеет тачскрин — учитываем и это. */
+function isMobileDevice() {
+  var ua = navigator.userAgent || '';
+  if (/Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua)) return true;
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1; // iPadOS
+}
+
+/* Разбирает сохранённую ссылку поставщика/цеха (c.link) и, если это
+   распознанный мессенджер (WhatsApp, личный чат Telegram, Viber),
+   возвращает ссылку, которая открывает СРАЗУ приложение, а не
+   промежуточную страницу — это особенно важно, если сайт открыт внутри
+   встроенного браузера другого приложения (Telegram/WhatsApp-webview),
+   где обычная https-ссылка на wa.me/t.me не всегда сама перехватывается
+   ОС и передаётся установленному приложению.
+   Для WhatsApp и личного чата Telegram сервис официально поддерживает
+   передачу текста прямо в ссылке (?text=...) — тогда сообщение уже
+   будет стоять в поле ввода, когда чат откроется, и prefilled: true.
+   Для остального (инвайт-ссылки групп, Viber, произвольные сайты)
+   текст туда не подставить — остаётся полагаться на буфер обмена,
+   prefilled: false. Что не распознано — возвращается как есть. */
+function resolvePurchaseAppLink(rawLink, text) {
+  var link = (rawLink || '').trim();
+  if (!link) return { url: link, prefilled: false };
+  var encodedText = encodeURIComponent(text || '');
+
+  // WhatsApp: wa.me/<телефон> или (api.)whatsapp.com/send?phone=<телефон>
+  var waMatch = link.match(/(?:wa\.me\/|whatsapp\.com\/send\?[^#]*phone=)(\d{6,15})/i);
+  if (waMatch) {
+    return { url: 'https://wa.me/' + waMatch[1] + '?text=' + encodedText, prefilled: true };
+  }
+
+  // Telegram: t.me/<username> — но НЕ инвайт-ссылка группы (t.me/+... или /joinchat/...),
+  // для неё текст никуда не подставить, ссылку просто открываем как есть.
+  var tgMatch = link.match(/t(?:elegram)?\.me\/([a-zA-Z0-9_]{4,32})(?:[/?]|$)/i);
+  if (tgMatch && !/t(?:elegram)?\.me\/(\+|joinchat\/)/i.test(link)) {
+    return { url: 'https://t.me/' + tgMatch[1] + '?text=' + encodedText, prefilled: true };
+  }
+
+  // Viber: ссылка вида viber://chat?number=... или страница с номером в query
+  var viberNumberMatch = link.match(/[?&]number=(%2B\d+|\+?\d+)/i);
+  if (/viber/i.test(link) && viberNumberMatch) {
+    var viberNumber = decodeURIComponent(viberNumberMatch[1]);
+    return { url: 'viber://chat?number=' + encodeURIComponent(viberNumber), prefilled: false };
+  }
+
+  return { url: link, prefilled: false };
+}
+
+/* Копирует отчёт текущего шага в буфер обмена и открывает приложение
+   поставщика/цеха — оба действия одним нажатием, чтобы в открывшемся
+   чате сразу можно было вставить (Ctrl+V) готовый текст (или он уже
+   будет вставлен автоматически, если сервис это поддерживает).
+   На телефоне переходим по ссылке через location.href в ТЕКУЩЕЙ вкладке,
+   а не window.open(..., '_blank'): так ОС надёжнее передаёт управление
+   установленному приложению — переход по ссылке "как по клику из письма"
+   вместо открытия ссылки в новом фоновом окне, которое встроенные
+   браузеры (Telegram/WhatsApp-webview) не всегда умеют отдавать наружу.
+   Возврат в это приложение — обычной кнопкой "Назад" в WhatsApp/Telegram
+   или свайпом/кнопкой "Назад" на телефоне. На десктопе, где нативного
+   приложения обычно нет, по-прежнему открываем в новой вкладке. */
 function sendAllPurchaseOpenAndCopy() {
   var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
   if (!c) return;
   var text = buildPurchaseReportText(c.id);
-  copyTextToClipboard(text, '📋 Текст скопирован — вставьте его в открывшемся чате');
-  window.open(c.link, '_blank', 'noopener');
+  var resolved = resolvePurchaseAppLink(c.link, text);
+
+  copyTextToClipboard(text, resolved.prefilled
+    ? '📋 Текст скопирован (на всякий случай — в чате он уже должен быть вставлен)'
+    : '📋 Текст скопирован — вставьте его в открывшемся чате');
+
+  if (isMobileDevice()) {
+    window.location.href = resolved.url;
+  } else {
+    window.open(resolved.url, '_blank', 'noopener');
+  }
+
   var nextBtn = $('send-purchase-next-btn');
   if (nextBtn) nextBtn.disabled = false;
 }
