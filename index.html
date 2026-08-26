@@ -47,7 +47,7 @@
     <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="16" y2="15"></line></svg></span>
     <span class="nav-label">Категории</span>
   </div>
-  <div class="nav-tab" data-tab="purchase">
+  <div class="nav-tab purchase-access-only" data-tab="purchase">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 2-1.58l1.65-7.42H5.12"></path></svg></span>
     <span class="nav-label">Закупка</span>
   </div>
@@ -100,12 +100,9 @@
        Открывается кликом по карточке (или иконкой ✏️) на главной странице;
        "← Назад к списку" возвращает на неё. -->
   <div id="purchase-detail-view" style="display:none">
-    <div class="purchase-detail-header">
-      <button type="button" class="purchase-back-btn" onclick="showPurchaseHome()" title="Назад к списку" aria-label="Назад к списку">
-        <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-      </button>
-      <h3 id="purchase-detail-title"></h3>
-    </div>
+    <button type="button" class="btn btn-ghost btn-sm floating-back-anchor" onclick="showPurchaseHome()" style="margin-bottom:14px">← Назад к списку</button>
+
+    <h3 id="purchase-detail-title" style="margin-bottom:14px"></h3>
 
     <!-- Управление самой карточкой цеха/поставщика (не позициями) —
          доступно только разработчику: добавить к цеху, переименовать,
@@ -118,18 +115,13 @@
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
       <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-contact-btn" onclick="setPurchaseContactLink()" style="display:none">🔗 Ссылка для отправки</button>
       <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
     </div>
 
     <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
       🧮 Впишите норму на неделю и остаток, который взвесили на месте — калькулятор посчитает, сколько докупить,
       округляя до ближайшего целого числа (например, 12,1 → 12, а 12,6 → 13).
-    </div>
-
-    <div class="search-wrap">
-      <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" class="search-input" id="purchase-search" placeholder="Поиск ингредиента..." oninput="renderPurchaseList(); toggleSearchClear('purchase-search')">
-      <button type="button" class="search-clear" id="purchase-search-clear" onclick="clearSearchInput('purchase-search')" title="Очистить" style="display:none">✕</button>
     </div>
 
     <div id="purchase-list"></div>
@@ -437,16 +429,19 @@
 
 <!-- TAB: DETAIL -->
 <div id="tab-detail" class="tab-content">
-  <button class="btn btn-ghost btn-sm detail-back" onclick="closeDetail('categories')">← Назад</button>
+  <button class="btn btn-ghost btn-sm detail-back floating-back-anchor" onclick="closeDetail('categories')">← Назад</button>
   <div id="detail-body"></div>
 </div>
 
-<!-- Плавающая компактная кнопка "Назад" для экрана рецепта — появляется,
-     когда обычная кнопка "← Назад" в начале рецепта уходит за пределы
-     видимой области при прокрутке (см. IntersectionObserver в JS),
-     чтобы не нужно было прокручивать наверх, чтобы вернуться к списку.
+<!-- Плавающая компактная кнопка "Назад" — ОДНА на всё приложение, общая для
+     любого длинного экрана, где есть обычная кнопка "← Назад"
+     (класс .floating-back-anchor): экран рецепта и экран цеха/поставщика
+     в "Закупке". Появляется, когда соответствующая обычная кнопка уходит
+     за пределы видимой области при прокрутке (см. initFloatingBackButton
+     в JS), чтобы не нужно было прокручивать наверх, чтобы вернуться назад.
+     onclick переписывается на действие того экрана, что сейчас открыт.
      Скрыта по умолчанию (класс .show добавляется/убирается из JS). -->
-<button class="detail-back-floating" id="detail-back-floating" onclick="closeDetail('categories')" title="Назад" aria-label="Назад к списку рецептов">
+<button class="detail-back-floating" id="detail-back-floating" onclick="closeDetail('categories')" title="Назад" aria-label="Назад">
   <svg viewBox="0 0 24 24" width="20" height="20"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 </button>
 
@@ -468,13 +463,33 @@
     <p id="app-modal-message"></p>
     <input type="text" id="app-modal-input" style="display:none" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
     <select id="app-modal-select" style="display:none"></select>
-    <div id="app-modal-checkboxes" class="modal-checkbox-list" style="display:none"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-sm" id="app-modal-cancel">Отмена</button>
       <button class="btn btn-primary btn-sm" id="app-modal-ok">ОК</button>
     </div>
     <div id="app-modal-dev-login-wrap" style="display:none;text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--glass-border)">
       <span id="app-modal-dev-login" style="color:var(--text-muted);font-size:12px;text-decoration:underline;cursor:pointer">🔑 Я разработчик (владелец) — войти</span>
+    </div>
+  </div>
+</div>
+
+<!-- Пошаговая рассылка отчётов поставщикам/цехам ("📤 Отправить всё" на
+     главной странице "Закупки"): по одному открывает ссылку, прикреплённую
+     к каждому поставщику/цеху, и копирует в буфер обмена текст его
+     недельного отчёта — вставить и нажать "отправить" в открывшемся чате
+     всё равно нужно вручную (ни Telegram, ни WhatsApp, ни Viber не
+     позволяют сайту отправить сообщение без участия человека). См.
+     startSendAllPurchase() в JS. -->
+<div class="modal-overlay" id="send-purchase-overlay">
+  <div class="modal-box" style="max-width:440px">
+    <h3 id="send-purchase-title"></h3>
+    <p>Текст уже скопирован в буфер обмена — откройте чат и вставьте его (Ctrl+V / зажать и «Вставить»), затем нажмите «Отправил(а) → Далее».</p>
+    <textarea class="send-purchase-text" id="send-purchase-text" readonly onclick="this.select()"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="cancelSendAllPurchase()">Отмена</button>
+      <button class="btn btn-ghost btn-sm" onclick="sendAllPurchaseSkip()">Пропустить</button>
+      <button class="btn btn-primary btn-sm" onclick="sendAllPurchaseOpenAndCopy()">📋 Скопировать и открыть чат</button>
+      <button class="btn btn-success btn-sm" id="send-purchase-next-btn" onclick="sendAllPurchaseNext()" disabled>Отправил(а) → Далее</button>
     </div>
   </div>
 </div>
