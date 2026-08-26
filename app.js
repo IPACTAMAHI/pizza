@@ -4069,7 +4069,7 @@ function parsePurchaseTextLines(text) {
       var lastUnit = mapPurchaseUnit(parts[parts.length - 1]);
       if (lastUnit) { name = parts.slice(0, -1).join(' '); unit = lastUnit; }
     }
-    var m = /^(.*?)[\s,]+(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|пак)\.?\s*$/i.exec(name);
+    var m = /^(.*?)[\s,]+(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|вед|пак)\.?\s*$/i.exec(name);
     if (m && m[1].trim()) { name = m[1].trim(); if (!unit) unit = mapPurchaseUnit(m[2]); }
     if (!name) return;
     pairs.push({ name: name, unit: unit || guessUnitFromText(line) || 'кг' });
@@ -4078,17 +4078,27 @@ function parsePurchaseTextLines(text) {
 }
 
 function guessUnitFromText(s) {
-  var m = /(?:^|\s)(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|пак)\.?(?:\s|$)/i.exec(String(s || ''));
+  var m = /(?:^|\s)(кг|г|гр|л|мл|шт|уп|кор|пач|бан|бут|вед|пак)\.?(?:\s|$)/i.exec(String(s || ''));
   return m ? mapPurchaseUnit(m[1]) : null;
 }
 
-// В карточке позиции есть только 2 единицы измерения — "кг" и "шт" (см. renderPurchaseList),
-// поэтому всё штучное сводим к "шт", а весовое/объёмное — к "кг".
+// Список единиц измерения в карточке позиции — см. PURCHASE_BASE_UNITS
+// (кг, г, л, мл, шт, бутылка, упаковка, ведро, банка). Распознаём
+// сокращения/варианты написания из импортируемых прайсов и приводим их
+// к одному из этих значений.
 function mapPurchaseUnit(raw) {
   var s = String(raw == null ? '' : raw).toLowerCase().trim();
   if (!s) return null;
-  if (/^(шт|уп|кор|пач|pcs?|бан|бут|пак)/.test(s)) return 'шт';
-  if (/^(кг|г|гр|л|мл|kg|g|l|ml)/.test(s)) return 'кг';
+  if (/^(кг|kg)/.test(s)) return 'кг';
+  if (/^(гр|g)/.test(s)) return 'г';
+  if (/^г(?![а-яёa-z])/.test(s)) return 'г';
+  if (/^(мл|ml)/.test(s)) return 'мл';
+  if (/^л(?![а-яёa-z])/.test(s)) return 'л';
+  if (/^(бут|bottle)/.test(s)) return 'бутылка';
+  if (/^(вед|bucket)/.test(s)) return 'ведро';
+  if (/^(бан|jar|can)/.test(s)) return 'банка';
+  if (/^(уп|кор|пач|pack|box)/.test(s)) return 'упаковка';
+  if (/^(шт|pcs?)/.test(s)) return 'шт';
   return null;
 }
 
@@ -4119,33 +4129,42 @@ async function extractPdfText(file) {
   return lines.join('\n');
 }
 
-// "Сбросить остатки" — быстрый способ начать новую неделю: очищает поле
-// "Остаток" (residual) у ВСЕХ позиций СРАЗУ ВО ВСЕХ цехах/поставщиках
-// (весь purchaseData целиком), не трогая название/ед./норму/дозаказ и не
-// затрагивая другие категории/поставщиков вовсе (они реально существуют
-// как отдельные ключи в purchaseData — проходим по каждому). Доступно и
-// админу, и участнику с ролью "Закупка" (см. hasPurchaseAccess) — обычному
-// гостю кнопка не видна вовсе (см. .purchase-access-only в CSS), а сюда,
-// на всякий случай, добавлена ещё и проверка в самой функции.
-async function resetPurchaseResiduals() {
+// "Сбросить остатки" — полный сброс перед началом новой недели: очищает
+// ОДНОВРЕМЕННО поля "Остаток" (residual) И "Дозаказ" (reorder, вместе с
+// единицей дозаказа reorderUnit, которая возвращается к значению по
+// умолчанию "кг") у ВСЕХ позиций СРАЗУ ВО ВСЕХ цехах/поставщиках (весь
+// purchaseData целиком — проходим по каждой категории как отдельному
+// ключу). Название/ед. измерения/норму (шаблон) НЕ трогает — это удобно,
+// чтобы затем просто вписать свежевзвешенные остатки поверх готового
+// списка позиций, не создавая всё заново. Доступно и админу, и участнику
+// с ролью "Закупка" (см. hasPurchaseAccess) — обычному гостю кнопка не
+// видна вовсе (см. .purchase-access-only в CSS), а сюда, на всякий
+// случай, добавлена ещё и проверка в самой функции. Кнопка есть и на
+// главной странице "Закупки" (сбрасывает сразу всё, вне зависимости от
+// того, в каком цехе/у какого поставщика открыта детальная страница), и
+// внутри детального экрана конкретного цеха/поставщика — обе вызывают
+// эту же функцию с одинаковым результатом.
+async function resetAllPurchaseStock() {
   if (!hasPurchaseAccess()) { showToast('🔒 Сбрасывать остатки может только администратор или участник с ролью «Закупка»'); return; }
   var allCats = Object.keys(purchaseData);
-  var totalRows = 0, rowsWithResidual = 0;
+  var totalRows = 0, rowsWithData = 0;
   allCats.forEach(function(cat) {
     purchaseRowsFor(cat).forEach(function(r) {
       totalRows++;
-      if (r.residual !== undefined && r.residual !== null && String(r.residual) !== '') rowsWithResidual++;
+      var hasResidual = r.residual !== undefined && r.residual !== null && String(r.residual) !== '';
+      var hasReorder = r.reorder !== undefined && r.reorder !== null && String(r.reorder) !== '';
+      if (hasResidual || hasReorder) rowsWithData++;
     });
   });
-  if (!rowsWithResidual) { showToast('Остатки уже пусты везде — сбрасывать нечего'); return; }
-  var ok = await customConfirm('Очистить поле «Остаток» у ВСЕХ позиций во ВСЕХ цехах и у ВСЕХ поставщиков (' + rowsWithResidual + ' из ' + totalRows + ' позиций)? Названия, нормы и дозаказ останутся без изменений. Действие нельзя отменить.', '🧹 Сбросить остатки везде');
+  if (!rowsWithData) { showToast('Остатки и дозаказ уже пусты везде — сбрасывать нечего'); return; }
+  var ok = await customConfirm('Полностью обнулить «Остаток» и «Дозаказ» у ВСЕХ позиций во ВСЕХ цехах и у ВСЕХ поставщиков (' + rowsWithData + ' из ' + totalRows + ' позиций)? Названия, единицы измерения и нормы останутся без изменений. Действие нельзя отменить.', '🧹 Сбросить остатки');
   if (!ok) return;
   allCats.forEach(function(cat) {
-    purchaseRowsFor(cat).forEach(function(r) { r.residual = ''; });
+    purchaseRowsFor(cat).forEach(function(r) { r.residual = ''; r.reorder = ''; r.reorderUnit = 'кг'; });
   });
   savePurchaseData();
-  renderPurchaseList();
-  showToast('✅ Остатки сброшены во всех цехах и у всех поставщиков');
+  renderPurchaseTab();
+  showToast('✅ Остаток и дозаказ обнулены во всех цехах и у всех поставщиков — можно вписывать новые остатки');
 }
 
 function removePurchaseRow(cat, id) {
@@ -4184,7 +4203,7 @@ function updatePurchaseField(cat, id, field, value) {
 // когда-то ввели. currentUnit подмешивается отдельно на случай данных,
 // сохранённых до появления общего списка (или гонки между вкладками), —
 // чтобы <select> в любом случае корректно показывал текущее значение.
-var PURCHASE_BASE_UNITS = ['кг', 'шт'];
+var PURCHASE_BASE_UNITS = ['кг', 'г', 'л', 'мл', 'шт', 'бутылка', 'упаковка', 'ведро', 'банка'];
 function purchaseUnitOptionsHtml(currentUnit) {
   var units = PURCHASE_BASE_UNITS.slice();
   purchaseCustomUnits.forEach(function(u) { if (units.indexOf(u) === -1) units.push(u); });
@@ -4401,9 +4420,9 @@ function renderPurchaseList() {
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
             '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
-              '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
-              '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
-              '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+              PURCHASE_BASE_UNITS.map(function(u) {
+                return '<option value="' + escAttr(u) + '"' + (reorderUnit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
+              }).join('') +
             '</select>' +
           '</div>' +
         '</label>' +
@@ -4473,9 +4492,9 @@ function renderPurchaseCombinedList() {
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
               'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
             '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
-              '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
-              '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
-              '<option value="шт"' + (reorderUnit === 'шт' ? ' selected' : '') + '>шт</option>' +
+              PURCHASE_BASE_UNITS.map(function(u) {
+                return '<option value="' + escAttr(u) + '"' + (reorderUnit === u ? ' selected' : '') + '>' + esc(u) + '</option>';
+              }).join('') +
             '</select>' +
           '</div>' +
         '</label>' +
