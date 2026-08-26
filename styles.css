@@ -263,6 +263,7 @@
   .purchase-home-card-text { min-width: 0; }
   .purchase-home-card-text strong { display: block; font-size: 15px; }
   .purchase-home-card-meta { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .purchase-home-send-progress { font-size: 12px; color: var(--text-muted); text-align: center; margin: 0 0 18px; }
   .purchase-home-card-link-badge { font-size: 12px; color: var(--success); font-weight: 500; }
   .purchase-home-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
   .purchase-home-icon-btn {
@@ -579,9 +580,30 @@
     display: grid; grid-template-columns: 60px 1fr 1fr 1fr 1fr; gap: 6px;
   }
   .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
-  .purchase-reorder-group { display: flex; gap: 4px; }
-  .purchase-reorder-group input { min-width: 0; flex: 1 1 auto; }
-  .purchase-reorder-group select { flex: 0 0 58px; padding: 8px 2px; }
+  .purchase-reorder-group { display: flex; flex-direction: column; gap: 6px; }
+  .purchase-reorder-group input { min-width: 0; width: 100%; }
+  /* Единицы дозаказа показываем все сразу отдельными кнопками (вместо
+     нативного <select>, где остальные варианты были видны только при
+     открытии списка) — их можно быстро выбрать одним тапом. */
+  .purchase-reorder-unit-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .reorder-unit-chip {
+    padding: 6px 11px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.06);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--glass-border);
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none; appearance: none;
+    transition: transform .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .reorder-unit-chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+  .reorder-unit-chip:active { transform: scale(.94); }
+  .reorder-unit-chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
   .purchase-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
   .purchase-field select, .purchase-field input {
