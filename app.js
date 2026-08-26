@@ -1237,6 +1237,7 @@ async function syncPurchaseFromGithub() {
     // категории (см. removePurchaseCategory).
     if (!Array.isArray(incomingCategories) || !incomingCategories.length) incomingCategories = defaultPurchaseCategories();
     incomingCategories.forEach(function(c) { if (!Array.isArray(incomingData[c.id])) incomingData[c.id] = []; });
+    purchaseCustomUnits = Array.isArray(data.customUnits) ? data.customUnits : [];
 
     // Остатки и дозаказ, введённые прямо сейчас на этом устройстве, —
     // локальные и временные, поэтому при обновлении шаблона с GitHub
@@ -1270,7 +1271,7 @@ function syncPurchaseToGithub() {
       return false;
     }
     // Остатки — личный черновик устройства, в общий шаблон их не публикуем.
-    var toSave = { categories: purchaseCategories, data: {} };
+    var toSave = { categories: purchaseCategories, data: {}, customUnits: purchaseCustomUnits };
     purchaseCategories.forEach(function(c) {
       toSave.data[c.id] = purchaseRowsFor(c.id).map(function(r) { return { id: r.id, name: r.name, unit: r.unit, norm: r.norm }; });
     });
@@ -3422,6 +3423,19 @@ var purchaseCategories = defaultPurchaseCategories();
 var purchaseData = { pizza: [], hot: [] };
 var currentPurchaseCategory = 'pizza';
 
+/* Общий (для всех цехов/поставщиков и всех сотрудников) список
+   нестандартных единиц измерения, когда-либо добавленных вручную через
+   "+ своя…" (см. registerCustomUnit/handlePurchaseUnitChange). Хранится
+   и синхронизируется вместе с шаблоном закупки (purchase.json →
+   customUnits), поэтому единица, введённая один раз на любой позиции,
+   сразу становится доступна для выбора на ВСЕХ позициях у всех — а не
+   только там, где её ввели. Количество единиц не ограничено; удалить
+   ненужные можно через "🗑 Управление единицами…" (см.
+   manageCustomUnitsModal) — но только те, что нигде не используются.
+   Базовые "кг"/"шт" (PURCHASE_BASE_UNITS) сюда не попадают — они и так
+   всегда доступны. */
+var purchaseCustomUnits = [];
+
 /* Режим редактирования шаблона закупки — по умолчанию ВЫКЛЮЧЕН, даже для
    администраторов и разработчика: как и с карточками рецептов, сначала
    нужно явно нажать "✏️ Редактировать шаблон", и только тогда поля
@@ -3510,9 +3524,11 @@ function loadPurchaseData() {
       purchaseCategories = defaultPurchaseCategories();
       purchaseData = {};
     }
+    purchaseCustomUnits = (parsed && Array.isArray(parsed.customUnits)) ? parsed.customUnits : [];
   } catch (e) {
     purchaseCategories = defaultPurchaseCategories();
     purchaseData = {};
+    purchaseCustomUnits = [];
   }
   if (!Array.isArray(purchaseCategories) || !purchaseCategories.length) purchaseCategories = defaultPurchaseCategories();
   if (!purchaseData || typeof purchaseData !== 'object') purchaseData = {};
@@ -3523,7 +3539,7 @@ function loadPurchaseData() {
 }
 
 function savePurchaseData() {
-  try { localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify({ categories: purchaseCategories, data: purchaseData })); } catch (e) {}
+  try { localStorage.setItem(PURCHASE_STORAGE_KEY, JSON.stringify({ categories: purchaseCategories, data: purchaseData, customUnits: purchaseCustomUnits })); } catch (e) {}
 }
 
 function purchaseRowsFor(cat) {
@@ -3671,7 +3687,16 @@ function renderPurchaseHomeList() {
   var workshops = purchaseCategories.filter(function(c) { return c.builtin; });
   var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
 
-  var sendableCount = purchaseCategories.filter(function(c) { return (c.link || '').trim(); }).length;
+  // Кнопка "Отправить всё" видна только пока есть что реально заказывать —
+  // категория должна иметь ссылку для отправки И хотя бы одну позицию,
+  // требующую покупки/дозаказа (см. buildPurchaseReportLines). После
+  // "✅ Завершить закупку" (finishSendAllPurchase) все обработанные позиции
+  // "закрываются", и, если больше нигде ничего не нужно, кнопка сама
+  // пропадает — без этого она осталась бы висеть просто из-за наличия
+  // ссылки у поставщика, даже когда заказывать уже нечего.
+  var sendableCount = purchaseCategories.filter(function(c) {
+    return (c.link || '').trim() && buildPurchaseReportLines(c.id).length > 0;
+  }).length;
   var html = '';
 
   // Если рассылка была прервана (например, случайно закрыли вкладку,
@@ -4094,6 +4119,35 @@ async function extractPdfText(file) {
   return lines.join('\n');
 }
 
+// "Сбросить остатки" — быстрый способ начать новую неделю: очищает поле
+// "Остаток" (residual) у ВСЕХ позиций СРАЗУ ВО ВСЕХ цехах/поставщиках
+// (весь purchaseData целиком), не трогая название/ед./норму/дозаказ и не
+// затрагивая другие категории/поставщиков вовсе (они реально существуют
+// как отдельные ключи в purchaseData — проходим по каждому). Доступно и
+// админу, и участнику с ролью "Закупка" (см. hasPurchaseAccess) — обычному
+// гостю кнопка не видна вовсе (см. .purchase-access-only в CSS), а сюда,
+// на всякий случай, добавлена ещё и проверка в самой функции.
+async function resetPurchaseResiduals() {
+  if (!hasPurchaseAccess()) { showToast('🔒 Сбрасывать остатки может только администратор или участник с ролью «Закупка»'); return; }
+  var allCats = Object.keys(purchaseData);
+  var totalRows = 0, rowsWithResidual = 0;
+  allCats.forEach(function(cat) {
+    purchaseRowsFor(cat).forEach(function(r) {
+      totalRows++;
+      if (r.residual !== undefined && r.residual !== null && String(r.residual) !== '') rowsWithResidual++;
+    });
+  });
+  if (!rowsWithResidual) { showToast('Остатки уже пусты везде — сбрасывать нечего'); return; }
+  var ok = await customConfirm('Очистить поле «Остаток» у ВСЕХ позиций во ВСЕХ цехах и у ВСЕХ поставщиков (' + rowsWithResidual + ' из ' + totalRows + ' позиций)? Названия, нормы и дозаказ останутся без изменений. Действие нельзя отменить.', '🧹 Сбросить остатки везде');
+  if (!ok) return;
+  allCats.forEach(function(cat) {
+    purchaseRowsFor(cat).forEach(function(r) { r.residual = ''; });
+  });
+  savePurchaseData();
+  renderPurchaseList();
+  showToast('✅ Остатки сброшены во всех цехах и у всех поставщиков');
+}
+
 function removePurchaseRow(cat, id) {
   if (!(isAdmin() && purchaseTemplateEditMode)) { showToast('🔒 Чтобы удалять позиции, сначала нажмите «✏️ Редактировать шаблон»'); return; }
   purchaseData[cat] = purchaseRowsFor(cat).filter(function(r) { return r.id !== id; });
@@ -4123,38 +4177,120 @@ function updatePurchaseField(cat, id, field, value) {
 // Базовый набор единиц измерения для позиции закупки. Раньше был жёстко
 // зашит только "кг"/"шт" — теперь администратор/разработчик (только в
 // режиме редактирования шаблона, см. canEditTemplate) может добавить
-// свою через пункт "+ своя…". Уже сохранённая нестандартная единица
-// (например, "л" или "уп") всегда попадает в список, чтобы <select>
-// корректно её отображал, даже если она не входит в базовый набор.
+// свою через пункт "+ своя…", и таких единиц может быть сколько угодно.
+// Уже добавленные нестандартные единицы хранятся в общем синхронизируемом
+// списке purchaseCustomUnits (см. выше) и поэтому одинаково доступны для
+// выбора на ЛЮБОЙ позиции у ЛЮБОГО сотрудника — а не только там, где их
+// когда-то ввели. currentUnit подмешивается отдельно на случай данных,
+// сохранённых до появления общего списка (или гонки между вкладками), —
+// чтобы <select> в любом случае корректно показывал текущее значение.
 var PURCHASE_BASE_UNITS = ['кг', 'шт'];
 function purchaseUnitOptionsHtml(currentUnit) {
   var units = PURCHASE_BASE_UNITS.slice();
+  purchaseCustomUnits.forEach(function(u) { if (units.indexOf(u) === -1) units.push(u); });
   if (currentUnit && units.indexOf(currentUnit) === -1) units.push(currentUnit);
   var html = units.map(function(u) {
     return '<option value="' + escAttr(u) + '"' + (u === currentUnit ? ' selected' : '') + '>' + esc(u) + '</option>';
   }).join('');
   html += '<option value="__custom_unit__">+ своя…</option>';
+  if (isAdmin() && purchaseTemplateEditMode && purchaseCustomUnits.length) {
+    html += '<option value="__manage_units__">🗑 Управление единицами…</option>';
+  }
   return html;
 }
 
+// Добавляет новую нестандартную единицу измерения в общий список
+// (purchaseCustomUnits), синхронизируемый вместе с шаблоном закупки —
+// благодаря этому единица, добавленная один раз на любой позиции, сразу
+// становится доступна для выбора везде и у всех, а не только там, где
+// её ввели. Базовые "кг"/"шт" сюда не попадают — они и так всегда есть.
+function registerCustomUnit(unit) {
+  unit = String(unit || '').trim();
+  if (!unit || PURCHASE_BASE_UNITS.indexOf(unit) !== -1) return;
+  if (purchaseCustomUnits.indexOf(unit) === -1) {
+    purchaseCustomUnits.push(unit);
+    savePurchaseData();
+    schedulePurchaseSync();
+  }
+}
+
+// Сколько позиций закупки (по всем цехам и поставщикам сразу) сейчас
+// используют данную единицу измерения — нужно, чтобы не дать удалить из
+// общего списка единицу, которая ещё где-то стоит: иначе у позиции
+// осталось бы значение unit, отсутствующее в общем списке.
+function purchaseUnitUsageCount(unit) {
+  var count = 0;
+  purchaseCategories.forEach(function(c) {
+    purchaseRowsFor(c.id).forEach(function(r) { if (r.unit === unit) count++; });
+  });
+  return count;
+}
+
+// Модалка управления общим списком нестандартных единиц измерения:
+// показывает каждую единицу с числом позиций, где она сейчас используется,
+// и позволяет удалить те, что больше не нужны. Удалить можно только
+// единицу с использованием 0 — если она ещё где-то стоит, сначала нужно
+// поменять её у соответствующих позиций (иначе значение "потеряется"
+// незаметно). После каждого удаления модалка открывается заново — так
+// можно убрать сразу несколько единиц подряд, пока не нажата "Готово".
+async function manageCustomUnitsModal() {
+  if (!purchaseCustomUnits.length) { showToast('ℹ️ Нестандартных единиц пока нет'); return; }
+  var options = purchaseCustomUnits.map(function(u) {
+    var n = purchaseUnitUsageCount(u);
+    return { value: u, label: u + (n ? ' (используется: ' + n + ')' : ' (не используется)') };
+  });
+  var choice = await showModal({
+    title: '🗑 Управление единицами',
+    message: 'Выберите единицу, которую нужно удалить из общего списка (можно удалить только те, что нигде не используются):',
+    withSelect: true,
+    selectOptions: options,
+    okText: 'Удалить',
+    cancelText: 'Готово'
+  });
+  if (!choice) return; // нажали "Готово"/закрыли модалку
+  if (purchaseUnitUsageCount(choice) > 0) {
+    showToast('⚠️ Единица «' + choice + '» ещё используется — сначала измените её у соответствующих позиций');
+    return manageCustomUnitsModal();
+  }
+  purchaseCustomUnits = purchaseCustomUnits.filter(function(u) { return u !== choice; });
+  savePurchaseData();
+  schedulePurchaseSync();
+  showToast('✅ Единица «' + choice + '» удалена из списка');
+  return manageCustomUnitsModal();
+}
+
 // Обработчик выбора в селекте "Ед." строки закупки. При выборе "+ своя…"
-// запрашивает текст через prompt() и сохраняет его как единицу измерения
-// этой позиции; при отмене/пустом вводе откатывает select к прежнему
-// значению, ничего не сохраняя.
-function handlePurchaseUnitChange(select, cat, id) {
+// запрашивает текст через showModal() (свой HTML-диалог — обычный
+// prompt() молча не работает на iOS в режиме "На экран Домой" и в
+// Telegram-браузере) и регистрирует его в общем списке единиц; при выборе
+// "🗑 Управление единицами…" открывает модалку удаления. При отмене/пустом
+// вводе откатывает select к прежнему значению, ничего не сохраняя.
+async function handlePurchaseUnitChange(select, cat, id) {
+  var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
+  var prevUnit = row ? row.unit : 'кг';
+  if (select.value === '__manage_units__') {
+    select.value = prevUnit;
+    await manageCustomUnitsModal();
+    renderPurchaseList();
+    return;
+  }
   if (select.value !== '__custom_unit__') {
     updatePurchaseField(cat, id, 'unit', select.value);
     recomputePurchaseRow(id);
     return;
   }
-  var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
-  var prevUnit = row ? row.unit : 'кг';
-  var custom = prompt('Введите свою единицу измерения (например: л, уп, банка):', '');
+  var custom = await showModal({
+    title: 'Своя единица измерения',
+    message: 'Введите свою единицу измерения (например: л, уп, банка):',
+    withInput: true,
+    placeholder: 'например: л'
+  });
   custom = (custom || '').trim();
   if (!custom) {
     select.value = prevUnit;
     return;
   }
+  registerCustomUnit(custom);
   updatePurchaseField(cat, id, 'unit', custom);
   renderPurchaseList(); // перерисовываем, чтобы select показал новую единицу как опцию
 }
@@ -5056,16 +5192,34 @@ function discardSendAllPurchaseProgress() {
 function renderSendAllPurchaseStep() {
   var overlay = $('send-purchase-overlay');
   if (!overlay) return;
+  var titleEl = $('send-purchase-title');
+  var msgEl = $('send-purchase-message');
+  var textEl = $('send-purchase-text');
+  var stepActions = $('send-purchase-step-actions');
+  var finishActions = $('send-purchase-finish-actions');
+  var nextBtn = $('send-purchase-next-btn');
+
+  // Все поставщики/цеха из очереди обработаны — вместо автоматического
+  // закрытия показываем финальный шаг с явной кнопкой "Завершить закупку".
+  // Пока пользователь её не нажал, можно передумать и просто закрыть
+  // модалку крестиком/вне окна — прогресс останется сохранён (баннер
+  // "Рассылка не завершена" на главной странице предложит вернуться сюда).
   if (sendAllPurchaseIndex >= sendAllPurchaseQueue.length) {
-    finishSendAllPurchase();
+    if (titleEl) titleEl.textContent = '✅ Все поставщики и цеха обработаны (' + sendAllPurchaseQueue.length + ')';
+    if (msgEl) msgEl.style.display = 'none';
+    if (textEl) textEl.style.display = 'none';
+    if (stepActions) stepActions.style.display = 'none';
+    if (finishActions) finishActions.style.display = '';
+    overlay.classList.add('show');
     return;
   }
+
   var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
-  var titleEl = $('send-purchase-title');
-  var textEl = $('send-purchase-text');
-  var nextBtn = $('send-purchase-next-btn');
   if (titleEl) titleEl.textContent = '📤 Отправка ' + (sendAllPurchaseIndex + 1) + ' из ' + sendAllPurchaseQueue.length + ' — ' + (c.icon || '📦') + ' ' + c.label;
-  if (textEl) textEl.value = buildPurchaseReportText(c.id);
+  if (msgEl) msgEl.style.display = '';
+  if (textEl) { textEl.style.display = ''; textEl.value = buildPurchaseReportText(c.id); }
+  if (stepActions) stepActions.style.display = '';
+  if (finishActions) finishActions.style.display = 'none';
   if (nextBtn) nextBtn.disabled = true; // сначала нужно нажать "Скопировать и открыть чат"
   overlay.classList.add('show');
 }
@@ -5095,13 +5249,33 @@ function sendAllPurchaseSkip() {
   renderSendAllPurchaseStep();
 }
 
+// Явное завершение закупки (кнопка "✅ Завершить закупку" на финальном шаге
+// рассылки). В отличие от старого поведения (просто закрыть модалку и
+// показать тост), теперь ещё и "закрываем" сами позиции у обработанных
+// поставщиков/цехов — иначе кнопка "📤 Отправить всё поставщикам" на
+// главной странице закупки так и продолжала бы её показывать (условие её
+// показа — есть ли ещё что заказывать, см. renderPurchaseHomeList): для
+// каждой позиции с заданной нормой считаем остаток равным норме (то, что
+// нужно было докупить, купили — к заказу 0), а разовый дозаказ, который
+// только что отправили поставщику, обнуляем. Названия/нормы/ед. измерения
+// и сама ссылка поставщика не трогаем — это шаблон, он остаётся для
+// следующей закупки. Как и остальные поля "Остаток"/"Дозаказ", это
+// затрагивает только этот браузер и не уходит в GitHub.
 function finishSendAllPurchase() {
+  var processedCount = sendAllPurchaseQueue.length;
+  sendAllPurchaseQueue.forEach(function(c) {
+    purchaseRowsFor(c.id).forEach(function(r) {
+      if (r.norm !== undefined && r.norm !== null && String(r.norm).trim() !== '') r.residual = r.norm;
+      r.reorder = '';
+    });
+  });
+  savePurchaseData();
   closeSendAllPurchaseModal();
-  showToast('✅ Рассылка завершена — обработано поставщиков/цехов: ' + sendAllPurchaseQueue.length);
+  showToast('✅ Закупка завершена — обработано поставщиков/цехов: ' + processedCount);
   sendAllPurchaseQueue = [];
   sendAllPurchaseIndex = 0;
   clearSendAllPurchaseProgress();
-  renderPurchaseHomeList();
+  renderPurchaseTab();
 }
 
 /* "Отмена" — это осознанный отказ от рассылки, поэтому стираем и
