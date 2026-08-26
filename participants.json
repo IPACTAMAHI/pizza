@@ -60,5 +60,14 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "9914-4FF4",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787739058526,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
