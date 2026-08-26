@@ -1178,27 +1178,26 @@ function updateTelegramConfigField() {
 const PURCHASE_PATH = 'purchase.json';
 
 /* Список категорий закупки хранится ВМЕСТЕ с позициями в одном файле
-   purchase.json: { categories: [{id,label,icon,builtin,protected,workshop}],
+   purchase.json: { categories: [{id,label,icon,builtin,workshop}],
    data: { id: [строки] } }.
    Флаг builtin помечает "цех" (в отличие от поставщика): у цеха есть
    свой общий список/отчёт, объединяющий его самого и всех привязанных
    к нему поставщиков (см. purchaseCategoriesForWorkshop). Изначально
-   есть два цеха — Пицца бар и Горячий цех, — они помечены ещё и флагом
-   protected: их нельзя удалить или "потерять", даже если файл шаблона
-   повреждён (см. ниже принудительное восстановление). Администратор
-   может добавлять сколько угодно новых цехов кнопкой "🏭 Добавить цех"
-   — они полноценные (со своим общим списком/отчётом и возможностью
-   привязывать поставщиков), но НЕ protected — их можно переименовывать
-   и удалять. Поверх цехов администратор также может добавлять сколько
-   угодно "поставщиков" — категории с builtin:false, привязываемые к
-   любому цеху через workshop, — под каждую свой список позиций с
-   нормой на неделю и тем же расчётом "сколько докупить". Старый формат
-   файла ({pizza:[...], hot:[...]} без categories) распознаётся и на
-   лету преобразуется в новый — старые сайты не ломаются при обновлении. */
+   есть два цеха — Пицца бар и Горячий цех, — они задаются этой функцией
+   как стартовый набор для нового/пустого сайта, но, как и любой другой
+   цех или поставщик, добавленный позже, могут быть переименованы и
+   удалены администратором насовсем (см. removePurchaseCategory) — после
+   удаления обратно не восстанавливаются. Поверх цехов администратор
+   также может добавлять сколько угодно "поставщиков" — категории с
+   builtin:false, привязываемые к любому цеху через workshop, — под
+   каждую свой список позиций с нормой на неделю и тем же расчётом
+   "сколько докупить". Старый формат файла ({pizza:[...], hot:[...]}
+   без categories) распознаётся и на лету преобразуется в новый —
+   старые сайты не ломаются при обновлении. */
 function defaultPurchaseCategories() {
   return [
-    { id: 'pizza', label: 'Пицца бар', icon: '🍕', builtin: true, protected: true },
-    { id: 'hot', label: 'Горячий цех', icon: '🔥', builtin: true, protected: true }
+    { id: 'pizza', label: 'Пицца бар', icon: '🍕', builtin: true },
+    { id: 'hot', label: 'Горячий цех', icon: '🔥', builtin: true }
   ];
 }
 
@@ -1231,10 +1230,12 @@ async function syncPurchaseFromGithub() {
       incomingCategories = defaultPurchaseCategories();
       incomingData = { pizza: Array.isArray(data.pizza) ? data.pizza : [], hot: Array.isArray(data.hot) ? data.hot : [] };
     }
-    // Встроенные категории должны быть на месте всегда, даже если файл повреждён
-    defaultPurchaseCategories().forEach(function(def, i) {
-      if (!incomingCategories.some(function(c) { return c.id === def.id; })) incomingCategories.splice(i, 0, def);
-    });
+    // Если категорий не осталось вообще (например, удалили все цеха и
+    // всех поставщиков) — подстраховка, чтобы не остаться без единой
+    // категории; конкретные же удалённые цеха/поставщики НЕ
+    // восстанавливаем — удаление постоянно, как и для любой другой
+    // категории (см. removePurchaseCategory).
+    if (!Array.isArray(incomingCategories) || !incomingCategories.length) incomingCategories = defaultPurchaseCategories();
     incomingCategories.forEach(function(c) { if (!Array.isArray(incomingData[c.id])) incomingData[c.id] = []; });
 
     // Остатки и дозаказ, введённые прямо сейчас на этом устройстве, —
@@ -3514,9 +3515,6 @@ function loadPurchaseData() {
     purchaseData = {};
   }
   if (!Array.isArray(purchaseCategories) || !purchaseCategories.length) purchaseCategories = defaultPurchaseCategories();
-  defaultPurchaseCategories().forEach(function(def, i) {
-    if (!purchaseCategories.some(function(c) { return c.id === def.id; })) purchaseCategories.splice(i, 0, def);
-  });
   if (!purchaseData || typeof purchaseData !== 'object') purchaseData = {};
   purchaseCategories.forEach(function(c) { if (!Array.isArray(purchaseData[c.id])) purchaseData[c.id] = []; });
   if (!purchaseCategories.some(function(c) { return c.id === currentPurchaseCategory; })) {
@@ -3665,7 +3663,7 @@ function renderPurchaseHomeList() {
       '</div>' +
       '<div class="purchase-home-card-actions developer-only">' +
         '<button type="button" class="purchase-home-icon-btn" title="Редактировать" onclick="event.stopPropagation(); enterPurchaseEditFor(\'' + c.id + '\')">✏️</button>' +
-        (c.protected ? '' : '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="event.stopPropagation(); removePurchaseCategory(\'' + c.id + '\')">🗑️</button>') +
+        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="event.stopPropagation(); removePurchaseCategory(\'' + c.id + '\')">🗑️</button>' +
       '</div>' +
     '</div>';
   }
@@ -3674,9 +3672,24 @@ function renderPurchaseHomeList() {
   var suppliers = purchaseCategories.filter(function(c) { return !c.builtin; });
 
   var sendableCount = purchaseCategories.filter(function(c) { return (c.link || '').trim(); }).length;
-  var html = sendableCount
-    ? '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>'
-    : '';
+  var html = '';
+
+  // Если рассылка была прервана (например, случайно закрыли вкладку,
+  // переключившись в мессенджер посреди отправки) — вместо обычной
+  // кнопки показываем баннер с прогрессом и предлагаем продолжить.
+  var sendProgress = loadSendAllPurchaseProgress();
+  if (sendProgress && sendProgress.index < sendProgress.ids.length) {
+    html += '<div class="purchase-send-progress-banner">' +
+      '<div class="purchase-send-progress-banner-title">📤 Рассылка не завершена</div>' +
+      '<div class="purchase-send-progress-banner-sub">Уже отправлено ' + sendProgress.index + ' из ' + sendProgress.ids.length + '</div>' +
+      '<div class="purchase-send-progress-banner-actions">' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="resumeSendAllPurchase()">▶️ Продолжить</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="discardSendAllPurchaseProgress()">Начать заново</button>' +
+      '</div>' +
+    '</div>';
+  } else if (sendableCount) {
+    html += '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>';
+  }
 
   html += '<div class="purchase-home-group-title">🏭 Цеха</div>';
   html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного цеха.</p>';
@@ -3715,12 +3728,11 @@ function updatePurchaseCombinedSectionVisibility() {
    Помимо двух изначальных цехов (Пицца бар / Горячий цех) администратор
    может добавить сколько угодно своих — например "Кондитерский цех"
    или "Цех заготовок". Новый цех работает точно так же, как и
-
-   изначальные: у него свой список позиций с нормой на неделю, свой
+   изначальные — у него свой список позиций с нормой на неделю, свой
    общий список/отчёт (цех + все привязанные к нему поставщики), к нему
-   можно привязывать поставщиков через "🔗 Привязать к цеху". В отличие
-   от Пицца бар/Горячего цеха, новый цех не помечен protected — его
-   можно переименовать и удалить (см. removePurchaseCategory). */
+   можно привязывать поставщиков через "🔗 Привязать к цеху", его можно
+   переименовать и удалить (см. removePurchaseCategory) точно так же,
+   как и Пицца бар/Горячий цех — никакой цех ничем не защищён. */
 function addPurchaseWorkshop() {
   if (!isAdmin()) { showToast('🔒 Добавлять цеха может только владелец или администратор'); return; }
   customPrompt('Название нового цеха, например: Кондитерский цех', '', 'Новый цех').then(function(val) {
@@ -3816,22 +3828,25 @@ function setPurchaseContactLink(cat) {
   });
 }
 
-/* Удаляет либо цех (builtin:true, но не protected — то есть не исходные
-   Пицца бар/Горячий цех), либо поставщика (builtin:false). Исходные два
-   цеха защищены флагом protected и удалить их нельзя — они и так
-   принудительно восстанавливаются в loadPurchaseData/syncPurchaseFromGithub,
-   если вдруг пропадут из файла шаблона. При удалении цеха все
+/* Удаляет цех (builtin:true) или поставщика (builtin:false) — включая
+   исходные "Пицца бар"/"Горячий цех": они больше ничем не защищены и
+   удаляются точно так же, как любой цех/поставщик, добавленный позже,
+   без возможности отмены и без автоматического восстановления при
+   следующей загрузке или синхронизации с GitHub. При удалении цеха все
    поставщики, которые были к нему привязаны, не удаляются — просто
-   теряют привязку (становятся "без привязки к цеху"). Вызывается как
-   иконкой 🗑️ на главной странице (без захода внутрь карточки), так и
-   изнутри детального экрана — в обоих случаях после удаления
-   возвращаемся на главную страницу. */
+   теряют привязку (становятся "без привязки к цеху"). Если удаляется
+   последняя оставшаяся категория (и цехов, и поставщиков больше не
+   остаётся), возвращаем стартовый набор "Пицца бар"/"Горячий цех" —
+   не как защиту конкретно этих двух, а просто чтобы раздел "Закупка"
+   не остался вообще без единой категории. Вызывается как иконкой 🗑️
+   на главной странице (без захода внутрь карточки), так и изнутри
+   детального экрана — в обоих случаях после удаления возвращаемся на
+   главную страницу. */
 function removePurchaseCategory(cat) {
   cat = cat || currentPurchaseCategory;
   if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var c = purchaseCategoryById(cat);
   if (!c) return;
-  if (c.protected) { showToast('🔒 Эту категорию удалить нельзя'); return; }
   var kind = c.builtin ? 'цех' : 'поставщика';
   var kindTitle = c.builtin ? 'Удалить цех' : 'Удалить поставщика';
   var extraWarning = c.builtin ? ' Все поставщики, привязанные к этому цеху, не удалятся — просто потеряют привязку.' : '';
@@ -3842,7 +3857,13 @@ function removePurchaseCategory(cat) {
     if (c.builtin) {
       purchaseCategories.forEach(function(x) { if (!x.builtin && x.workshop === cat) x.workshop = ''; });
     }
-    if (currentPurchaseCategory === cat) currentPurchaseCategory = purchaseCategories[0] ? purchaseCategories[0].id : 'pizza';
+    if (!purchaseCategories.length) {
+      purchaseCategories = defaultPurchaseCategories();
+      purchaseCategories.forEach(function(x) { if (!Array.isArray(purchaseData[x.id])) purchaseData[x.id] = []; });
+    }
+    if (currentPurchaseCategory === cat || !purchaseCategories.some(function(x) { return x.id === currentPurchaseCategory; })) {
+      currentPurchaseCategory = purchaseCategories[0].id;
+    }
     savePurchaseData();
     showPurchaseHome();
     schedulePurchaseSync();
@@ -4123,6 +4144,26 @@ function purchaseResultDisplay(row) {
   return { text: toBuy + ' ' + row.unit, cls: 'purchase-result-need' };
 }
 
+/* Поля "Норма"/"Остаток"/"Дозаказ" — числовые и обычно короткие (1-3
+   символа), но раньше растягивались на всю ширину своей колонки грида
+   (см. историю в styles.css), из-за чего вокруг одной цифры оставалось
+   много пустого места. Теперь ширина поля считается по факту введённого
+   текста (или, если поле пустое, по подсказке-плейсхолдеру) и обновляется
+   при каждом нажатии клавиши — так поле остаётся компактным, но растёт
+   по мере набора более длинного числа. Вызывается как из oninput каждого
+   такого поля, так и один раз после отрисовки списка (для уже
+   заполненных значений). */
+function autosizePurchaseInput(el) {
+  if (!el) return;
+  var val = (el.value !== '' && el.value != null) ? String(el.value) : (el.getAttribute('placeholder') || '');
+  var ch = Math.max(2, Math.min(val.length + 1, 10));
+  el.style.width = ch + 'ch';
+}
+
+function autosizeAllPurchaseInputs(root) {
+  (root || document).querySelectorAll('.purchase-field input[type="number"]').forEach(autosizePurchaseInput);
+}
+
 function renderPurchaseList() {
   var holder = $('purchase-list');
   if (!holder) return;
@@ -4172,11 +4213,11 @@ function renderPurchaseList() {
         '</label>' +
         '<label class="purchase-field"><span>Норма (неделя)</span>' +
           '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-norm" placeholder="14" value="' + escAttr(row.norm) + '"' + ro + ' ' +
-            'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'norm\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+            'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'norm\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
         '</label>' +
         '<label class="purchase-field"><span>Остаток</span>' +
           '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
-            'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+            'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
         '</label>' +
         '<div class="purchase-field"><span>Докупить</span>' +
           '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
@@ -4184,7 +4225,7 @@ function renderPurchaseList() {
         '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
-              'oninput="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+              'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
             '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + cat + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
               '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
               '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
@@ -4198,6 +4239,7 @@ function renderPurchaseList() {
 
   updatePurchaseSummary();
   renderPurchaseCombinedList();
+  autosizeAllPurchaseInputs(holder);
 }
 
 /* ================================================================
@@ -4244,10 +4286,10 @@ function renderPurchaseCombinedList() {
       '<div class="purchase-row-readonly-name">' + esc(row.name) +
         '<span class="purchase-row-meta">норма: ' + (row.norm === '' || row.norm == null ? '—' : esc(String(row.norm))) + ' ' + esc(row.unit) + '</span>' +
       '</div>' +
-      '<div class="purchase-row-fields" style="grid-template-columns:1fr 1fr 1fr">' +
+      '<div class="purchase-row-fields purchase-row-fields-combined">' +
         '<label class="purchase-field"><span>Остаток</span>' +
           '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
-            'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+            'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
         '</label>' +
         '<div class="purchase-field"><span>Докупить</span>' +
           '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
@@ -4255,7 +4297,7 @@ function renderPurchaseCombinedList() {
         '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
           '<div class="purchase-reorder-group">' +
             '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
-              'oninput="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+              'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
             '<select class="purchase-reorder-unit" onchange="updatePurchaseField(\'' + catId + '\',\'' + row.id + '\',\'reorderUnit\',this.value)">' +
               '<option value="кг"' + (reorderUnit === 'кг' ? ' selected' : '') + '>кг</option>' +
               '<option value="г"' + (reorderUnit === 'г' ? ' selected' : '') + '>г</option>' +
@@ -4268,6 +4310,7 @@ function renderPurchaseCombinedList() {
   }).join('');
 
   updatePurchaseCombinedSummary();
+  autosizeAllPurchaseInputs(holder);
 }
 
 function updatePurchaseCombinedSummary() {
@@ -4864,6 +4907,51 @@ async function deleteRecipe(id) {
 var sendAllPurchaseQueue = [];
 var sendAllPurchaseIndex = 0;
 
+/* Прогресс рассылки хранится в localStorage (id категорий по порядку +
+   текущий индекс), чтобы при случайном закрытии вкладки/браузера
+   посреди рассылки (например, после ухода в мессенджер отправлять
+   отчёт) можно было вернуться в "Закупку" и продолжить с того же
+   места, а не начинать заново. Пишем прогресс на каждый шаг
+   (после "Отправил(а) → Далее" / "Пропустить") и стираем при
+   завершении или явной отмене. */
+var SEND_PURCHASE_PROGRESS_KEY = 'route20_send_purchase_progress';
+
+function saveSendAllPurchaseProgress() {
+  try {
+    if (!sendAllPurchaseQueue.length) { localStorage.removeItem(SEND_PURCHASE_PROGRESS_KEY); return; }
+    localStorage.setItem(SEND_PURCHASE_PROGRESS_KEY, JSON.stringify({
+      ids: sendAllPurchaseQueue.map(function(c) { return c.id; }),
+      index: sendAllPurchaseIndex
+    }));
+  } catch (e) {}
+}
+
+function loadSendAllPurchaseProgress() {
+  try {
+    var raw = localStorage.getItem(SEND_PURCHASE_PROGRESS_KEY);
+    if (!raw) return null;
+    var data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.ids) || !data.ids.length) return null;
+    // Оставляем только тех поставщиков/цеха, что всё ещё существуют и
+    // сохранили ссылку для отправки (могли быть удалены/отредактированы
+    // за время, пока рассылка была не завершена).
+    var ids = data.ids.filter(function(id) {
+      var c = purchaseCategoryById(id);
+      return c && (c.link || '').trim();
+    });
+    if (!ids.length) return null;
+    var index = typeof data.index === 'number' ? data.index : 0;
+    if (index < 0) index = 0;
+    if (index > ids.length) index = ids.length;
+    return { ids: ids, index: index };
+  }
+  catch (e) { return null; }
+}
+
+function clearSendAllPurchaseProgress() {
+  try { localStorage.removeItem(SEND_PURCHASE_PROGRESS_KEY); } catch (e) {}
+}
+
 function startSendAllPurchase() {
   var candidates = purchaseCategories.filter(function(c) {
     return (c.link || '').trim() && buildPurchaseReportLines(c.id).length > 0;
@@ -4874,7 +4962,30 @@ function startSendAllPurchase() {
   }
   sendAllPurchaseQueue = candidates;
   sendAllPurchaseIndex = 0;
+  saveSendAllPurchaseProgress();
   renderSendAllPurchaseStep();
+}
+
+/* Продолжает рассылку с места, сохранённого в localStorage (баннер на
+   главной странице "Закупки"). Если прогресс не восстанавливается
+   (например, все сохранённые поставщики/цеха успели удалить или у них
+   убрали ссылку), тихо начинает рассылку заново по актуальному списку. */
+function resumeSendAllPurchase() {
+  var progress = loadSendAllPurchaseProgress();
+  if (!progress) { startSendAllPurchase(); return; }
+  var queue = progress.ids.map(function(id) { return purchaseCategoryById(id); }).filter(Boolean);
+  if (!queue.length) { clearSendAllPurchaseProgress(); startSendAllPurchase(); return; }
+  sendAllPurchaseQueue = queue;
+  sendAllPurchaseIndex = progress.index;
+  saveSendAllPurchaseProgress();
+  renderSendAllPurchaseStep();
+}
+
+/* "Начать заново" в баннере незавершённой рассылки — стирает сохранённый
+   прогресс и запускает рассылку с нуля по актуальному списку. */
+function discardSendAllPurchaseProgress() {
+  clearSendAllPurchaseProgress();
+  startSendAllPurchase();
 }
 
 function renderSendAllPurchaseStep() {
@@ -4909,11 +5020,13 @@ function sendAllPurchaseOpenAndCopy() {
 
 function sendAllPurchaseNext() {
   sendAllPurchaseIndex++;
+  saveSendAllPurchaseProgress();
   renderSendAllPurchaseStep();
 }
 
 function sendAllPurchaseSkip() {
   sendAllPurchaseIndex++;
+  saveSendAllPurchaseProgress();
   renderSendAllPurchaseStep();
 }
 
@@ -4922,12 +5035,19 @@ function finishSendAllPurchase() {
   showToast('✅ Рассылка завершена — обработано поставщиков/цехов: ' + sendAllPurchaseQueue.length);
   sendAllPurchaseQueue = [];
   sendAllPurchaseIndex = 0;
+  clearSendAllPurchaseProgress();
+  renderPurchaseHomeList();
 }
 
+/* "Отмена" — это осознанный отказ от рассылки, поэтому стираем и
+   сохранённый прогресс (в отличие от случайного закрытия вкладки, после
+   которого прогресс должен остаться и предложить продолжить). */
 function cancelSendAllPurchase() {
   closeSendAllPurchaseModal();
   sendAllPurchaseQueue = [];
   sendAllPurchaseIndex = 0;
+  clearSendAllPurchaseProgress();
+  renderPurchaseHomeList();
   showToast('Рассылка отменена');
 }
 
