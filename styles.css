@@ -187,9 +187,26 @@
   }
   .admin-panel-row {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 10px;
+    gap: 10px; flex-wrap: wrap;
+  }
+  /* На узком экране кнопка/значение в правой части строки переносится
+     под подпись и растягивается на всю ширину — иначе на телефоне
+     длинная подпись ("👥 Участники (доступ по ключу)") и кнопка
+     ("🔑 Сгенерировать ключ") сжимались бы в одну тесную строку. */
+  @media (max-width: 480px) {
+    .admin-panel-row > .btn { width: 100%; justify-content: center; }
   }
   .admin-panel-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+
+  /* Строка "поле ввода + кнопка" в карточках админ-панели (юзернейм
+     Telegram, ссылка на группу и т.п.) — на телефоне становится
+     колонкой, чтобы поле не сжималось до нечитаемой ширины рядом с
+     кнопкой. */
+  .admin-input-row { display: flex; gap: 8px; margin-top: 10px; }
+  @media (max-width: 480px) {
+    .admin-input-row { flex-direction: column; }
+    .admin-input-row .btn { width: 100%; justify-content: center; }
+  }
 
   /* Карточка участника в списке — раньше это была просто строка с
      нижней границей и всё сливалось в один серый список; теперь у
