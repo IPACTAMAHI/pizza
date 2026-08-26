@@ -4641,8 +4641,10 @@ function updatePurchaseSummary() {
 //  - если норма/остаток дают количество к покупке И вписан дозаказ в той
 //    же единице — они складываются в одно число;
 //  - если единицы разные — показываются оба количества через "+".
-function buildPurchaseReportLines(cat) {
+function buildPurchaseReportData(cat) {
   var lines = [];
+  var hasNormBased = false; // хотя бы одна позиция реально нуждается в докупке по норме (не дозаказ)
+  var hasReorderOnly = false; // хотя бы одна позиция участвует ТОЛЬКО через "Дозаказ" (норма не задана/не нужна)
   purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); }).forEach(function(row) {
     var toBuy = computeToBuy(row); // null = норма не задана, 0 = хватает
     var needQty = (toBuy && toBuy > 0) ? toBuy : 0;
@@ -4653,27 +4655,49 @@ function buildPurchaseReportLines(cat) {
 
     var qtyText;
     if (needQty > 0 && hasReorder) {
+      hasNormBased = true;
       qtyText = (needUnit === reorderUnit)
         ? (needQty + reorderQty) + ' ' + needUnit
         : needQty + ' ' + needUnit + ' + ' + reorderQty + ' ' + reorderUnit;
     } else if (needQty > 0) {
+      hasNormBased = true;
       qtyText = needQty + ' ' + needUnit;
     } else if (hasReorder) {
+      hasReorderOnly = true;
       qtyText = reorderQty + ' ' + reorderUnit;
     } else {
       return; // нечего заказывать — поставщику эта строка не нужна
     }
     lines.push(row.name.trim() + ' — ' + qtyText);
   });
-  return lines;
+
+  // Заголовок отчёта должен отражать то, что реально вписано:
+  // - только "Дозаказ" по всем позициям → "🔁 Дозаказ";
+  // - только норма/остаток → "📦 Закупка на неделю";
+  // - и то и другое вперемешку → "📦 Закупка на неделю + 🔁 дозаказ".
+  var kind = 'normal';
+  if (hasReorderOnly && hasNormBased) kind = 'both';
+  else if (hasReorderOnly) kind = 'reorder';
+
+  return { lines: lines, kind: kind };
+}
+
+function buildPurchaseReportLines(cat) {
+  return buildPurchaseReportData(cat).lines;
+}
+
+function purchaseReportHeaderTitle(kind) {
+  if (kind === 'reorder') return '🔁 Дозаказ';
+  if (kind === 'both') return '📦 Закупка на неделю + 🔁 дозаказ';
+  return '📦 Закупка на неделю';
 }
 
 function buildPurchaseReportText(cat) {
   var today = new Date().toLocaleDateString('ru-RU');
-  var lines = buildPurchaseReportLines(cat);
-  var header = purchaseCategoryIcon(cat) + ' Закупка на неделю — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
-  if (!lines.length) return header + '\n\nНет позиций.';
-  return header + '\n\n' + lines.join('\n');
+  var data = buildPurchaseReportData(cat);
+  var header = purchaseCategoryIcon(cat) + ' ' + purchaseReportHeaderTitle(data.kind) + ' — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
+  if (!data.lines.length) return header + '\n\nНет позиций.';
+  return header + '\n\n' + data.lines.join('\n');
 }
 
 function fallbackCopyText(text, successMsg) {
