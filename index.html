@@ -273,7 +273,7 @@
       «Отправить в Telegram» — она одним нажатием откроет ваш чат с готовым сообщением (имя + код устройства),
       останется только скопировать их в поле «Добавить» ниже.
     </p>
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div class="admin-input-row">
       <input type="text" id="admin-telegram-username" placeholder="username" style="flex:1">
       <button class="btn btn-primary btn-sm" onclick="saveAdminTelegramUsername()">💾 Сохранить</button>
     </div>
@@ -289,7 +289,7 @@
       по этой ссылке, а затем отправит туда сообщение с именем и кодом устройства, выбрав группу из
       списка чатов Telegram. Если это поле заполнено, оно используется вместо личного юзернейма выше.
     </p>
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div class="admin-input-row">
       <input type="text" id="admin-telegram-group" placeholder="https://t.me/+инвайт-ссылка" style="flex:1">
       <button class="btn btn-primary btn-sm" onclick="saveAdminTelegramGroupLink()">💾 Сохранить</button>
     </div>
