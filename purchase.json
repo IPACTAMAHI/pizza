@@ -122,6 +122,13 @@
       "workshops": [
         "__general__"
       ]
+    },
+    {
+      "id": "sup1787742748785ixavt",
+      "label": "Метро",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": ""
     }
   ],
   "data": {
@@ -535,6 +542,7 @@
         "unit": "вед",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787742748785ixavt": []
   }
 }
