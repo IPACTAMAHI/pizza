@@ -120,7 +120,7 @@
        прямо отсюда, без захода внутрь. -->
   <div id="purchase-home-view">
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех заведениях и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
     </div>
     <div id="purchase-home-list"></div>
   </div>
@@ -139,7 +139,7 @@
          что включает правку позиций ниже (см. togglePurchaseTemplateEdit) —
          закрывается ТОЛЬКО после успешного сохранения на GitHub. -->
     <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Добавить к цеху</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Добавить к заведению</button>
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
       <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
@@ -163,7 +163,7 @@
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px">
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="flex:1;min-width:160px">+ Добавить ингредиент</button>
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки везде</button>
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех заведениях и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки везде</button>
     </div>
 
     <div style="margin-bottom:14px">
@@ -186,9 +186,9 @@
          блок скрывается — см. updatePurchaseCombinedSectionVisibility(). -->
     <div id="purchase-combined-section">
       <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
-        <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — цех и его поставщики</h2>
+        <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — заведение и его поставщики</h2>
         <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
-          🧮 Здесь сразу все позиции этого цеха и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
+          🧮 Здесь сразу все позиции этого заведения и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по заведению и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
         </div>
         <div id="purchase-combined-list"></div>
         <div style="margin-bottom:14px">
@@ -197,9 +197,9 @@
       </div>
 
       <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по цеху и его поставщикам — с уже указанным остатком по каждому:</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по заведению и его поставщикам — с уже указанным остатком по каждому:</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (цех + поставщики)</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (заведение + поставщики)</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
