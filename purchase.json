@@ -1,13 +1,6 @@
 {
   "categories": [
     {
-      "id": "pizza",
-      "label": "Пицца бар",
-      "icon": "🍕",
-      "builtin": true,
-      "protected": true
-    },
-    {
       "id": "hot",
       "label": "Римские пекарни",
       "icon": "🔥",
@@ -153,7 +146,6 @@
     }
   ],
   "data": {
-    "pizza": [],
     "hot": [],
     "sup1787670070254dxeg2": [
       {
@@ -569,7 +561,7 @@
       {
         "id": "p1787747785332h3mjv",
         "name": "Сливки 30%",
-        "unit": "мл",
+        "unit": "кг",
         "norm": ""
       }
     ]
