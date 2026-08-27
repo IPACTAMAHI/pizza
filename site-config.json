@@ -81,23 +81,35 @@
     {
       "id": "main",
       "label": "Пицца бар",
-      "icon": "🍕"
+      "icon": "🍕",
+      "venue": "venue-main"
     },
     {
       "id": "pmtbp6cdzl2wfz",
       "label": "Горячий цех",
-      "icon": "🔥"
+      "icon": "🔥",
+      "venue": "venue-main"
     },
     {
       "id": "pmtbqzxi2ees6b",
       "label": "Холодный цех",
-      "icon": "🥗"
+      "icon": "🥗",
+      "venue": "venue-main"
     },
     {
       "id": "pmtbr2awvwird4",
       "label": "Кондитер",
-      "icon": "🎂"
+      "icon": "🎂",
+      "venue": "venue-main"
     }
   ],
-  "mainRoleGranted": true
+  "mainRoleGranted": true,
+  "venues": [
+    {
+      "id": "venue-main",
+      "label": "Route 20",
+      "icon": "🏠",
+      "purchase": true
+    }
+  ]
 }
