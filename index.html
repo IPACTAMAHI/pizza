@@ -35,10 +35,9 @@ html,body{background:#0b0b0d;margin:0}
    существовала и рисовалась. При медленном интернете, в момент до
    применения styles.css, все вкладки разворачивались разом — и в этот
    короткий момент постороннему было видно содержимое сайта целиком.
-   Отдельно то же самое происходило с файлом, скачанным кнопкой
-   «Экспорт»: он снимался с уже разблокированной страницы, поэтому
-   заслонки в нём не было вовсе (теперь она туда возвращается — см.
-   exportSnapshot в app.js).
+   (Раньше та же дыра была у файла, который скачивала кнопка «Экспорт»:
+   снимок делался с уже разблокированной страницы. Сейчас экспорт
+   выгружает не страницу, а recipes.json, так что вопрос снят.)
 
    Исключения — сама заслонка, диалоговые окна (в них спрашивают имя и
    ключ доступа) и всплывающие уведомления. Класс снимает unlockGate()
@@ -53,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260827j">
+<link rel="stylesheet" href="styles.css?v=20260827n">
 </head>
 <body>
 
@@ -79,7 +78,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
 <!-- HEADER -->
 <div class="header">
-  <button class="header-corner-btn export-toggle developer-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Опубликовать текущий список">
+  <button class="header-corner-btn export-toggle developer-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Скачать резервную копию рецептов">
     <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
     <span class="label">Экспорт</span>
   </button>
@@ -89,6 +88,15 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
   </button>
   <h1>Книга рецептов</h1>
   <p>Pizza Door</p>
+  <!-- Переключатель заведений. Стоит в потоке под заголовком, а не в
+       углу: углы уже заняты «Экспортом» и «Входом», и третья кнопка там
+       не помещалась бы на телефоне. Показывается только тем, кому
+       доступна больше чем одна точка — см. updateVenueSwitcher. -->
+  <button class="venue-switch" id="venue-switch-btn" onclick="openVenueSwitcher()" title="Переключить заведение" style="display:none">
+    <span class="icon">🏠</span>
+    <span class="label">Заведение</span>
+    <span class="venue-switch-caret">▾</span>
+  </button>
 </div>
 
 <!-- NAV TABS -->
@@ -135,7 +143,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
       <button type="button" class="search-clear" id="purchase-home-search-clear" onclick="clearSearchInput('purchase-home-search')" title="Очистить" style="display:none">✕</button>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех заведениях и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
     </div>
     <div id="purchase-home-list"></div>
   </div>
@@ -154,7 +162,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
          что включает правку позиций ниже (см. togglePurchaseTemplateEdit) —
          закрывается ТОЛЬКО после успешного сохранения на GitHub. -->
     <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Добавить к заведению</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Добавить к цеху</button>
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
       <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
@@ -178,7 +186,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px">
       <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="flex:1;min-width:160px">+ Добавить ингредиент</button>
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех заведениях и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки везде</button>
+      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки везде</button>
     </div>
 
     <div style="margin-bottom:14px">
@@ -197,9 +205,9 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
          блок скрывается — см. updatePurchaseCombinedSectionVisibility(). -->
     <div id="purchase-combined-section">
       <div style="margin:22px 0 8px;padding-top:16px;border-top:1px solid var(--glass-border)">
-        <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — заведение и его поставщики</h2>
+        <h2 style="margin-bottom:6px" id="purchase-combined-title">📋 Общий список — цех и его поставщики</h2>
         <div class="ingr-calc-hint" id="purchase-combined-hint" style="margin-bottom:14px">
-          🧮 Здесь сразу все позиции этого заведения и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по заведению и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
+          🧮 Здесь сразу все позиции этого цеха и всех поставщиков, привязанных к нему, сгруппированные по поставщику — удобно ходить по цеху и вписывать остатки подряд, не переключаясь между вкладками. Позиция, добавленная поставщику выше, появляется тут автоматически.
         </div>
         <div id="purchase-combined-list"></div>
         <div style="margin-bottom:14px">
@@ -208,7 +216,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
       </div>
 
       <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по заведению и его поставщикам — с уже указанным остатком по каждому:</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по цеху и его поставщикам — с уже указанным остатком по каждому:</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (заведение + поставщики)</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
@@ -233,10 +241,10 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
   <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
-      <span>Экспорт файла</span>
-      <button class="btn btn-ghost btn-sm" onclick="exportSnapshot()">⬇️ Экспорт</button>
+      <span>Резервная копия рецептов</span>
+      <button class="btn btn-ghost btn-sm" onclick="exportSnapshot()">⬇️ Скачать recipes.json</button>
     </div>
-    <p class="admin-panel-hint">Скачивает копию сайта с текущими рецептами внутри — на случай, если нужно перезалить вручную.</p>
+    <p class="admin-panel-hint">Сохраняет текущую базу файлом recipes.json — резервная копия на случай, если данные придётся восстанавливать вручную.</p>
   </div>
 
   <div class="admin-panel-card developer-only">
@@ -279,9 +287,29 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
   <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
+      <span>🏠 Заведения сети</span>
+      <button class="btn btn-primary btn-sm" onclick="addVenue()">+ Добавить заведение</button>
+    </div>
+    <p class="admin-panel-hint">
+      Каждое заведение ведёт своё: свои разделы, свои категории, свои рецепты и свою закупку.
+      Новое заведение создаётся пустым — разделы в нём добавляются так же, как в этом, а вкладка
+      «Закупка» подключается кнопкой 🛒. Сам сайт при этом один: новая возможность появляется
+      сразу во всех точках.
+      <br><br>
+      Роли выдаются по вкладкам, и в списке ролей рядом с вкладкой указано её заведение — один
+      человек может работать сразу в нескольких точках. Кнопка 👁 открывает заведение, чтобы
+      добавлять разделы и рецепты именно в него; переключиться можно и кнопкой «Заведение» в шапке.
+      Удаление заведения удаляет все его разделы, рецепты и закупку.
+    </p>
+    <div id="venues-admin-list" style="margin-top:10px"></div>
+  </div>
+
+  <div class="admin-panel-card developer-only">
+    <div class="admin-panel-row">
       <span>🗂️ Разделы (вкладки)</span>
       <button class="btn btn-primary btn-sm" onclick="addSection()">+ Добавить раздел</button>
     </div>
+    <p class="admin-panel-hint" id="sections-admin-venue" style="font-weight:600;color:var(--text)"></p>
     <p class="admin-panel-hint">
       Каждый раздел — самостоятельная книга: свои категории, свои рецепты и своя кнопка
       «Добавить рецепт» внутри. Разделы между собой не связаны — «Горячий цех» не видит
@@ -363,6 +391,9 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <div id="participants-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="participants-list" style="margin-top:10px"></div>
     <p class="admin-panel-hint" style="margin-top:10px">
+      Сайт переспрашивает доступ в фоне каждые 15 секунд, поэтому и «Блок», и «✕» действуют
+      сами, без перезагрузки у человека: если он сейчас на сайте — его выкинет сразу, если нет —
+      доступ будет закрыт при следующем открытии.<br>
       <strong>🚫 «Блок»</strong> закрывает доступ уже одобренному человеку, но запись остаётся в списке —
       в любой момент можно нажать «🔓 Открыть» и вернуть доступ обратно, ничего заново спрашивать не нужно.<br>
       <strong>✕</strong> — это не разбан, а полное удаление записи из списка (например, если добавили по ошибке).
@@ -577,7 +608,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260827j"></script>
+<script src="app.js?v=20260827n"></script>
 
 
 
