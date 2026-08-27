@@ -68,5 +68,14 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "L20V-HDB4",
+    "fingerprint": "",
+    "name": "тест",
+    "addedAt": 1787866559421,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
