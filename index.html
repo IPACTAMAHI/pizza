@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html lang="ru" class="gate-locked"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b0b0d">
@@ -21,11 +21,39 @@
      непрозрачный с первого кадра и полностью перекрывает контент под
      собой (шапку, вкладки, список рецептов), пока JS (см. initApp() в
      app.js) не завершит все проверки доступа и не уберёт его. -->
-<style>html,body{background:#0b0b0d;margin:0}</style>
+<style>
+html,body{background:#0b0b0d;margin:0}
+/* ЗАМОК ДОСТУПА. Класс gate-locked стоит на <html> прямо в разметке, а
+   это правило лежит ВСТРОЕННЫМ стилем в <head> — то есть действует с
+   самого первого кадра, ещё до того как загрузятся styles.css и app.js.
+   Пока он не снят, содержимое сайта не просто перекрыто заслонкой
+   сверху, а вообще не отрисовывается: шапка, вкладки, список рецептов,
+   форма добавления и админ-панель физически не отображаются.
+
+   Почему одной заслонки (#access-gate-overlay) было мало: она лишь
+   закрывала экран собой, а вся разметка сайта под ней всё это время
+   существовала и рисовалась. При медленном интернете, в момент до
+   применения styles.css, все вкладки разворачивались разом — и в этот
+   короткий момент постороннему было видно содержимое сайта целиком.
+   Отдельно то же самое происходило с файлом, скачанным кнопкой
+   «Экспорт»: он снимался с уже разблокированной страницы, поэтому
+   заслонки в нём не было вовсе (теперь она туда возвращается — см.
+   exportSnapshot в app.js).
+
+   Исключения — сама заслонка, диалоговые окна (в них спрашивают имя и
+   ключ доступа) и всплывающие уведомления. Класс снимает unlockGate()
+   в app.js, и только после того, как все проверки доступа пройдены. */
+html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toast){display:none!important}
+/* Те же правила, что и в styles.css, но продублированы здесь — чтобы
+   диалоговые окна были скрыты с первого кадра, даже если styles.css ещё
+   не приехал. Без этого на медленной сети их содержимое (заготовки
+   текста внутри) на мгновение показывалось бы обычным текстом. */
+.modal-overlay:not(.show),.photo-lightbox:not(.show){display:none}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260827b">
+<link rel="stylesheet" href="styles.css?v=20260827h">
 </head>
 <body>
 
@@ -73,6 +101,12 @@
     <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><line x1="8" y1="11" x2="16" y2="11"></line><line x1="8" y1="15" x2="16" y2="15"></line></svg></span>
     <span class="nav-label">Категории</span>
   </div>
+  <!-- Сюда JS (renderCustomNavTabs в app.js) вставляет дополнительные
+       вкладки, добавленные разработчиком в Админ-панели — см. карточку
+       "🗂️ Дополнительные вкладки". display:contents, чтобы вложенные
+       .nav-tab участвовали в flex-раскладке .nav-tabs как обычные
+       соседние вкладки, а не как один общий блок. -->
+  <div id="custom-nav-tabs" style="display:contents"></div>
   <div class="nav-tab purchase-access-only" data-tab="purchase">
     <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 2-1.58l1.65-7.42H5.12"></path></svg></span>
     <span class="nav-label">Закупка</span>
@@ -94,21 +128,21 @@
     <input type="search" class="search-input" id="search-categories" name="search-categories-field" placeholder="Поиск по названию рецепта..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderCategoriesList(); toggleSearchClear('search-categories')">
     <button type="button" class="search-clear" id="search-categories-clear" onclick="clearSearchInput('search-categories')" title="Очистить" style="display:none">✕</button>
   </div>
-  <div class="chip-row" id="category-chips">
-    <span class="chip active" data-type="" onclick="selectCategoryChip('')">Все</span>
-    <span class="chip" data-type="pizza" onclick="selectCategoryChip('pizza')">🍕 Пицца</span>
-    <span class="chip" data-type="pinsa" onclick="selectCategoryChip('pinsa')">🫓 Пинца</span>
-    <span class="chip" data-type="dough" onclick="selectCategoryChip('dough')">🌾 Тесто</span>
-    <span class="chip" data-type="sauce" onclick="selectCategoryChip('sauce')">🥫 Соусы</span>
-    <span class="chip" data-type="prep" onclick="selectCategoryChip('prep')">🧂 Заготовки</span>
-    <span class="chip" data-type="focaccia" onclick="selectCategoryChip('focaccia')">🫓 Фокачча</span>
-    <span class="chip" data-type="burger" onclick="selectCategoryChip('burger')">🍔 Бургер</span>
-  </div>
+  <!-- Чипы категорий собирает JS (renderCategoryChipRows в app.js) по
+       списку из настроек сайта — раньше они были зашиты прямо здесь, и
+       добавить категорию можно было только правкой этого файла. Набор
+       категорий правится в Админ-панели, карточка «🏷️ Категории рецептов». -->
+  <div class="chip-row" id="category-chips"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">
     <span id="categories-count" style="font-size:14px;color:var(--text-muted)">Всего: 15</span>
   </div>
   <div id="categories-list"></div>
 </div>
+
+<!-- Сюда JS (ensureCustomTabContent в app.js) добавляет содержимое
+     дополнительных вкладок, по одной панели .tab-content на вкладку —
+     см. #custom-nav-tabs выше. -->
+<div id="custom-tabs-content"></div>
 
 <!-- TAB: ЗАКУПКА -->
 <div id="tab-purchase" class="tab-content">
@@ -269,6 +303,37 @@
 
   <div class="admin-panel-card developer-only">
     <div class="admin-panel-row">
+      <span>🏷️ Категории рецептов</span>
+      <button class="btn btn-primary btn-sm" onclick="addRecipeCategory()">+ Добавить категорию</button>
+    </div>
+    <p class="admin-panel-hint">
+      Это чипы-фильтры («Пицца», «Соусы», «Тесто» и т.д.) на вкладке «Категории» и пункты списка
+      «Тип» в форме рецепта. Переименование меняет название сразу везде — на чипах, на бейджах
+      карточек и в форме, — а сами рецепты остаются в своей категории.
+      Кнопка «📏» включает или убирает поле «Размер» в форме для этой категории (для соусов и
+      теста оно не нужно). При удалении категории сайт спросит, в какую категорию перенести её
+      рецепты — рецепты не пропадают.
+    </p>
+    <div id="categories-admin-list" style="margin-top:10px"></div>
+  </div>
+
+  <div class="admin-panel-card developer-only">
+    <div class="admin-panel-row">
+      <span>🗂️ Дополнительные вкладки</span>
+      <button class="btn btn-primary btn-sm" onclick="addCustomTab()">+ Добавить вкладку</button>
+    </div>
+    <p class="admin-panel-hint">
+      Новая вкладка показывает список рецептов с фильтром по категориям — так же, как вкладка
+      «Категории». У каждой вкладки своя роль: её видят только те участники, кому эта роль выдана
+      (плюс админ и разработчик) — выдать можно кнопкой «🎭 Роли» в списке участников ниже, сразу
+      несколько ролей за раз. Переименование вкладки автоматически переименовывает и её роль,
+      а удаление вкладки убирает роль у всех участников. Сами рецепты при этом не затрагиваются.
+    </p>
+    <div id="custom-tabs-admin-list" style="margin-top:10px"></div>
+  </div>
+
+  <div class="admin-panel-card developer-only">
+    <div class="admin-panel-row">
       <span>📤 Telegram для приёма кодов</span>
     </div>
     <p class="admin-panel-hint">
@@ -340,11 +405,15 @@
       <strong>✕</strong> — это не разбан, а полное удаление записи из списка (например, если добавили по ошибке).
       После удаления «отменить» уже нельзя — если понадобится снова дать доступ этому человеку,
       его придётся добавить заново, попросив код ещё раз.<br>
-      <strong>👑 «Сделать админом»</strong> — даёт участнику ограниченные права прямо на его устройстве,
-      без ввода GitHub-ключа: управление участниками (блокировка/удаление, но не назначение других
-      администраторов) и редактирование уже существующих карточек рецептов. Добавлять или удалять
-      рецепты, генерировать ключи доступа и менять настройки сайта такой админ не может — это остаётся
-      только у разработчика (вход по GitHub-ключу). Права можно в любой момент снять кнопкой «👤 Снять админа».
+      <strong>🎭 «Роли»</strong> — открывает список всех ролей сайта галочками: можно отметить сразу
+      несколько и сохранить одним действием. Роль <strong>«Закупка»</strong> открывает вкладку «Закупка»,
+      роль дополнительной вкладки — доступ именно к ней (без роли вкладка у человека не отображается).
+      Роль <strong>«Администратор»</strong> даёт ограниченные права прямо на его устройстве, без ввода
+      GitHub-ключа: управление участниками (блокировка/удаление, но не назначение других администраторов)
+      и редактирование уже существующих карточек рецептов. Добавлять или удалять рецепты, генерировать
+      ключи доступа и менять настройки сайта такой админ не может — это остаётся только у разработчика
+      (вход по GitHub-ключу), и назначить или снять администратора тоже может только он, каждый раз
+      подтверждая это своим ключом.
     </p>
   </div>
 </div>
@@ -370,15 +439,9 @@
 
   <div class="form-group">
     <label>Тип</label>
-    <select id="f-type" onchange="onTypeChange()">
-      <option value="pizza">🍕 Пицца</option>
-      <option value="pinsa">🫓 Пинца</option>
-      <option value="dough">🌾 Тесто</option>
-      <option value="sauce">🥫 Соус</option>
-      <option value="prep">🧂 Заготовка</option>
-      <option value="focaccia">🫓 Фокачча</option>
-      <option value="burger">🍔 Бургер</option>
-    </select>
+    <!-- Пункты списка заполняет JS (renderTypeSelect в app.js) по тому же
+         списку категорий, что и чипы выше. -->
+    <select id="f-type" onchange="onTypeChange()"></select>
   </div>
 
   <div class="form-group">
@@ -485,7 +548,10 @@
 <div class="app-footer">Route 20 — Римские пекарни<br><span id="device-code-footer" style="color:var(--text-muted);font-size:11px"></span></div>
 
 <!-- TOAST -->
-<div class="toast" id="toast">✅ Сохранено на GitHub</div>
+<!-- Текст задаётся из JS (showToast). Пустой по умолчанию: иначе
+     заготовка «✅ Сохранено на GitHub» успевала мелькнуть на экране,
+     пока не загрузился styles.css с её прозрачностью. -->
+<div class="toast" id="toast"></div>
 
 <!-- MODAL (замена prompt/confirm) -->
 <div class="photo-lightbox" id="photo-lightbox" onclick="closePhotoLightbox()">
@@ -548,7 +614,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260827b"></script>
+<script src="app.js?v=20260827h"></script>
 
 
 
