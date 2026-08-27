@@ -5751,63 +5751,42 @@ function initStickySearchOffset() {
    список рецептов, поиск позиций внутри цеха/поставщика). Проблема
    воспроизводится и в Safari, и в Chrome на мобильных — то есть дело не
    в конкретном браузере, а в том, что при открытой экранной клавиатуре
-   мобильный браузер сам пытается "подскроллить" страницу так, чтобы
-   сфокусированное поле было видно над клавиатурой, и иногда промахивается
-   в самый верх страницы (особенно когда список результатов под полем
-   меняет высоту на каждое нажатие клавиши). Починить это через одни
-   только CSS/вёрстку нельзя — поведение встроено в сам браузер и у
-   каждого движка (WebKit/Blink) реализовано по-своему. Поэтому вместо
-   борьбы с конкретной причиной просто следим за скроллом, пока одно из
-   полей поиска сфокусировано: пока человек не трогает экран пальцем
-   (обычный жест скролла), любой резкий скачок скролла почти к нулю
-   считаем этим самым браузерным сбоем и тут же возвращаем страницу туда,
-   где она была — человек продолжает видеть то же поле поиска и результаты
-   под ним, что бы ни делал браузер под капотом. */
+   мобильный браузер сам "подскраливает" видимую область под сфокусированное
+   поле и иногда промахивается в самый верх страницы (особенно когда список
+   результатов под полем меняет высоту на каждое нажатие клавиши). Важно:
+   на iOS такой "прыжок" далеко не всегда сопровождается обычным событием
+   scroll на window — там пролистывается сама видимая область экрана
+   (visualViewport), а не документ в привычном смысле, поэтому слушать
+   scroll недостаточно. Вместо этого проверяем реальное положение самого
+   поля на экране (getBoundingClientRect) сразу после каждого нажатия
+   клавиши — это универсальный признак "уехало или нет", не зависящий от
+   того, через какой именно внутренний механизм браузер это сделал — и
+   если поле заметно "уехало" от того места, где было, тут же силой
+   возвращаем его в кадр через scrollIntoView. */
 function initSearchScrollJumpGuard() {
   var GUARDED_IDS = ['purchase-home-search', 'search-categories', 'purchase-search-positions'];
-  var trackedScrollY = null;
-  var isUserScrolling = false;
-  var userScrollTimer = null;
-
-  function guardedFieldFocused() {
-    var el = document.activeElement;
-    return !!(el && GUARDED_IDS.indexOf(el.id) !== -1);
-  }
-
-  // Жест пальцем по экрану — это обычный, "настоящий" скролл, его трогать
-  // не нужно; на 400мс после последнего touchmove считаем скролл ручным.
-  document.addEventListener('touchmove', function() {
-    isUserScrolling = true;
-    clearTimeout(userScrollTimer);
-    userScrollTimer = setTimeout(function() { isUserScrolling = false; }, 400);
-  }, { passive: true });
-
-  document.addEventListener('focusin', function(e) {
-    if (GUARDED_IDS.indexOf(e.target.id) !== -1) trackedScrollY = window.scrollY;
+  GUARDED_IDS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+      var before = el.getBoundingClientRect().top;
+      // Два кадра подряд — на некоторых устройствах браузер выполняет
+      // свою (порой ошибочную) подстройку скролла не мгновенно, а только
+      // после того, как отрисовка от текущего нажатия клавиши уляжется.
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          var after = el.getBoundingClientRect().top;
+          // Пока идёт печать, поле не должно заметно смещаться от того
+          // места, где было до нажатия клавиши. Скачок больше высоты
+          // панели вкладок означает, что страницу откатило к началу и
+          // поле "уехало" вниз, в своё обычное (не прилипшее) положение.
+          if (Math.abs(after - before) > 80) {
+            el.scrollIntoView({ block: 'start', behavior: 'auto' });
+          }
+        });
+      });
+    });
   });
-  document.addEventListener('focusout', function(e) {
-    if (GUARDED_IDS.indexOf(e.target.id) !== -1) trackedScrollY = null;
-  });
-
-  function onScroll() {
-    if (!guardedFieldFocused()) { trackedScrollY = null; return; }
-    if (isUserScrolling) { trackedScrollY = window.scrollY; return; }
-    // Резкий скачок почти к нулю с заметной высоты, без ручного скролла,
-    // пока поле поиска в фокусе, — это и есть тот самый браузерный сбой.
-    if (trackedScrollY != null && trackedScrollY > 120 && window.scrollY < 40) {
-      window.scrollTo(0, trackedScrollY);
-      return;
-    }
-    trackedScrollY = window.scrollY;
-  }
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  // На части устройств браузер "доскабливает" скролл уже после того, как
-  // клавиатура/панель автозаполнения меняет размер видимой области, а не
-  // сразу в момент ввода символа — visualViewport ловит и такие случаи.
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', function() { requestAnimationFrame(onScroll); });
-  }
 }
 
 async function initApp() {
