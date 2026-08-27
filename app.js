@@ -110,8 +110,40 @@ function ensureModalDom() {
   );
 }
 
+/* Контейнер для списка галочек (withChecklist — см. showModal). Создаётся
+   на лету, а не задан в index.html: разметку модалки в разное время
+   собирают три места (index.html, ensureModalDom и восстановление после
+   showPendingScreen/showBlockedScreen, которые затирают body), и любое из
+   них может оказаться старой версией без этого блока. Поэтому просто
+   дописываем его перед кнопками, если его ещё нет. */
+function ensureModalChecklistDom() {
+  if ($('app-modal-checklist')) return;
+  var overlay = $('app-modal-overlay');
+  if (!overlay) return;
+  var actions = overlay.querySelector('.modal-actions');
+  if (!actions) return;
+  actions.insertAdjacentHTML('beforebegin', '<div class="modal-checklist" id="app-modal-checklist" style="display:none"></div>');
+}
+
+/* Подвал модалки — блок ПОД кнопками действия (footerHtml в showModal).
+   Нужен для второстепенных действий вроде «Нет ключа? Написать
+   администратору»: если положить такую кнопку в текст сообщения, она
+   окажется ВЫШЕ поля ввода и будет спорить за внимание с главной
+   кнопкой («Войти»). Создаётся на лету по тем же соображениям, что и
+   список галочек выше. */
+function ensureModalFooterDom() {
+  if ($('app-modal-footer')) return;
+  var overlay = $('app-modal-overlay');
+  if (!overlay) return;
+  var actions = overlay.querySelector('.modal-actions');
+  if (!actions) return;
+  actions.insertAdjacentHTML('afterend', '<div class="modal-footer-slot" id="app-modal-footer" style="display:none"></div>');
+}
+
 function showModal(opts) {
   ensureModalDom();
+  ensureModalChecklistDom();
+  ensureModalFooterDom();
   return new Promise(function(resolve) {
     var overlay = $('app-modal-overlay');
     var titleEl = $('app-modal-title');
@@ -124,6 +156,8 @@ function showModal(opts) {
     var devLink = $('app-modal-dev-login');
     var codeWrap = $('app-modal-code-entry-wrap');
     var codeLink = $('app-modal-code-entry');
+    var checklistEl = $('app-modal-checklist');
+    var footerEl = $('app-modal-footer');
 
     titleEl.textContent = opts.title || '';
     if (opts.messageHtml) {
@@ -160,6 +194,31 @@ function showModal(opts) {
       }
     }
 
+    // Список галочек — несколько значений можно выбрать за один раз
+    // (используется окном «Роли» участника: роли выдаются пачкой).
+    if (checklistEl) {
+      if (opts.withChecklist && opts.withChecklist.length) {
+        checklistEl.style.display = '';
+        checklistEl.innerHTML = opts.withChecklist.map(function(o) {
+          return '<label class="modal-check-row' + (o.disabled ? ' is-disabled' : '') + '">' +
+            '<input type="checkbox" value="' + escAttr(o.value) + '"' + (o.checked ? ' checked' : '') + (o.disabled ? ' disabled' : '') + '>' +
+            '<span class="modal-check-text">' +
+              '<span class="modal-check-label">' + esc(o.label) + '</span>' +
+              (o.hint ? '<span class="modal-check-hint">' + esc(o.hint) + '</span>' : '') +
+            '</span>' +
+          '</label>';
+        }).join('');
+      } else {
+        checklistEl.style.display = 'none';
+        checklistEl.innerHTML = '';
+      }
+    }
+
+    if (footerEl) {
+      footerEl.innerHTML = opts.footerHtml || '';
+      footerEl.style.display = opts.footerHtml ? '' : 'none';
+    }
+
     if (devWrap) devWrap.style.display = opts.devLogin ? '' : 'none';
     if (codeWrap) codeWrap.style.display = opts.enterCode ? '' : 'none';
 
@@ -177,11 +236,21 @@ function showModal(opts) {
     }
 
     okBtn.onclick = function() {
-      if (opts.withSelect) cleanup(selectEl.value);
+      if (opts.withChecklist) {
+        // Отключённые галочки (например «Администратор» у обычного админа)
+        // тоже попадают в результат, если они отмечены, — иначе сохранение
+        // молча снимало бы роль, которую этому человеку не разрешено менять.
+        var picked = [];
+        checklistEl.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+          if (cb.checked) picked.push(cb.value);
+        });
+        cleanup(picked);
+      }
+      else if (opts.withSelect) cleanup(selectEl.value);
       else cleanup(opts.withInput ? inputEl.value : true);
     };
     cancelBtn.onclick = function() {
-      cleanup((opts.withInput || opts.withSelect) ? null : false);
+      cleanup((opts.withInput || opts.withSelect || opts.withChecklist) ? null : false);
     };
     inputEl.onkeydown = function(e) {
       if (e.key === 'Enter') { e.preventDefault(); okBtn.onclick(); }
@@ -242,6 +311,11 @@ function customSelect(message, options, selectedValue, title) {
    доступ, видеть, кто пользуется сайтом, и в любой момент закрыть
    доступ конкретному человеку.
    ================================================================ */
+/* Значок Telegram (бумажный самолётик) — используется на кнопках
+   «Написать администратору» на экранах доступа и в карточке "Поделиться"
+   у рецепта. Размер и цвет задаёт .btn-telegram svg в styles.css. */
+var TELEGRAM_ICON_SVG = '<svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.8 19.8c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.7 13.1l-4.8-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3z"></path></svg>';
+
 const DEVICE_ID_KEY = 'r20_device_id';
 const DEVICE_NAME_KEY = 'r20_device_name';
 const PARTICIPANTS_KEY = 'r20_participants_cache';
@@ -523,13 +597,13 @@ async function requireAccessKey(name) {
     var lockedMs = keyEntryLockedMsRemaining();
     if (lockedMs > 0) {
       var lockedMin = Math.ceil(lockedMs / 60000);
-      var requestHtml = '<p style="text-align:center;font-size:12px;margin-top:12px">' +
-        '<span onclick="requestAccessFromLockedScreen(\'' + escAttr(name) + '\')" style="color:var(--accent);text-decoration:underline;cursor:pointer">📤 Запросить ключ у администратора →</span>' +
-        '</p>';
+      var requestHtml = '<div style="text-align:center">' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="requestAccessFromLockedScreen(\'' + escAttr(name) + '\')">📤 Запросить ключ у администратора</button>' +
+        '</div>';
       await showModal({
         title: '⏳ Слишком много попыток',
         message: 'Ключ несколько раз подряд не подошёл — ввод временно недоступен (ещё ' + lockedMin + ' мин.) на этом устройстве. Если ключа нет — запросите его у администратора.',
-        messageHtml: requestHtml,
+        footerHtml: requestHtml,
         withInput: false,
         hideCancel: true,
         okText: 'Понятно',
@@ -545,15 +619,20 @@ async function requireAccessKey(name) {
     var contactHtml = '';
     var url = getTelegramSendUrl(name);
     if (url) {
-      contactHtml = '<p style="text-align:center;font-size:12px;margin-top:12px">' +
-        '<a href="' + escAttr(url) + '" target="_blank" rel="noopener" style="color:var(--accent)">Нет ключа? Написать администратору в Telegram →</a>' +
-        '</p>';
+      // Идёт в подвал окна (footerHtml) — ПОД кнопку «Войти»: это
+      // запасной путь, он не должен перебивать главное действие.
+      contactHtml = '<div style="text-align:center">' +
+        '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Нет ключа?</div>' +
+        '<a class="btn btn-telegram btn-sm" href="' + escAttr(url) + '" target="_blank" rel="noopener">' +
+          TELEGRAM_ICON_SVG + (siteConfig.adminTelegramGroup ? 'Написать в группу' : 'Написать администратору') +
+        '</a>' +
+      '</div>';
     }
 
     var entered = await showModal({
       title: '🔑 Ключ доступа',
       message: 'Введите ключ доступа, который вам передал администратор книги рецептов. Без него открыть рецепты нельзя.',
-      messageHtml: contactHtml,
+      footerHtml: contactHtml,
       withInput: true,
       placeholder: 'XXXX-XXXX',
       hideCancel: true,
@@ -577,8 +656,21 @@ async function requireAccessKey(name) {
     var p = participants.filter(function(x) { return x.id === normalized; })[0];
 
     if (!p) {
+      // Ключа нет в копии, которую раздаёт GitHub Pages, — но он мог быть
+      // создан буквально только что и ещё не попасть в неё (сборка сайта
+      // занимает до минуты). Спрашиваем напрямую GitHub API: он отдаёт
+      // файл сразу после коммита, без ожидания пересборки страницы.
+      var fresh = await fetchParticipantsFromGithubApi();
+      if (fresh) {
+        participants = keepRecentlyClaimedSelf(fresh);
+        saveParticipantsLocal();
+        p = participants.filter(function(x) { return x.id === normalized; })[0];
+      }
+    }
+
+    if (!p) {
       registerFailedKeyAttempt();
-      await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок. Если ключ создан только что — сайту нужно до минуты, чтобы опубликовать его на GitHub Pages, попробуйте ещё раз через минуту. Если не поможет — получите новый ключ у администратора.', '⚠️ Ключ не найден');
+      await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок и целиком (формат XXXX-XXXX). Если не поможет — получите новый ключ у администратора.', '⚠️ Ключ не найден');
       continue;
     }
 
@@ -635,13 +727,101 @@ function saveParticipantsLocal() {
   try { localStorage.setItem(PARTICIPANTS_KEY, JSON.stringify(participants)); } catch (e) {}
 }
 
+/* ================================================================
+   ЗАДЕРЖКА GITHUB PAGES И СВЕЖИЙ СПИСОК УЧАСТНИКОВ
+   ================================================================
+   Обычное чтение идёт по относительному пути './participants.json' —
+   то есть из копии, которую раздаёт GitHub Pages. Но Pages обновляет
+   свою копию НЕ сразу после коммита: сайт пересобирается и
+   раскатывается по CDN до минуты. Из-за этого только что созданный
+   ключ доступа реально существовал в репозитории, но по «сайтовой»
+   копии его ещё не было — и человек получал «Такой ключ не найден»,
+   пока Pages не догонит.
+
+   Само содержимое файла при этом доступно мгновенно через GitHub API
+   (api.github.com/.../contents/...): он отдаёт данные прямо из
+   репозитория, без промежуточной сборки. Репозиторий публичный, так
+   что читать его можно вообще без токена — а значит и обычному гостю,
+   у которого никакого ключа GitHub нет и быть не должно.
+
+   Владельца и название репозитория берём (по очереди): из настроек
+   синхронизации, если человек — администратор; из site-config.json,
+   куда их записывает администратор при сохранении любых настроек;
+   иначе выводим из адреса вида owner.github.io/repo. Это публичные
+   данные, никакого секрета в них нет.
+   ================================================================ */
+function getPublicRepoRef() {
+  var cfg = getGithubConfig();
+  if (cfg && cfg.owner && cfg.repo) return { owner: cfg.owner, repo: cfg.repo, branch: cfg.branch || 'main' };
+  if (siteConfig && siteConfig.repoOwner && siteConfig.repoName) {
+    return { owner: siteConfig.repoOwner, repo: siteConfig.repoName, branch: siteConfig.repoBranch || '' };
+  }
+  var m = /^([a-z0-9][a-z0-9-]*)\.github\.io$/.exec((location.hostname || '').toLowerCase());
+  if (m) {
+    var seg = (location.pathname || '/').split('/').filter(Boolean)[0];
+    // Без явной ветки — GitHub API сам возьмёт ветку по умолчанию.
+    return { owner: m[1], repo: seg || (m[1] + '.github.io'), branch: '' };
+  }
+  return null;
+}
+
+async function fetchParticipantsFromGithubApi() {
+  var ref = getPublicRepoRef();
+  if (!ref) return null;
+  try {
+    var url = 'https://api.github.com/repos/' + encodeURIComponent(ref.owner) + '/' + encodeURIComponent(ref.repo) +
+      '/contents/' + PARTICIPANTS_PATH + '?_=' + Date.now() +
+      (ref.branch ? '&ref=' + encodeURIComponent(ref.branch) : '');
+    // Accept: ...raw — GitHub отдаёт сам файл, а не обёртку с base64.
+    var headers = { 'Accept': 'application/vnd.github.raw' };
+    var cfg = getGithubConfig();
+    if (cfg && cfg.token) headers['Authorization'] = 'Bearer ' + cfg.token; // у администратора выше лимит запросов
+    var res = await fetchWithTimeout(url, { headers: headers, cache: 'no-store' }, 12000);
+    if (!res.ok) return null;
+    var data = await res.json();
+    return Array.isArray(data) ? data : null;
+  } catch (e) {
+    console.warn('fetchParticipantsFromGithubApi:', e);
+    return null;
+  }
+}
+
+/* Обратная сторона той же задержки Pages: человек только что ввёл
+   ключ, запись о нём сохранена локально, страница перезагрузилась —
+   а «сайтовая» копия списка участников всё ещё старая, без него.
+   Раньше она просто затирала локальную, запись пропадала, и человека
+   выкидывало на экран «Ожидайте подтверждения администратора» —
+   ровно на ту же минуту.
+
+   Поэтому свою собственную, только что привязанную запись держим
+   поверх пришедшего списка, пока Pages не догонит. Ограничение по
+   времени принципиально: если администратор потом удалит или
+   заблокирует человека, старая локальная запись уже не будет его
+   «спасать» — по истечении этого окна побеждает то, что пришло с
+   сервера. */
+var RECENT_CLAIM_GRACE_MS = 30 * 60 * 1000;
+
+function keepRecentlyClaimedSelf(incoming) {
+  try {
+    var myId = getDeviceId();
+    if (!myId) return incoming;
+    if (incoming.some(function(x) { return x.id === myId; })) return incoming; // сервер уже знает — берём серверную версию
+    var mine = participants.filter(function(x) { return x.id === myId; })[0];
+    if (!mine || !mine.claimedAt) return incoming;
+    if (Date.now() - mine.claimedAt > RECENT_CLAIM_GRACE_MS) return incoming;
+    return incoming.concat([mine]);
+  } catch (e) {
+    return incoming;
+  }
+}
+
 async function syncParticipantsFromGithub() {
   try {
     var res = await fetch('./' + PARTICIPANTS_PATH + '?_=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) return; // файла ещё нет (никого не добавляли) или открыто локально — тихий фолбэк
     var data = await res.json();
     if (Array.isArray(data)) {
-      participants = data;
+      participants = keepRecentlyClaimedSelf(data);
       saveParticipantsLocal();
       if (currentTab === 'admin') renderParticipantsList();
     }
@@ -995,7 +1175,7 @@ function renderOnlineUsersList() {
   }
 
   holder.innerHTML = shown.map(function(x) {
-    var roleBadge = (x.participant && x.participant.role === 'admin') ? '<span class="online-member-badge">👑 админ</span>' : '';
+    var roleBadge = participantHasRole(x.participant, 'admin') ? '<span class="online-member-badge">👑 админ</span>' : '';
     var accessBadge = !x.hasAccess ? '<span class="online-member-badge" style="background:var(--warning);color:#1a1a1a" title="Нет одобренной записи участника или заблокирован, но при этом реально на сайте — стоит проверить">⚠️ нет доступа</span>' : '';
     var itemClass = 'participant-item online-item' + (x.live ? ' is-live' : '') + (!x.hasAccess ? ' is-blocked' : '');
     return '<div class="' + itemClass + '">' +
@@ -1105,7 +1285,13 @@ async function removeOnlinePresence(id) {
 const SITE_CONFIG_KEY = 'r20_site_config_cache';
 const SITE_CONFIG_PATH = 'site-config.json';
 
-var SITE_CONFIG_DEFAULTS = { adminTelegram: '', adminTelegramGroup: '' };
+var SITE_CONFIG_DEFAULTS = {
+  adminTelegram: '', adminTelegramGroup: '', customTabs: [], categories: [],
+  // Публичные (не секретные) координаты репозитория — нужны гостю, чтобы
+  // при вводе ключа прочитать participants.json напрямую через GitHub API,
+  // минуя задержку GitHub Pages. См. getPublicRepoRef.
+  repoOwner: '', repoName: '', repoBranch: ''
+};
 var siteConfig = Object.assign({}, SITE_CONFIG_DEFAULTS);
 
 function loadSiteConfigLocal() {
@@ -1132,6 +1318,12 @@ async function syncSiteConfigFromGithub() {
       siteConfig = Object.assign({}, SITE_CONFIG_DEFAULTS, data);
       saveSiteConfigLocal();
       updateTelegramConfigField();
+      renderCustomNavTabs();
+      renderCustomTabsAdminList();
+      renderCategoryChipRows();
+      renderTypeSelect();
+      renderCategoriesAdminList();
+      refreshAllRecipeLists();
       return true;
     }
     return false;
@@ -1148,6 +1340,15 @@ function syncSiteConfigToGithub() {
       showToast('⚠️ Сначала настройте синхронизацию с GitHub (⚙️ в разделе «Добавить»)');
       return false;
     }
+    // Заодно запоминаем в общедоступных настройках, из какого репозитория
+    // живёт сайт. Это не ключ и не секрет (репозиторий и так публичный) —
+    // но именно эти три строки позволяют гостю на любом домене прочитать
+    // свежий participants.json через GitHub API при вводе ключа.
+    if (cfg.owner && cfg.repo) {
+      siteConfig.repoOwner = cfg.owner;
+      siteConfig.repoName = cfg.repo;
+      siteConfig.repoBranch = cfg.branch || 'main';
+    }
     var res = await putJsonToGithub(SITE_CONFIG_PATH, siteConfig, 'Обновление настроек сайта (' + new Date().toLocaleString('ru-RU') + ')');
     if (res.ok) { saveSiteConfigLocal(); return true; }
     console.error('syncSiteConfigToGithub error:', res.error);
@@ -1161,6 +1362,561 @@ function updateTelegramConfigField() {
   if (input && document.activeElement !== input) input.value = siteConfig.adminTelegram || '';
   var groupInput = $('admin-telegram-group');
   if (groupInput && document.activeElement !== groupInput) groupInput.value = siteConfig.adminTelegramGroup || '';
+}
+
+/* ================================================================
+   ДОПОЛНИТЕЛЬНЫЕ ВКЛАДКИ (custom nav tabs)
+   ================================================================
+   Разработчик (вход по GitHub-ключу) может добавить в верхнюю
+   навигацию новую вкладку по образцу «Категории»: тот же список
+   рецептов с фильтром по чипам-категориям и поиском, только под
+   своим названием/иконкой. Список вкладок хранится ВНУТРИ siteConfig
+   (поле customTabs) — то есть уезжает в тот же site-config.json и
+   синхронизируется так же, как Telegram-настройки: пишет только
+   разработчик, читают (и видят у себя в навигации) все посетители.
+   Сами карточки рецептов при этом не копируются и не привязываются
+   к вкладке — вкладка просто показывает тот же общий recipes[] с
+   собственным (независимым от «Категории») состоянием фильтра/поиска.
+   ================================================================ */
+var customTabFilters = {}; // tabId -> текущий выбранный чип-фильтр (как currentCategoryFilter, но отдельно на вкладку)
+
+function getCustomTabs() {
+  return Array.isArray(siteConfig.customTabs) ? siteConfig.customTabs : [];
+}
+
+/* Создаёт HTML-панель содержимого вкладки (чипы + поиск + список),
+   если её ещё нет в DOM — по структуре повторяет статичную разметку
+   #tab-categories из index.html. Переименование вкладки эту панель не
+   трогает (обновляется только кнопка в навигации, см. renderCustomNavTabs). */
+function ensureCustomTabContent(t) {
+  var paneId = 'tab-custom:' + t.id;
+  if ($(paneId)) return;
+  var container = $('custom-tabs-content');
+  if (!container) return;
+  var chipsHtml = categoryChipsHtml(customTabFilters[t.id] || '', function(id) {
+    return "selectCustomTabChip('" + t.id + "', '" + id + "')";
+  });
+  var html = '<div id="' + paneId + '" class="tab-content">' +
+    '<div class="search-wrap">' +
+      '<svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
+      '<input type="search" class="search-input" id="search-custom-' + t.id + '" placeholder="Поиск по названию рецепта..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderCustomTabList(\'' + t.id + '\'); toggleSearchClear(\'search-custom-' + t.id + '\')">' +
+      '<button type="button" class="search-clear" id="search-custom-' + t.id + '-clear" onclick="clearSearchInput(\'search-custom-' + t.id + '\')" title="Очистить" style="display:none">✕</button>' +
+    '</div>' +
+    '<div class="chip-row" id="custom-chips-' + t.id + '">' + chipsHtml + '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">' +
+      '<span id="custom-count-' + t.id + '" style="font-size:14px;color:var(--text-muted)">Всего: 0</span>' +
+    '</div>' +
+    '<div id="custom-list-' + t.id + '"></div>' +
+  '</div>';
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+function removeCustomTabContentPane(id) {
+  var el = $('tab-custom:' + id);
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+  delete customTabFilters[id];
+}
+
+/* Перерисовывает саму навигацию (.nav-tab кнопки) по текущему списку
+   siteConfig.customTabs — вызывается при старте, после каждой
+   синхронизации site-config.json с GitHub, при смене прав
+   (applyAdminUI) и сразу после локального добавления/переименования/
+   удаления вкладки.
+
+   Показываются только те вкладки, к которым у этого человека реально
+   есть доступ (см. hasCustomTabAccess): у каждой вкладки своя роль, и
+   тот, кому она не выдана, вкладку просто не видит — так же, как
+   сейчас устроена «Закупка». */
+function renderCustomNavTabs() {
+  var container = $('custom-nav-tabs');
+  if (!container) return;
+  var tabs = getCustomTabs().filter(function(t) { return hasCustomTabAccess(t.id); });
+  tabs.forEach(ensureCustomTabContent);
+  // Вкладка, открытая прямо сейчас, но ставшая недоступной (роль сняли
+  // или её отозвали синхронизацией) — уводим человека на «Категории»,
+  // чтобы он не остался на экране, которого у него больше нет.
+  if (currentTab.indexOf('custom:') === 0 && !hasCustomTabAccess(currentTab.slice('custom:'.length))) {
+    switchTab('categories');
+  }
+  container.innerHTML = tabs.map(function(t) {
+    var tabName = 'custom:' + t.id;
+    return '<div class="nav-tab' + (currentTab === tabName ? ' active' : '') + '" data-tab="' + escAttr(tabName) + '" onclick="switchTab(\'' + tabName + '\')">' +
+      '<span class="nav-icon" style="font-size:19px;line-height:1">' + esc(t.icon || '📁') + '</span>' +
+      '<span class="nav-label">' + esc(t.label) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function selectCustomTabChip(tabId, type) {
+  customTabFilters[tabId] = type;
+  var row = $('custom-chips-' + tabId);
+  if (row) row.querySelectorAll('.chip').forEach(function(chip) { chip.classList.toggle('active', chip.dataset.type === type); });
+  renderCustomTabList(tabId);
+}
+
+function renderCustomTabList(tabId) {
+  var filter = customTabFilters[tabId] || '';
+  var items = filter
+    ? recipes.filter(function(r) { return r.type === filter; })
+    : recipes.slice();
+  items = applySearch(items, 'search-custom-' + tabId);
+  var listEl = $('custom-list-' + tabId), countEl = $('custom-count-' + tabId);
+  if (listEl && countEl) renderCards(listEl, countEl, items, 'Ничего не найдено');
+}
+
+/* Список вкладок в самой Админ-панели (карточка "🗂️ Дополнительные
+   вкладки", видна только разработчику) — с кнопками переименовать/удалить. */
+function renderCustomTabsAdminList() {
+  var holder = $('custom-tabs-admin-list');
+  if (!holder) return;
+  var tabs = getCustomTabs();
+  if (!tabs.length) { holder.innerHTML = '<div class="purchase-home-empty">Дополнительных вкладок пока нет</div>'; return; }
+  holder.innerHTML = tabs.map(function(t) {
+    return '<div class="participant-item">' +
+      '<span>' + esc(t.icon || '📁') + ' ' + esc(t.label) + '</span>' +
+      '<div style="display:flex;gap:6px">' +
+        '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameCustomTab(\'' + t.id + '\')">✏️</button>' +
+        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="removeCustomTab(\'' + t.id + '\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function addCustomTab() {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var label = await customPrompt('Название новой вкладки:', '', '➕ Новая вкладка');
+  if (label === null) return;
+  label = (label || '').trim();
+  if (!label) { showToast('⚠️ Название не может быть пустым'); return; }
+  var icon = await customPrompt('Иконка вкладки — один эмодзи (необязательно):', '📁', '➕ Новая вкладка — иконка');
+  if (icon === null) icon = '';
+  icon = (icon || '').trim() || '📁';
+
+  if (!Array.isArray(siteConfig.customTabs)) siteConfig.customTabs = [];
+  siteConfig.customTabs.push({ id: uid(), label: label, icon: icon });
+  saveSiteConfigLocal();
+  renderCustomNavTabs();
+  renderCustomTabsAdminList();
+
+  showToast('⏳ Сохраняю...');
+  var ok = await syncSiteConfigToGithub();
+  if (ok) showToast('✅ Вкладка «' + label + '» добавлена — выдайте её роль участникам в списке ниже');
+}
+
+async function renameCustomTab(id) {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var t = getCustomTabs().find(function(x) { return x.id === id; });
+  if (!t) return;
+  var val = await customPrompt('Новое название вкладки:', t.label, '✏️ Переименовать вкладку');
+  if (val === null) return;
+  val = (val || '').trim();
+  if (!val) { showToast('⚠️ Название не может быть пустым'); return; }
+  t.label = val;
+  saveSiteConfigLocal();
+  renderCustomNavTabs();
+  renderCustomTabsAdminList();
+  // Название роли этой вкладки нигде отдельно не хранится — оно берётся
+  // из самой вкладки (см. roleLabel), поэтому достаточно перерисовать
+  // список участников, чтобы новое имя появилось и на бейджах ролей.
+  renderParticipantsList();
+
+  showToast('⏳ Сохраняю...');
+  var ok = await syncSiteConfigToGithub();
+  if (ok) showToast('✅ Название вкладки и её роли обновлено');
+}
+
+async function removeCustomTab(id) {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var t = getCustomTabs().find(function(x) { return x.id === id; });
+  if (!t) return;
+  // Считаем заранее, у скольких участников была роль этой вкладки —
+  // чтобы честно предупредить, что вместе со вкладкой исчезнет и роль.
+  var roleId = 'tab:' + id;
+  var affected = participants.filter(function(x) { return participantHasRole(x, roleId); });
+  var roleWarning = affected.length
+    ? ' Роль «' + t.label + '» тоже исчезнет — сейчас она выдана ' + affected.length + ' участник(ам).'
+    : ' Вместе со вкладкой исчезнет и её роль.';
+
+  var ok = await customConfirm('Удалить вкладку «' + t.label + '»? Сами рецепты никуда не денутся — исчезнет только эта вкладка из навигации.' + roleWarning + ' Действие нельзя отменить.', '🗑️ Удалить вкладку');
+  if (!ok) return;
+
+  siteConfig.customTabs = getCustomTabs().filter(function(x) { return x.id !== id; });
+  saveSiteConfigLocal();
+  if (currentTab === 'custom:' + id) switchTab('categories');
+  removeCustomTabContentPane(id);
+  renderCustomNavTabs();
+  renderCustomTabsAdminList();
+
+  // Роль удалённой вкладки вычищаем у всех участников — иначе в
+  // participants.json навсегда остались бы висеть 'tab:<id>' на вкладку,
+  // которой больше нет.
+  if (affected.length) {
+    affected.forEach(function(x) {
+      setParticipantRoles(x, getParticipantRoles(x).filter(function(r) { return r !== roleId; }));
+    });
+    saveParticipantsLocal();
+    renderParticipantsList();
+  }
+
+  showToast('⏳ Сохраняю...');
+  var okSync = await syncSiteConfigToGithub();
+  if (affected.length) await syncParticipantsToGithub();
+  if (okSync) showToast('🗑️ Вкладка и её роль удалены');
+}
+
+/* ================================================================
+   РОЛИ УЧАСТНИКОВ (несколько ролей на одного человека)
+   ================================================================
+   Раньше у участника было ОДНО поле p.role со строкой
+   'viewer' | 'admin' | 'purchase' — то есть человек мог быть либо
+   админом, либо закупщиком, либо никем, но не двумя сразу. Теперь
+   роли хранятся массивом p.roles, и их можно выдавать сколько угодно
+   одному человеку за один раз (см. editParticipantRoles).
+
+   Идентификаторы ролей:
+     'admin'      — полноценный администратор (как и раньше: назначает
+                    только разработчик и только с подтверждением
+                    GitHub-ключом);
+     'purchase'   — доступ к вкладке «Закупка»;
+     'tab:<id>'   — доступ к дополнительной вкладке с этим id
+                    (см. блок «ДОПОЛНИТЕЛЬНЫЕ ВКЛАДКИ» выше).
+
+   Название роли вкладки нигде отдельно не хранится — оно всегда
+   берётся из самой вкладки (t.label/t.icon). Поэтому переименование
+   вкладки автоматически переименовывает и её роль, а удаление вкладки
+   убирает роль из общего списка; сами записи 'tab:<id>' у участников
+   при удалении вкладки вычищаются явно (см. removeCustomTab).
+
+   СОВМЕСТИМОСТЬ СО СТАРЫМИ ЗАПИСЯМИ: participants.json на GitHub
+   может содержать записи ещё со старым одиночным p.role (и его же
+   читают вкладки/устройства, где открыта прошлая версия сайта).
+   Поэтому getParticipantRoles() на лету понимает оба формата, а
+   setParticipantRoles() всегда дописывает и старое поле p.role
+   (admin > purchase > viewer) — чтобы не сломать тех, кто ещё не
+   обновил страницу.
+   ================================================================ */
+function getParticipantRoles(p) {
+  if (!p) return [];
+  if (Array.isArray(p.roles)) return p.roles.slice();
+  if (p.role && p.role !== 'viewer') return [p.role]; // старый формат — одна роль строкой
+  return [];
+}
+
+function participantHasRole(p, roleId) {
+  return getParticipantRoles(p).indexOf(roleId) !== -1;
+}
+
+function setParticipantRoles(p, roles) {
+  var uniq = [];
+  (roles || []).forEach(function(r) { if (r && uniq.indexOf(r) === -1) uniq.push(r); });
+  p.roles = uniq;
+  // Зеркало в старое поле — для страниц/устройств со старой версией сайта.
+  p.role = uniq.indexOf('admin') !== -1 ? 'admin' : (uniq.indexOf('purchase') !== -1 ? 'purchase' : 'viewer');
+}
+
+/* Полный список ролей, которые сейчас существуют на сайте: две
+   встроенные плюс по одной на каждую дополнительную вкладку. Именно
+   отсюда берётся список галочек в окне «Роли» у участника. */
+function allRoleDefs() {
+  var defs = [
+    { id: 'admin', label: '👑 Администратор', hint: 'Управление участниками и редактирование карточек рецептов' },
+    { id: 'purchase', label: '🛒 Закупка', hint: 'Доступ к вкладке «Закупка»' }
+  ];
+  getCustomTabs().forEach(function(t) {
+    defs.push({
+      id: 'tab:' + t.id,
+      label: (t.icon || '📁') + ' ' + t.label,
+      hint: 'Доступ к вкладке «' + t.label + '»'
+    });
+  });
+  return defs;
+}
+
+/* Человекочитаемое название роли по её id — для бейджей в списке
+   участников. Для ролей вкладок название всегда берётся из текущей
+   вкладки, поэтому оно само следует за переименованием. */
+function roleLabel(roleId) {
+  var def = allRoleDefs().filter(function(d) { return d.id === roleId; })[0];
+  if (def) return def.label;
+  // Роль вкладки, которой больше нет (вкладку удалили в другом браузере,
+  // а этот ещё не обновил site-config) — показываем нейтрально.
+  return roleId.indexOf('tab:') === 0 ? '📁 (удалённая вкладка)' : roleId;
+}
+
+/* Доступ к конкретной дополнительной вкладке: админ и разработчик
+   видят все вкладки, обычный участник — только те, чья роль ему
+   выдана. Ровно та же логика, что у hasPurchaseAccess() для «Закупки». */
+function hasCustomTabAccess(tabId) {
+  if (isAdmin()) return true;
+  var me = getMyParticipantRecord();
+  return !!(me && !me.blocked && participantHasRole(me, 'tab:' + tabId));
+}
+
+/* ================================================================
+   КАТЕГОРИИ РЕЦЕПТОВ (чипы «Пицца / Пинца / Тесто / ...»)
+   ================================================================
+   Раньше этот набор был зашит в код в четырёх разных местах сразу
+   (чипы в index.html, выпадающий список «Тип» в форме, эмодзи и
+   подписи бейджей в renderCards, цвета .type-* в styles.css) — то
+   есть добавить категорию можно было только правкой исходников.
+   Теперь весь набор хранится одним списком в siteConfig.categories
+   и уезжает в тот же site-config.json, что и дополнительные вкладки:
+   правит разработчик, видят все посетители.
+
+   Каждая категория: { id, label, icon, color, hasSize }.
+     id      — то, что записано в поле recipe.type. НИКОГДА не меняется
+               при переименовании, иначе все рецепты этой категории
+               разом «потеряются»;
+     label   — отображаемое название (чип, бейдж на карточке, пункт
+               в форме — везде одно и то же имя);
+     icon    — эмодзи;
+     color   — цвет бейджа на карточке рецепта (раньше это были
+               классы .type-pizza и т.п. в CSS, теперь задаётся
+               прямо в разметке, чтобы новые категории тоже могли
+               иметь свой цвет без правки стилей);
+     hasSize — показывать ли в форме поле «Размер» (для соусов,
+               теста и заготовок оно бессмысленно).
+
+   Пустой/отсутствующий список в site-config.json означает «ещё
+   ничего не настраивали» — тогда берётся стартовый набор ниже,
+   полностью совпадающий с тем, что было зашито в коде раньше.
+   Поэтому старые сайты после обновления выглядят ровно так же.
+   ================================================================ */
+function defaultRecipeCategories() {
+  return [
+    { id: 'pizza',    label: 'Пицца',     icon: '🍕', color: '#b23a45', hasSize: true },
+    { id: 'pinsa',    label: 'Пинца',     icon: '🫓', color: '#8a6033', hasSize: true },
+    { id: 'dough',    label: 'Тесто',     icon: '🌾', color: '#5b6b85', hasSize: false },
+    { id: 'sauce',    label: 'Соусы',     icon: '🥫', color: '#3d7a5c', hasSize: false },
+    { id: 'prep',     label: 'Заготовки', icon: '🧂', color: '#7c5aa3', hasSize: false },
+    { id: 'focaccia', label: 'Фокачча',   icon: '🫓', color: '#a3821f', hasSize: true },
+    { id: 'burger',   label: 'Бургер',    icon: '🍔', color: '#94502a', hasSize: false }
+  ];
+}
+
+/* Цвета для бейджей новых категорий — берутся по очереди, чтобы
+   свежедобавленная категория сразу отличалась от соседних и не
+   пришлось выбирать цвет вручную. */
+var CATEGORY_COLOR_PALETTE = [
+  '#b23a45', '#3d7a5c', '#5b6b85', '#8a6033', '#7c5aa3',
+  '#a3821f', '#94502a', '#2f6f7e', '#8a3f6b', '#4a6f2f'
+];
+
+function getRecipeCategories() {
+  var list = siteConfig.categories;
+  return (Array.isArray(list) && list.length) ? list : defaultRecipeCategories();
+}
+
+function recipeCategoryById(id) {
+  return getRecipeCategories().filter(function(c) { return c.id === id; })[0] || null;
+}
+
+function firstRecipeCategoryId() {
+  var cats = getRecipeCategories();
+  return cats.length ? cats[0].id : '';
+}
+
+/* Собирает строку чипов: «Все» плюс по чипу на каждую категорию.
+   onclickFor(id) должен вернуть JS-вызов, который выполнится по клику —
+   у главной вкладки «Категории» и у дополнительных вкладок он разный,
+   а сама разметка чипов одна и та же. */
+function categoryChipsHtml(activeType, onclickFor) {
+  var html = '<span class="chip' + (!activeType ? ' active' : '') + '" data-type="" onclick="' + escAttr(onclickFor('')) + '">Все</span>';
+  getRecipeCategories().forEach(function(c) {
+    html += '<span class="chip' + (activeType === c.id ? ' active' : '') + '" data-type="' + escAttr(c.id) + '"' +
+      ' onclick="' + escAttr(onclickFor(c.id)) + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>';
+  });
+  return html;
+}
+
+/* Перерисовывает ВСЕ строки чипов сразу: и на главной вкладке
+   «Категории», и внутри каждой уже созданной дополнительной вкладки
+   (их панели создаются один раз и живут в DOM, поэтому обновить их
+   нужно явно — см. ensureCustomTabContent). */
+function renderCategoryChipRows() {
+  var ids = getRecipeCategories().map(function(c) { return c.id; });
+
+  // Фильтр, указывающий на удалённую категорию, сбрасываем на «Все» —
+  // иначе список молча остался бы пустым без единого активного чипа.
+  if (currentCategoryFilter && ids.indexOf(currentCategoryFilter) === -1) currentCategoryFilter = '';
+  var mainRow = $('category-chips');
+  if (mainRow) {
+    mainRow.innerHTML = categoryChipsHtml(currentCategoryFilter, function(id) {
+      return "selectCategoryChip('" + id + "')";
+    });
+  }
+
+  getCustomTabs().forEach(function(t) {
+    if (customTabFilters[t.id] && ids.indexOf(customTabFilters[t.id]) === -1) customTabFilters[t.id] = '';
+    var row = $('custom-chips-' + t.id);
+    if (!row) return;
+    row.innerHTML = categoryChipsHtml(customTabFilters[t.id] || '', function(id) {
+      return "selectCustomTabChip('" + t.id + "', '" + id + "')";
+    });
+  });
+}
+
+/* Выпадающий список «Тип» в форме добавления/редактирования рецепта. */
+function renderTypeSelect() {
+  var sel = $('f-type');
+  if (!sel) return;
+  var keep = sel.value;
+  sel.innerHTML = getRecipeCategories().map(function(c) {
+    return '<option value="' + escAttr(c.id) + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</option>';
+  }).join('');
+  if (keep && recipeCategoryById(keep)) sel.value = keep;
+}
+
+/* Перерисовать все видимые списки карточек — нужно после переименования
+   или переноса рецептов между категориями, чтобы бейджи на карточках
+   обновились сразу, без перезагрузки страницы. */
+function refreshAllRecipeLists() {
+  if (!recipes.length) return;
+  if ($('categories-list')) renderCategoriesList();
+  getCustomTabs().forEach(function(t) {
+    if ($('custom-list-' + t.id)) renderCustomTabList(t.id);
+  });
+}
+
+/* Список категорий в Админ-панели (карточка «🏷️ Категории рецептов»,
+   видна только разработчику) — с количеством рецептов в каждой и
+   кнопками «показывать размер / переименовать / удалить». */
+function renderCategoriesAdminList() {
+  var holder = $('categories-admin-list');
+  if (!holder) return;
+  var cats = getRecipeCategories();
+  holder.innerHTML = cats.map(function(c) {
+    var count = recipes.filter(function(r) { return r.type === c.id; }).length;
+    return '<div class="participant-item">' +
+      '<div style="min-width:0;display:flex;align-items:center;gap:8px">' +
+        '<span class="badge type-badge" style="background:' + escAttr(c.color || '#666') + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>' +
+        '<span style="font-size:12px;color:var(--text-muted)">' + count + ' рец.' + (c.hasSize ? ' · с размером' : '') + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:4px;flex-shrink:0">' +
+        '<button type="button" class="purchase-home-icon-btn" title="' + (c.hasSize ? 'Убрать поле «Размер» из формы' : 'Показывать поле «Размер» в форме') + '" onclick="toggleRecipeCategorySize(\'' + escAttr(c.id) + '\')">📏</button>' +
+        '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameRecipeCategory(\'' + escAttr(c.id) + '\')">✏️</button>' +
+        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="removeRecipeCategory(\'' + escAttr(c.id) + '\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* Общая часть для всех трёх операций: сохранить локально, обновить
+   всё, что показывает категории, и опубликовать на GitHub. */
+async function saveRecipeCategories(successMessage) {
+  saveSiteConfigLocal();
+  renderCategoryChipRows();
+  renderTypeSelect();
+  renderCategoriesAdminList();
+  refreshAllRecipeLists();
+  showToast('⏳ Сохраняю...');
+  var ok = await syncSiteConfigToGithub();
+  if (ok) showToast(successMessage);
+  return ok;
+}
+
+async function addRecipeCategory() {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var label = await customPrompt('Название категории:', '', '➕ Новая категория');
+  if (label === null) return;
+  label = (label || '').trim();
+  if (!label) { showToast('⚠️ Название не может быть пустым'); return; }
+
+  var icon = await customPrompt('Иконка категории — один эмодзи (необязательно):', '🍽', '➕ Новая категория — иконка');
+  if (icon === null) icon = '';
+  icon = (icon || '').trim();
+
+  var cats = getRecipeCategories().slice(); // slice: если сейчас используется стартовый набор, работаем с копией
+  cats.push({
+    id: uid(),
+    label: label,
+    icon: icon,
+    color: CATEGORY_COLOR_PALETTE[cats.length % CATEGORY_COLOR_PALETTE.length],
+    hasSize: true
+  });
+  siteConfig.categories = cats;
+  await saveRecipeCategories('✅ Категория «' + label + '» добавлена');
+}
+
+/* Переименование меняет только подпись и иконку — id категории
+   остаётся прежним, поэтому все рецепты, уже помеченные этой
+   категорией, никуда не деваются. */
+async function renameRecipeCategory(id) {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var cats = getRecipeCategories().slice();
+  var c = cats.filter(function(x) { return x.id === id; })[0];
+  if (!c) return;
+
+  var label = await customPrompt('Новое название категории:', c.label, '✏️ Переименовать категорию');
+  if (label === null) return;
+  label = (label || '').trim();
+  if (!label) { showToast('⚠️ Название не может быть пустым'); return; }
+
+  var icon = await customPrompt('Иконка категории — один эмодзи (можно оставить пустым):', c.icon || '', '✏️ Иконка — ' + label);
+  if (icon === null) icon = c.icon || '';
+
+  c.label = label;
+  c.icon = (icon || '').trim();
+  siteConfig.categories = cats;
+  await saveRecipeCategories('✅ Категория переименована');
+}
+
+/* Показывать ли в форме рецепта поле «Размер» (25/30/35 см) — для
+   соусов, теста и заготовок оно только мешает. */
+async function toggleRecipeCategorySize(id) {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var cats = getRecipeCategories().slice();
+  var c = cats.filter(function(x) { return x.id === id; })[0];
+  if (!c) return;
+  c.hasSize = !c.hasSize;
+  siteConfig.categories = cats;
+  if (currentTab === 'add') onTypeChange();
+  await saveRecipeCategories(c.hasSize ? '📏 Поле «Размер» включено для «' + c.label + '»' : '📏 Поле «Размер» убрано у «' + c.label + '»');
+}
+
+/* Удаление категории. Если в ней есть рецепты — сначала спрашиваем,
+   в какую категорию их перенести, и переносим: рецепты при удалении
+   категории не пропадают никогда. Последнюю оставшуюся категорию
+   удалить нельзя — иначе форму добавления рецепта было бы нечем
+   заполнить. */
+async function removeRecipeCategory(id) {
+  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  var cats = getRecipeCategories().slice();
+  if (cats.length <= 1) { showToast('⚠️ Должна остаться хотя бы одна категория'); return; }
+  var c = cats.filter(function(x) { return x.id === id; })[0];
+  if (!c) return;
+
+  var affected = recipes.filter(function(r) { return r.type === id; });
+  var moveTo = null;
+
+  if (affected.length) {
+    var options = cats.filter(function(x) { return x.id !== id; }).map(function(x) {
+      return { value: x.id, label: (x.icon ? x.icon + ' ' : '') + x.label };
+    });
+    moveTo = await customSelect(
+      'В категории «' + c.label + '» сейчас рецептов: ' + affected.length + '.\n\n' +
+      'Выберите, в какую категорию их перенести — после этого категория «' + c.label + '» будет удалена.',
+      options, options[0].value, '🗑️ Удалить категорию'
+    );
+    if (moveTo === null) return;
+  } else {
+    var ok = await customConfirm('Удалить категорию «' + c.label + '»? В ней нет ни одного рецепта.', '🗑️ Удалить категорию');
+    if (!ok) return;
+  }
+
+  if (affected.length) affected.forEach(function(r) { r.type = moveTo; });
+
+  siteConfig.categories = cats.filter(function(x) { return x.id !== id; });
+  await saveRecipeCategories(affected.length
+    ? '🗑️ Категория удалена, рецептов перенесено: ' + affected.length
+    : '🗑️ Категория удалена');
+
+  // Рецепты хранятся отдельно от настроек (recipes.json), поэтому после
+  // переноса их нужно сохранить и опубликовать своим запросом.
+  if (affected.length) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch (e) {}
+    await syncToGithub(false);
+  }
 }
 
 /* ================================================================
@@ -1490,6 +2246,10 @@ async function ownerLoginFromGateScreen() {
 }
 
 function showBlockedScreen() {
+  // Этот экран сам занимает всю страницу вместо содержимого сайта,
+  // поэтому замок доступа снимаем — иначе правило gate-locked
+  // (см. встроенный стиль в <head>) скрыло бы и его тоже.
+  document.documentElement.classList.remove('gate-locked');
   var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
   document.body.innerHTML =
     '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
@@ -1511,6 +2271,10 @@ function showBlockedScreen() {
    каждые 3 секунды и открывает доступ, как только он появится. */
 var pendingPollTimer = null;
 function showPendingScreen() {
+  // Этот экран сам занимает всю страницу вместо содержимого сайта,
+  // поэтому замок доступа снимаем — иначе правило gate-locked
+  // (см. встроенный стиль в <head>) скрыло бы и его тоже.
+  document.documentElement.classList.remove('gate-locked');
   var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
   var isGroupMode = !!siteConfig.adminTelegramGroup;
   var actionsHtml = '<button class="btn btn-primary btn-sm" id="pending-resend-btn" onclick="resendTelegramRequest()">' +
@@ -1584,12 +2348,20 @@ function renderParticipantsList() {
     }
     holder.innerHTML = unclaimedKeys.map(function(p) {
       var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
+      // Роли, выданные ключу заранее (см. generateInviteKey) — человек
+      // получит их сразу при первом входе, без отдельного действия админа.
+      var keyRoles = getParticipantRoles(p);
+      var rolesHtml = keyRoles.length
+        ? '<br>' + keyRoles.map(function(r) { return '<span class="role-badge">' + esc(roleLabel(r)) + '</span>'; }).join('')
+        : '<br><span class="role-badge" style="opacity:.6">без ролей — только «Категории»</span>';
       return '<div class="participant-item">' +
         '<div style="min-width:0">' +
           '<strong>🔑 ' + esc(p.id) + '</strong>' +
           '<br><span style="font-size:12px;color:var(--text-muted)">ещё не использован' + (dateStr ? ' · создан ' + dateStr : '') + '</span>' +
+          rolesHtml +
         '</div>' +
         '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
+          '<button class="btn btn-primary btn-sm" onclick="editParticipantRoles(\'' + escAttr(p.id) + '\')" title="Что откроется человеку сразу после входа по этому ключу">🎭 Роли</button>' +
           '<button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard(\'' + escAttr(p.id) + '\', \'📋 Ключ скопирован\')" title="Скопировать ключ, чтобы отправить человеку">📋 Копировать</button>' +
           '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить неиспользованный ключ">✕</button>' +
         '</div>' +
@@ -1617,9 +2389,16 @@ function renderParticipantsList() {
   var presenceAvailable = (typeof firebase !== 'undefined');
   holder.innerHTML = shown.map(function(p) {
     var dateStr = p.addedAt ? new Date(p.addedAt).toLocaleDateString('ru-RU') : '';
-    var isRoleAdmin = p.role === 'admin';
-    var isRolePurchase = p.role === 'purchase';
-    var itemClass = 'participant-item' + (isRoleAdmin ? ' is-admin' : '') + (isRolePurchase ? ' is-purchase' : '') + (p.blocked ? ' is-blocked' : '');
+    var myRoles = getParticipantRoles(p);
+    var isRoleAdmin = myRoles.indexOf('admin') !== -1;
+    var isRolePurchase = myRoles.indexOf('purchase') !== -1;
+    // Бейджи всех выданных ролей — включая роли дополнительных вкладок.
+    // Название роли вкладки берётся из самой вкладки (см. roleLabel),
+    // поэтому переименование вкладки сразу видно и здесь.
+    var rolesHtml = myRoles.length
+      ? '<br>' + myRoles.map(function(r) { return '<span class="role-badge">' + esc(roleLabel(r)) + '</span>'; }).join('')
+      : '';
+    var itemClass = 'participant-item' + (isRoleAdmin ? ' is-admin' : '') + (isRolePurchase && !isRoleAdmin ? ' is-purchase' : '') + (p.blocked ? ' is-blocked' : '');
     // Статус "онлайн" берём из того же источника, что и вкладка "Онлайн" —
     // Firebase presence (см. subscribeOnlineUsers): её id совпадает с id
     // участника (см. requireAccessKey — после входа id устройства = ключ).
@@ -1635,15 +2414,13 @@ function renderParticipantsList() {
     return '<div class="' + itemClass + '">' +
       '<div style="min-width:0">' +
         '<strong>' + esc(p.name) + '</strong>' +
-        (isRoleAdmin ? ' <span style="color:var(--accent-2);font-size:12px">· 👑 админ</span>' : '') +
-        (isRolePurchase ? ' <span style="color:#6ea8d6;font-size:12px">· 🛒 закупка</span>' : '') +
         (p.blocked ? ' <span style="color:var(--accent);font-size:12px">· заблокирован</span>' : '') +
+        rolesHtml +
         (statusHtml ? '<br>' + statusHtml : '') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
-        (devMode ? '<button class="btn btn-sm ' + (isRoleAdmin ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantAdmin(\'' + escAttr(p.id) + '\')" title="' + (isRoleAdmin ? 'Снять права администратора (нужно подтверждение ключом)' : 'Дать права администратора (нужно подтверждение ключом)') + '">' + (isRoleAdmin ? '👤 Снять админа' : '👑 Сделать админом') + '</button>' : '') +
-        (!isRoleAdmin ? '<button class="btn btn-sm ' + (isRolePurchase ? 'btn-ghost' : 'btn-primary') + '" onclick="toggleParticipantPurchaseRole(\'' + escAttr(p.id) + '\')" title="' + (isRolePurchase ? 'Убрать роль «Закупка» — вкладка снова станет недоступна' : 'Дать доступ только к вкладке «Закупка», без прав администратора') + '">' + (isRolePurchase ? '🛒 Убрать закупку' : '🛒 Сделать закупщиком') + '</button>' : '') +
+        '<button class="btn btn-primary btn-sm" onclick="editParticipantRoles(\'' + escAttr(p.id) + '\')" title="Выдать или снять роли — можно отметить сразу несколько">🎭 Роли</button>' +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
       '</div>' +
@@ -1651,81 +2428,82 @@ function renderParticipantsList() {
   }).join('');
 }
 
-async function toggleParticipantAdmin(id) {
-  if (!isDeveloper()) { showToast('🔒 Назначать и снимать администраторов может только разработчик (вход по GitHub-ключу)'); return; }
+/* Окно «Роли» участника — единое место, где выдаются и снимаются все
+   роли сразу: «Администратор», «Закупка» и по одной роли на каждую
+   дополнительную вкладку (см. allRoleDefs). Открывается кнопкой
+   «🎭 Роли» в списке участников; отмечать можно сколько угодно ролей
+   за один раз, сохраняются они одним действием.
+
+   Кто что может: обычный админ выдаёт и снимает роли вкладок и
+   «Закупку», а галочка «Администратор» у него заблокирована —
+   назначать и снимать администраторов по-прежнему может только
+   разработчик (вход по GitHub-ключу) и каждый раз с подтверждением
+   этим ключом, как было и в старой отдельной кнопке. */
+async function editParticipantRoles(id) {
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var p = participants.filter(function(x) { return x.id === id; })[0];
   if (!p) return;
-  var willGrant = p.role !== 'admin';
 
-  if (!willGrant) {
-    var myRecord = getMyParticipantRecord();
-    var isSelf = myRecord && myRecord.id === p.id;
-    if (isSelf) {
-      var okSelf = await customConfirm('Вы хотите снять права администратора с самой записи, привязанной к вашему устройству. Ваш вход по GitHub-ключу при этом не пострадает. Продолжить?');
-      if (!okSelf) return;
+  var devMode = isDeveloper();
+  var before = getParticipantRoles(p);
+  // У ещё не использованного ключа имени нет — показываем сам ключ.
+  var who = p.name || ('ключ ' + p.id);
+
+  var picked = await showModal({
+    title: '🎭 Роли — ' + who,
+    message: p.claimed === false
+      ? 'Отметьте, что откроется человеку сразу после того, как он войдёт по этому ключу. Без ролей ему будет доступна только вкладка «Категории».'
+      : 'Отметьте все роли, которые должны быть у этого человека. Роль вкладки открывает доступ именно к ней: без неё вкладка у человека просто не отображается.',
+    withChecklist: allRoleDefs().map(function(d) {
+      var lockedAdmin = (d.id === 'admin' && !devMode);
+      return {
+        value: d.id,
+        label: d.label,
+        hint: d.hint + (lockedAdmin ? ' — меняет только разработчик' : ''),
+        checked: before.indexOf(d.id) !== -1,
+        disabled: lockedAdmin
+      };
+    }),
+    okText: '💾 Сохранить'
+  });
+  if (picked === null) return;
+
+  var wasAdmin = before.indexOf('admin') !== -1;
+  var willAdmin = picked.indexOf('admin') !== -1;
+
+  if (wasAdmin !== willAdmin) {
+    if (!devMode) { showToast('🔒 Назначать и снимать администраторов может только разработчик (вход по GitHub-ключу)'); return; }
+    if (!willAdmin) {
+      var myRecord = getMyParticipantRecord();
+      if (myRecord && myRecord.id === p.id) {
+        var okSelf = await customConfirm('Вы снимаете права администратора с записи, привязанной к вашему устройству. Ваш вход по GitHub-ключу при этом не пострадает. Продолжить?');
+        if (!okSelf) return;
+      }
     }
+    // Каждое назначение или снятие админа подтверждается ключом заново —
+    // чтобы никто не выдал себе лишние права, просто оказавшись рядом с
+    // вашим уже разблокированным устройством.
+    var confirmed = await confirmWithDeveloperKey(willAdmin ? '🔑 Подтверждение назначения' : '🔑 Подтверждение снятия прав');
+    if (!confirmed) return;
   }
 
-  // Каждое назначение или снятие админа требует заново подтвердить его
-  // вашим ключом — так же, как при обычном входе. Это не даёт кому-то
-  // выдать себе или другому лишние права, просто оказавшись рядом с
-  // вашим уже разблокированным устройством.
-  var confirmed = await confirmWithDeveloperKey(willGrant ? '🔑 Подтверждение назначения' : '🔑 Подтверждение снятия прав');
-  if (!confirmed) return;
-
-  var ok = await customConfirm(
-    willGrant
-      ? 'Назначить «' + p.name + '» администратором?\n\nОн сможет управлять участниками (блокировать/удалять) и редактировать уже существующие карточки рецептов — без ввода GitHub-ключа. Добавлять новые рецепты, генерировать ключи доступа, назначать/снимать других админов и менять настройки сайта он не сможет — это остаётся только у вас.'
-      : 'Снять права администратора с «' + p.name + '»?'
-  );
-  if (!ok) return;
-
-  p.role = willGrant ? 'admin' : 'viewer';
+  setParticipantRoles(p, picked);
   renderParticipantsList();
-  applyAdminUI();
+  applyAdminUI(); // если роли поменяли самому себе — сразу пересобираем доступные вкладки
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
-  if (saved) showToast(willGrant ? '👑 Права администратора выданы' : '👤 Права администратора сняты');
+  if (saved) showToast(picked.length ? '✅ Роли сохранены' : '✅ Все роли сняты');
   // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 
-  if (willGrant) {
+  if (!wasAdmin && willAdmin) {
     var wantsFull = await customConfirm(
       'Локальные права редактирования выданы сразу.\n\n' +
-      'Хотите также подготовить для «' + p.name + '» отдельный GitHub-ключ, чтобы у него был ПОЛНЫЙ доступ,' +
+      'Хотите также подготовить для «' + who + '» отдельный GitHub-ключ, чтобы у него был ПОЛНЫЙ доступ,' +
       ' включая публикацию изменений на GitHub? Ключ нужно будет отправить ему лично (например в Telegram) —' +
       ' сайт не передаёт его автоматически и никому не показывает.'
     );
     if (wantsFull) await prepareAdminHandoffMessage(p);
   }
-}
-
-/* Роль "Закупка" — в отличие от полноценного админа, даёт доступ ровно
-   к одной вкладке "Закупка" (см. hasPurchaseAccess/.purchase-access-only)
-   и ничего больше сверх обычного гостя. Так как это заметно менее
-   чувствительное право, чем admin, назначать/снимать её может любой
-   admin (isAdmin()), а не только настоящий разработчик — без
-   дополнительного подтверждения GitHub-ключом. Недоступна для тех, кто
-   уже admin — у админа и так есть доступ к "Закупке" через isAdmin(). */
-async function toggleParticipantPurchaseRole(id) {
-  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
-  var p = participants.filter(function(x) { return x.id === id; })[0];
-  if (!p) return;
-  if (p.role === 'admin') { showToast('🔒 У администратора и так есть доступ к «Закупке»'); return; }
-  var willGrant = p.role !== 'purchase';
-
-  var ok = await customConfirm(
-    willGrant
-      ? 'Дать «' + p.name + '» доступ к вкладке «Закупка»?\n\nОн увидит только эту вкладку (плюс всё, что видно обычному гостю) — без прав администратора и без доступа к рецептам или настройкам сайта.'
-      : 'Убрать у «' + p.name + '» доступ к вкладке «Закупка»?'
-  );
-  if (!ok) return;
-
-  p.role = willGrant ? 'purchase' : 'viewer';
-  renderParticipantsList();
-  showToast('⏳ Сохраняю...');
-  var saved = await syncParticipantsToGithub();
-  if (saved) showToast(willGrant ? '🛒 Доступ к «Закупке» выдан' : '🛒 Доступ к «Закупке» снят');
-  // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
 /* ================================================================
@@ -1793,16 +2571,39 @@ async function generateInviteKey() {
     id = Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
   } while (participants.some(function(p) { return p.id === id; }));
 
-  participants.push({ id: id, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, role: 'viewer', claimed: false });
+  // Роли выбираются СРАЗУ при создании ключа и хранятся прямо в его
+  // записи. Иначе человек, впервые вошедший по ключу, попадал на сайт
+  // вообще без ролей — то есть без вкладки «Закупка» и без единой
+  // дополнительной вкладки, — и сидел на почти пустом сайте до тех пор,
+  // пока администратор отдельным действием не выдаст ему доступ.
+  // При первом входе (см. requireAccessKey) роли из записи ключа
+  // сохраняются как есть, так что доступ открывается сразу.
+  var roles = await showModal({
+    title: '🔑 Новый ключ — что откроется',
+    message: 'Отметьте, что человек увидит сразу после ввода ключа. Без ролей ему будет доступна только вкладка «Категории». Изменить роли можно в любой момент и потом — кнопкой «🎭 Роли» в списке.',
+    withChecklist: allRoleDefs().map(function(d) {
+      return { value: d.id, label: d.label, hint: d.hint, checked: false, disabled: false };
+    }),
+    okText: '🔑 Создать ключ'
+  });
+  if (roles === null) return; // отменили — ключ не создаём
+
+  var record = { id: id, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, claimed: false };
+  setParticipantRoles(record, roles);
+  participants.push(record);
   participantsFilter = 'keys';
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var ok = await syncParticipantsToGithub();
   if (!ok) return; // при ok===false внутри syncParticipantsToGithub уже показан toast с точной причиной
 
+  var rolesLine = roles.length
+    ? 'Сразу после входа ему будет доступно: ' + roles.map(roleLabel).join(', ') + '.'
+    : 'Ролей не выдано — человек увидит только вкладку «Категории».';
+
   await showModal({
     title: '🔑 Ключ создан',
-    message: 'Передайте этот ключ человеку любым способом (голосом, в Telegram и т.п.). При первом заходе на сайт он введёт его и сразу получит доступ — одобрять его вручную не нужно.',
+    message: 'Передайте этот ключ человеку любым способом (голосом, в Telegram и т.п.). При первом заходе на сайт он введёт его и сразу получит доступ — одобрять его вручную не нужно.\n\n' + rolesLine,
     messageHtml: '<div style="display:flex;justify-content:center;margin:10px 0 4px">' + copyChipHtml('🔑', 'Ключ', id, '📋 Ключ скопирован') + '</div>',
     withInput: false,
     hideCancel: true,
@@ -1904,13 +2705,13 @@ const ADMIN_KEY = 'r20_admin_mode';
 function isAdmin() {
   if (localStorage.getItem(ADMIN_KEY) === '1') return true;
   var me = getMyParticipantRecord();
-  return !!(me && !me.blocked && me.role === 'admin');
+  return !!(me && !me.blocked && participantHasRole(me, 'admin'));
 }
 
 function isAdminByParticipantRole() {
   if (localStorage.getItem(ADMIN_KEY) === '1') return false; // это уже вход по ключу
   var me = getMyParticipantRecord();
-  return !!(me && !me.blocked && me.role === 'admin');
+  return !!(me && !me.blocked && participantHasRole(me, 'admin'));
 }
 
 /* "Разработчик" — это именно вход по настоящему GitHub-ключу (как у вас),
@@ -1935,7 +2736,7 @@ function isDeveloper() {
 function hasPurchaseAccess() {
   if (isAdmin()) return true;
   var me = getMyParticipantRecord();
-  return !!(me && !me.blocked && me.role === 'purchase');
+  return !!(me && !me.blocked && participantHasRole(me, 'purchase'));
 }
 
 /* ================================================================
@@ -2039,7 +2840,8 @@ function applyAdminUI() {
   // раскрыт через is-admin, этот класс включается только для реального
   // участника с ролью 'purchase' и открывает ему ровно вкладку "Закупка".
   var meForPurchase = getMyParticipantRecord();
-  document.body.classList.toggle('is-purchase-role', !!(meForPurchase && !meForPurchase.blocked && meForPurchase.role === 'purchase'));
+  document.body.classList.toggle('is-purchase-role', !!(meForPurchase && !meForPurchase.blocked && participantHasRole(meForPurchase, 'purchase')));
+  renderCustomNavTabs(); // права изменились — пересобираем список доступных дополнительных вкладок
   if (!isAdmin()) purchaseTemplateEditMode = false; // выход из режима — сбрасываем и режим редактирования шаблона закупки
   var btn = $('admin-toggle-btn');
   if (btn) {
@@ -2528,6 +3330,37 @@ async function syncFromGithub() {
    посетитель ссылки увидит актуальный список сразу при открытии,
    без зависимости от localStorage конкретного браузера.
    ================================================================ */
+/* Разметка заслонки проверки доступа — ровно та же, что лежит первым
+   элементом <body> в index.html. Нужна здесь, чтобы вернуть её в файл,
+   который скачивается кнопкой «Экспорт» (на самой странице её к тому
+   моменту уже нет — см. unlockGate). */
+var ACCESS_GATE_HTML =
+  '<div id="access-gate-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b0b0d;display:flex;align-items:center;justify-content:center;">' +
+    '<div style="text-align:center;color:var(--text-muted);font-family:var(--font-body)">' +
+      '<div style="font-size:32px;margin-bottom:10px">🍕</div>' +
+      'Загрузка…' +
+    '</div>' +
+  '</div>';
+
+/* Возвращает замок доступа в HTML, снятый с текущей страницы.
+
+   Снимок для экспорта берётся с ЭТОЙ страницы, а мы на ней уже вошли —
+   то есть замок с неё снят: класса gate-locked на <html> нет, а заслонка
+   «Загрузка…» удалена из DOM ещё в unlockGate(). Если выгрузить как
+   есть, в опубликованном файле не окажется ни того, ни другого — и
+   любой человек, открывший ссылку, увидит содержимое сайта целиком,
+   пока скрипт не успеет проверить его доступ. */
+function restoreAccessGateInHtml(html) {
+  html = html.replace(/<html([^>]*)>/i, function(match, attrs) {
+    attrs = attrs.replace(/\s*class\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i, ''); // прежний class убираем целиком
+    return '<html' + attrs + ' class="gate-locked">';
+  });
+  if (html.indexOf('id="access-gate-overlay"') === -1) {
+    html = html.replace(/<body([^>]*)>/i, '<body$1>\n' + ACCESS_GATE_HTML);
+  }
+  return html;
+}
+
 function exportSnapshot() {
   if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
   if (!recipes.length) { showToast('⚠️ Список пуст — нечего публиковать'); return; }
@@ -2537,6 +3370,9 @@ function exportSnapshot() {
 
   try {
     var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+    html = restoreAccessGateInHtml(html);
+
     var seedJson = JSON.stringify(recipes);
     var re = /const SEED_RECIPES = \[[\s\S]*?\];\n/;
     if (!re.test(html)) {
@@ -2585,6 +3421,12 @@ function switchTab(name) {
     showToast('🔒 Вкладка «Закупка» доступна только администратору и участникам с ролью «Закупка»');
     return;
   }
+  // У каждой дополнительной вкладки своя роль — без неё вкладка не
+  // открывается, даже если кто-то попробует вызвать switchTab напрямую.
+  if (name.indexOf('custom:') === 0 && !hasCustomTabAccess(name.slice('custom:'.length))) {
+    showToast('🔒 Эта вкладка доступна только участникам с её ролью');
+    return;
+  }
   if (location.hash.indexOf('#recipe=') === 0) {
     history.replaceState(null, '', location.pathname + location.search);
   }
@@ -2601,6 +3443,7 @@ function switchTab(name) {
   if (leavingAdmin) unsubscribeOnlineUsers(); // не держим лишний канал открытым вне админ-панели
 
   if (name === 'categories') renderCategoriesList();
+  if (name.indexOf('custom:') === 0) renderCustomTabList(name.slice('custom:'.length));
   if (name === 'admin') {
     renderAdminPanel(); renderParticipantsList(); updateTelegramConfigField();
     syncParticipantsFromGithub().then(function() { renderParticipantsList(); renderOnlineUsersList(); });
@@ -2622,29 +3465,33 @@ function switchTab(name) {
    Открыть форму добавления с предустановленным типом
    (вызывается из кнопок "Новая пицца" / "Новый соус")
    ================================================================ */
-var pendingAddType = 'pizza';
+var pendingAddType = '';
 function openAddForm(type) {
-  pendingAddType = type || 'pizza';
+  pendingAddType = type || firstRecipeCategoryId();
   switchTab('add');
 }
 
-var TYPE_LABELS = {
-  pizza: { add: '➕ Новый рецепт пиццы', edit: 'рецепт', card: '🍕', accusative: ' рецепт пиццы' },
-  pinsa: { add: '➕ Новая пинца', edit: 'пинцу', card: '🫓', accusative: ' пинцу' },
-  dough: { add: '➕ Новое тесто', edit: 'тесто', card: '🌾', accusative: ' рецепт теста' },
-  sauce: { add: '➕ Новый соус', edit: 'соус', card: '🥫', accusative: ' соус' },
-  prep: { add: '➕ Новая заготовка', edit: 'заготовку', card: '🧂', accusative: ' заготовку' },
-  focaccia: { add: '➕ Новая фокачча', edit: 'фокаччу', card: '🫓', accusative: ' фокаччу' },
-  burger: { add: '➕ Новый бургер', edit: 'бургер', card: '🍔', accusative: ' бургер' }
-};
+/* Заголовок формы и подпись категории теперь берутся из самой
+   категории (см. getRecipeCategories) — отдельного словаря с
+   падежами больше нет: он был зашит в код и не мог знать про
+   категории, добавленные пользователем. */
+function categoryTitleSuffix(id) {
+  var c = recipeCategoryById(id);
+  if (!c) return '';
+  return ' — ' + (c.icon ? c.icon + ' ' : '') + c.label;
+}
 
 function onTypeChange() {
-  var type = $('f-type').value;
+  var sel = $('f-type');
+  if (!sel) return;
+  var type = sel.value;
+  var cat = recipeCategoryById(type);
   var sizeGroup = $('f-size-group');
-  if (sizeGroup) sizeGroup.style.display = (type === 'sauce' || type === 'dough' || type === 'prep' || type === 'burger') ? 'none' : '';
-  var info = TYPE_LABELS[type] || TYPE_LABELS.pizza;
-  var titlePrefix = editingRecipe ? '✏️ Редактировать' : '➕ Новый(ая)';
-  $('form-title').textContent = editingRecipe ? ('✏️ Редактировать ' + info.edit) : info.add;
+  if (sizeGroup) sizeGroup.style.display = (cat && cat.hasSize) ? '' : 'none';
+  var titleEl = $('form-title');
+  if (titleEl) {
+    titleEl.textContent = (editingRecipe ? '✏️ Редактирование' : '➕ Новый рецепт') + categoryTitleSuffix(type);
+  }
 }
 
 /* ================================================================
@@ -3001,10 +3848,11 @@ function previewVideoRow(input) {
 
 function resetForm() {
   editingRecipe = null;
-  var type = pendingAddType || 'pizza';
-  pendingAddType = 'pizza';
+  renderTypeSelect(); // категории могли измениться с прошлого открытия формы
+  var type = recipeCategoryById(pendingAddType) ? pendingAddType : firstRecipeCategoryId();
+  pendingAddType = firstRecipeCategoryId();
   $('f-type').value = type;
-  $('form-title').textContent = (TYPE_LABELS[type] || TYPE_LABELS.pizza).add;
+  $('form-title').textContent = '➕ Новый рецепт' + categoryTitleSuffix(type);
   $('f-name').value = '';
   $('f-time').value = '';
   $('f-size').value = '';
@@ -3077,7 +3925,7 @@ async function saveRecipe() {
 
   var recipe = {
     id: recipeId,
-    type: $('f-type').value || 'pizza',
+    type: $('f-type').value || firstRecipeCategoryId(),
     name: name,
     photo: photoValue,
     time: parseInt($('f-time').value) || null,
@@ -3100,8 +3948,8 @@ async function saveRecipe() {
     showToast('✅ Рецепт обновлён');
   } else {
     recipes.push(recipe);
-    var typeNames = { sauce: '✅ Соус добавлен!', pinsa: '✅ Пинца добавлена!', dough: '✅ Тесто добавлено!', pizza: '✅ Пицца добавлена!', prep: '✅ Заготовка добавлена!', focaccia: '✅ Фокачча добавлена!', burger: '✅ Бургер добавлен!' };
-    showToast(typeNames[recipe.type] || typeNames.pizza);
+    var addedCat = recipeCategoryById(recipe.type);
+    showToast('✅ Рецепт добавлен' + (addedCat ? ' — ' + (addedCat.icon ? addedCat.icon + ' ' : '') + addedCat.label : '') + '!');
   }
 
   var saved = saveAll();
@@ -3123,21 +3971,27 @@ function renderCards(containerEl, countEl, items, emptyText) {
     return;
   }
 
-  var typeEmoji = { sauce: '🥫', pinsa: '🫓', dough: '🌾', pizza: '🍕', prep: '🧂', focaccia: '🫓', burger: '🍔' };
-  var typeNames = { sauce: 'Соус', pinsa: 'Пинца', dough: 'Тесто', pizza: 'Пицца', prep: 'Заготовка', focaccia: 'Фокачча', burger: 'Бургер' };
-
   var html = '';
   for (var i = 0; i < items.length; i++) {
     var r = items[i];
-    var typeClass = 'type-' + (r.type || 'pizza');
+    // Подпись, эмодзи и цвет бейджа берутся из настроек категорий
+    // (siteConfig.categories), а не из зашитого в код словаря —
+    // поэтому переименование категории сразу видно на всех карточках.
+    // Рецепт со ссылкой на несуществующую категорию (такое возможно
+    // только у того, кто ещё не получил свежий site-config.json)
+    // показывается нейтрально, а не притворяется пиццей.
+    var cat = recipeCategoryById(r.type);
+    var catIcon = (cat && cat.icon) ? cat.icon : '🍽';
+    var catName = cat ? cat.label : 'Без категории';
+    var catColor = (cat && cat.color) ? cat.color : '#5a5a60';
     var delay = Math.min(i, 8) * 0.04;
-    html += '<div class="recipe-card ctype-' + (r.type || 'pizza') + '" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
+    html += '<div class="recipe-card ctype-' + escAttr(r.type || '') + '" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
       (r.photo ? '<img class="card-thumb" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="">' :
-        '<div class="card-thumb" style="display:flex;align-items:center;justify-content:center;font-size:32px">' + (typeEmoji[r.type] || '🍕') + '</div>') +
+        '<div class="card-thumb" style="display:flex;align-items:center;justify-content:center;font-size:32px">' + esc(catIcon) + '</div>') +
       '<div class="card-info">\n'
       + '  <h3>' + esc(r.name) + '</h3>\n'
       + '  <div class="card-meta">' +
-        '<span class="badge type-badge ' + typeClass + '">' + (typeNames[r.type] || 'Пицца') + '</span>' +
+        '<span class="badge type-badge" style="background:' + escAttr(catColor) + '">' + esc(catName) + '</span>' +
         (r.style ? '<span class="badge badge-style">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
         (r.weight ? '<span class="badge badge-cal">⚖️ ' + formatWeight(r.weight) + '</span>' : '') +
@@ -3174,6 +4028,7 @@ function clearSearchInput(inputId) {
   input.focus();
   if (inputId === 'search-categories') renderCategoriesList();
   if (inputId === 'purchase-home-search') renderPurchaseHomeList();
+  if (inputId.indexOf('search-custom-') === 0) renderCustomTabList(inputId.slice('search-custom-'.length));
 }
 
 /* ================================================================
@@ -3194,7 +4049,7 @@ function selectCategoryChip(type) {
 
 function renderCategoriesList() {
   var items = currentCategoryFilter
-    ? recipes.filter(function(r) { return (r.type || 'pizza') === currentCategoryFilter; })
+    ? recipes.filter(function(r) { return r.type === currentCategoryFilter; })
     : recipes.slice();
   items = applySearch(items, 'search-categories');
   renderCards($('categories-list'), $('categories-count'), items, 'Ничего не найдено');
@@ -3204,6 +4059,8 @@ function renderCategoriesList() {
    ВКЛАДКА "АДМИН-ПАНЕЛЬ"
    ================================================================ */
 function renderAdminPanel() {
+  renderCustomTabsAdminList();
+  renderCategoriesAdminList();
   var countEl = $('admin-total-count');
   if (countEl) countEl.textContent = recipes.length + ' шт.';
   var panelBtn = $('admin-panel-toggle-btn');
@@ -5336,7 +6193,7 @@ function editFromDetail(id) {
   }
   if (!r) return;
 
-  var recType = r.type || 'pizza';
+  var recType = recipeCategoryById(r.type) ? r.type : firstRecipeCategoryId();
   pendingAddType = recType;
   // editingRecipe выставляем ДО switchTab('add') — так switchTab видит,
   // что это редактирование уже существующей карточки (а не создание
@@ -5344,9 +6201,10 @@ function editFromDetail(id) {
   editingRecipe = JSON.parse(JSON.stringify(r)); // деep copy
   switchTab('add');
 
+  renderTypeSelect();
   $('f-type').value = recType;
   onTypeChange();
-  $('form-title').textContent = '✏️ Редактировать ' + (TYPE_LABELS[recType] || TYPE_LABELS.pizza).edit;
+  $('form-title').textContent = '✏️ Редактирование' + categoryTitleSuffix(recType);
   $('f-name').value = r.name;
   $('f-time').value = r.time || '';
   $('f-size').value = r.size || '';
@@ -5752,15 +6610,32 @@ document.addEventListener('DOMContentLoaded', function() {
 // панели зависит от размера шрифта/экрана устройства, поэтому лучше
 // измерить её реально, а не подбирать одно число вручную. Пересчитываем
 // и при повороте экрана/изменении размера окна.
-function initStickySearchOffset() {
+function applyStickySearchOffset() {
   var nav = document.querySelector('.nav-tabs');
   if (!nav) return;
-  function apply() {
-    document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
-  }
-  apply();
-  window.addEventListener('resize', apply);
-  window.addEventListener('orientationchange', apply);
+  var h = nav.offsetHeight;
+  // Пока стоит замок доступа, панель вкладок скрыта и её высота равна 0 —
+  // такое значение записывать нельзя, иначе поисковая строка «прилипнет»
+  // к самому верху и уедет под панель. Пересчитаем после unlockGate().
+  if (!h) return;
+  document.documentElement.style.setProperty('--nav-h', h + 'px');
+}
+
+function initStickySearchOffset() {
+  applyStickySearchOffset();
+  window.addEventListener('resize', applyStickySearchOffset);
+  window.addEventListener('orientationchange', applyStickySearchOffset);
+}
+
+/* Снимает замок доступа: убирает заслонку «Загрузка…» и класс
+   gate-locked с <html> (см. встроенный стиль в <head> index.html),
+   после чего содержимое сайта впервые становится видимым. Вызывать
+   только тогда, когда все проверки доступа реально пройдены. */
+function unlockGate() {
+  var gateOverlay = $('access-gate-overlay');
+  if (gateOverlay) gateOverlay.remove();
+  document.documentElement.classList.remove('gate-locked');
+  applyStickySearchOffset(); // теперь панель вкладок видна — её высоту можно измерить
 }
 
 /* Защита от "прыжка" страницы в начало при вводе текста в поле поиска
@@ -5811,6 +6686,9 @@ async function initApp() {
 
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
   loadSiteConfigLocal();
+  renderCustomNavTabs(); // сразу из локального кэша, не дожидаясь сети — см. syncSiteConfigFromGithub ниже за свежими данными
+  renderCategoryChipRows(); // чипы категорий и список «Тип» в форме тоже собираются из настроек, а не зашиты в разметку
+  renderTypeSelect();
 
   // Отмечаем "я тут" максимально рано — до какой-либо проверки одобрения
   // или блокировки, чтобы в списке "Онлайн" было видно вообще всех, кто
@@ -5837,8 +6715,7 @@ async function initApp() {
     if (status === 'pending') { showPendingScreen(); return; }
   }
 
-  var gateOverlay = $('access-gate-overlay');
-  if (gateOverlay) gateOverlay.remove();
+  unlockGate();
 
   showDeviceCodeInFooter();
 
