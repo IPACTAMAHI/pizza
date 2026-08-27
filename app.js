@@ -5726,6 +5726,7 @@ document.addEventListener('DOMContentLoaded', function() {
   initApp();
   initFloatingBackButton();
   initStickySearchOffset();
+  initSearchScrollJumpGuard();
 });
 
 // Прописывает реальную высоту липкой панели вкладок (.nav-tabs) в
@@ -5743,6 +5744,70 @@ function initStickySearchOffset() {
   apply();
   window.addEventListener('resize', apply);
   window.addEventListener('orientationchange', apply);
+}
+
+/* Защита от "прыжка" страницы в начало при вводе текста в поле поиска
+   на телефоне (см. .search-wrap в index.html: главная "Закупка", общий
+   список рецептов, поиск позиций внутри цеха/поставщика). Проблема
+   воспроизводится и в Safari, и в Chrome на мобильных — то есть дело не
+   в конкретном браузере, а в том, что при открытой экранной клавиатуре
+   мобильный браузер сам пытается "подскроллить" страницу так, чтобы
+   сфокусированное поле было видно над клавиатурой, и иногда промахивается
+   в самый верх страницы (особенно когда список результатов под полем
+   меняет высоту на каждое нажатие клавиши). Починить это через одни
+   только CSS/вёрстку нельзя — поведение встроено в сам браузер и у
+   каждого движка (WebKit/Blink) реализовано по-своему. Поэтому вместо
+   борьбы с конкретной причиной просто следим за скроллом, пока одно из
+   полей поиска сфокусировано: пока человек не трогает экран пальцем
+   (обычный жест скролла), любой резкий скачок скролла почти к нулю
+   считаем этим самым браузерным сбоем и тут же возвращаем страницу туда,
+   где она была — человек продолжает видеть то же поле поиска и результаты
+   под ним, что бы ни делал браузер под капотом. */
+function initSearchScrollJumpGuard() {
+  var GUARDED_IDS = ['purchase-home-search', 'search-categories', 'purchase-search-positions'];
+  var trackedScrollY = null;
+  var isUserScrolling = false;
+  var userScrollTimer = null;
+
+  function guardedFieldFocused() {
+    var el = document.activeElement;
+    return !!(el && GUARDED_IDS.indexOf(el.id) !== -1);
+  }
+
+  // Жест пальцем по экрану — это обычный, "настоящий" скролл, его трогать
+  // не нужно; на 400мс после последнего touchmove считаем скролл ручным.
+  document.addEventListener('touchmove', function() {
+    isUserScrolling = true;
+    clearTimeout(userScrollTimer);
+    userScrollTimer = setTimeout(function() { isUserScrolling = false; }, 400);
+  }, { passive: true });
+
+  document.addEventListener('focusin', function(e) {
+    if (GUARDED_IDS.indexOf(e.target.id) !== -1) trackedScrollY = window.scrollY;
+  });
+  document.addEventListener('focusout', function(e) {
+    if (GUARDED_IDS.indexOf(e.target.id) !== -1) trackedScrollY = null;
+  });
+
+  function onScroll() {
+    if (!guardedFieldFocused()) { trackedScrollY = null; return; }
+    if (isUserScrolling) { trackedScrollY = window.scrollY; return; }
+    // Резкий скачок почти к нулю с заметной высоты, без ручного скролла,
+    // пока поле поиска в фокусе, — это и есть тот самый браузерный сбой.
+    if (trackedScrollY != null && trackedScrollY > 120 && window.scrollY < 40) {
+      window.scrollTo(0, trackedScrollY);
+      return;
+    }
+    trackedScrollY = window.scrollY;
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  // На части устройств браузер "доскабливает" скролл уже после того, как
+  // клавиатура/панель автозаполнения меняет размер видимой области, а не
+  // сразу в момент ввода символа — visualViewport ловит и такие случаи.
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function() { requestAnimationFrame(onScroll); });
+  }
 }
 
 async function initApp() {
