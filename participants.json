@@ -41,18 +41,5 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
-  },
-  {
-    "id": "S2NP-BUJF",
-    "fingerprint": "",
-    "name": "Тестер",
-    "addedAt": 1787866008570,
-    "blocked": false,
-    "claimed": true,
-    "roles": [
-      "tab:main"
-    ],
-    "role": "viewer",
-    "claimedAt": 1787866024377
   }
 ]
