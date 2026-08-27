@@ -151,6 +151,14 @@
       "icon": "🏭",
       "builtin": true,
       "venue": "vpmtc0x7kfezeh4"
+    },
+    {
+      "id": "sup1787865661906qr72y",
+      "label": "Метро",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "ws17878656176691145k",
+      "venue": "vpmtc0x7kfezeh4"
     }
   ],
   "data": {
@@ -735,7 +743,8 @@
         "norm": ""
       }
     ],
-    "ws17878656176691145k": []
+    "ws17878656176691145k": [],
+    "sup1787865661906qr72y": []
   },
   "customUnits": []
 }
