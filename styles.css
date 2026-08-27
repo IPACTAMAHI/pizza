@@ -1170,11 +1170,104 @@
     margin-bottom: 4px;
   }
 
+  /* Переключатель заведений под заголовком шапки. */
+  .venue-switch {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin: 10px auto 0;
+    padding: 7px 14px;
+    border-radius: 20px;
+    background: rgba(15,15,20,.42);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.16);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .2s ease, transform .15s ease;
+  }
+  .venue-switch:hover { background: rgba(15,15,20,.62); }
+  .venue-switch:active { transform: scale(.96); }
+  .venue-switch .icon { font-size: 15px; line-height: 1; }
+  .venue-switch-caret { opacity: .7; font-size: 11px; }
+
+  /* Заведение, открытое прямо сейчас, в списке админ-панели. */
+  .venue-current { border-color: rgba(226,86,75,.45) !important; }
+
+  /* Вкладка, спрятанная по данным (а не по роли): у выбранного
+     заведения может не быть закупки. Правила роли выше объявлены с
+     !important, поэтому перекрываем их более точным селектором. */
+  body .nav-tab.tab-hidden,
+  body.is-admin .nav-tab.purchase-access-only.tab-hidden,
+  body.is-purchase-role .nav-tab.purchase-access-only.tab-hidden { display: none !important; }
+
+  /* ===== АКТУАЛЬНОСТЬ РЕЦЕПТА =====
+     Статус («Актуально» / «Убрано с меню» / «Не актуально (сезонное)»)
+     виден только админу и разработчику: сотруднику неактуальные
+     карточки вообще не показываются. */
+
+  /* Строка фильтра по актуальности. Слегка отделена от чипов категорий
+     сверху, чтобы две строки отбора не читались как одна длинная. */
+  .status-filter-row { margin: 10px 0 2px; }
+  .status-chip { font-size: 12.5px; padding: 8px 13px; }
+
+  /* Приглушённая карточка: рецепт на месте, но в работе его сейчас нет.
+     Пунктирная рамка слева отличает такие карточки от актуальных даже
+     при беглом взгляде на список. */
+  .recipe-card-inactive { opacity: .62; border-left: 3px dashed rgba(255,255,255,.28); }
+  .recipe-card-inactive:hover { opacity: .85; }
+  .recipe-card-inactive .card-thumb { filter: grayscale(.65); }
+
+  .badge-status { color: #fff; font-weight: 700; }
+  .detail-badge-status { background: rgba(255,255,255,.1); }
+
+  /* Переключатель статуса. Кнопки узкие и в один ряд — их жмут с
+     телефона прямо в списке, не открывая рецепт. */
+  .card-status-switch {
+    display: flex; gap: 5px; flex-wrap: wrap;
+    margin-top: 7px;
+  }
+  .status-opt {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,.05);
+    color: var(--text-muted);
+    font-size: 11.5px; font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .status-opt:hover { color: var(--text); border-color: rgba(255,255,255,.22); }
+  .status-opt:active { transform: scale(.95); }
+  .status-opt.is-current {
+    background: var(--accent-grad); color: #fff;
+    border-color: transparent; box-shadow: var(--shadow-accent);
+  }
+
+  /* Тот же переключатель внутри открытого рецепта */
+  .detail-status {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: -10px 0 22px;
+  }
+  .detail-status-title { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+  .detail-status .card-status-switch { margin-top: 0; }
+  .detail-status .status-opt { font-size: 12.5px; padding: 7px 13px; }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 500px) {
     .header h1 { font-size: 22px; }
     .card-thumb { width: 70px; height: 70px; }
     .nav-tab { padding: 10px 4px; font-size: 13px; }
+    /* На маленьком экране в карточке остаются только значки статуса —
+       три подписи туда не помещаются и ломают вёрстку карточки. */
+    .recipe-card .status-opt-label { display: none; }
+    .recipe-card .status-opt { padding: 5px 9px; font-size: 13px; }
   }
   @media (min-width: 901px) {
     .header { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
