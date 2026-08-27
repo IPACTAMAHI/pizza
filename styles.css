@@ -30,13 +30,7 @@
 
   body {
     font-family: var(--font-body);
-    background:
-      linear-gradient(rgba(10,10,12,.92), rgba(8,8,10,.97)),
-      url(images/site-background.jpg);
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
+    background: var(--bg); /* фон-картинка теперь на отдельном фиксированном слое body::after, см. ниже */
     color: var(--text);
     min-height: 100vh;
     min-height: 100dvh; /* учитывает адресную строку/панели браузера на iOS и Android */
@@ -46,6 +40,26 @@
     overscroll-behavior-y: contain;
   }
   ::selection { background: var(--accent); color: #fff; }
+  /* Фоновая картинка вынесена из background-attachment:fixed на body в
+     отдельный неподвижный слой (position:fixed + z-index ниже body::before).
+     background-attachment:fixed прямо на прокручиваемом body — известный
+     баг Mobile Safari: при появлении клавиатуры (фокус на поле поиска и
+     т.п.) страница резко сбрасывает скролл в самый верх, потому что
+     WebKit пересчитывает fixed-фон при каждом изменении высоты видимой
+     области. На отдельном фиксированном слое, не являющемся фоном
+     самого скроллящегося body, этого пересчёта/сброса не происходит. */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: -2;
+    background:
+      linear-gradient(rgba(10,10,12,.92), rgba(8,8,10,.97)),
+      url(images/site-background.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
   body::before {
     content: '';
     position: fixed; inset: 0;
@@ -130,7 +144,7 @@
   .admin-toggle { right: 14px; }
   .export-toggle { left: 14px; }
 
-  .search-wrap { position: relative; margin-bottom: 14px; }
+  .search-wrap { position: relative; margin-bottom: 14px; scroll-margin-top: 60px; }
   .search-wrap .search-icon {
     position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
     width: 18px; height: 18px;
