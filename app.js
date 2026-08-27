@@ -23,10 +23,25 @@ function loadRecipes() {
   catch(e) { recipes = JSON.parse(JSON.stringify(SEED_RECIPES)); console.error('Load error:', e); }
 }
 
+/* Можно ли публиковать текущий список рецептов на GitHub.
+   Нельзя, если актуальную версию с сервера получить не удалось: в
+   памяти тогда лежит локальная (а у нового посетителя — вообще зашитая
+   в файл) копия, и публикация стёрла бы всё, чего в ней нет. Это ровно
+   тот случай, когда «сохранил один рецепт — пропали остальные». */
+function canPublishRecipes() {
+  return dataSource === 'github' || dataSource === 'missing';
+}
+
 function saveAll() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
-    if (isAdmin()) syncToGithub(false); // фоновая синхронизация, тихо (без тоста при успехе)
+    if (isAdmin()) {
+      if (canPublishRecipes()) {
+        syncToGithub(false); // фоновая синхронизация, тихо (без тоста при успехе)
+      } else {
+        showToast('⚠️ Не удалось получить актуальный список с GitHub — изменение сохранено только на этом устройстве. Обновите страницу и повторите.');
+      }
+    }
     return true;
   } catch(e) {
     if (e.name === 'QuotaExceededError') {
@@ -1309,21 +1324,35 @@ function saveSiteConfigLocal() {
    на кэш) — вызывается перед КАЖДОЙ отправкой заявки в Telegram, чтобы,
    если администратор успел поменять юзернейм/ссылку на группу, гость
    отправлял сообщение уже по новым данным, а не по старым из localStorage. */
+/* Откуда реально взяты настройки, показанные сейчас:
+     'github'  — только что получены с сервера, можно смело публиковать
+                 поверх (мы видим актуальную версию);
+     'missing' — файла на сервере ещё нет, публиковать безопасно;
+     'local'   — связаться с сервером НЕ удалось, показаны локальные
+                 данные. Публиковать их поверх серверных нельзя: там
+                 может лежать более свежая версия, и мы её затрём. */
+var siteConfigSource = 'local';
+
 async function syncSiteConfigFromGithub() {
   try {
     var res = await fetch('./' + SITE_CONFIG_PATH + '?_=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) return false; // файла ещё нет (Telegram не настроен) или открыто локально — тихий фолбэк
+    if (!res.ok) {
+      // 404 — файла ещё нет (настройки ни разу не сохраняли); прочие
+      // коды означают проблему со связью, а не отсутствие файла.
+      siteConfigSource = (res.status === 404) ? 'missing' : 'local';
+      return false;
+    }
     var data = await res.json();
     if (data && typeof data === 'object') {
+      siteConfigSource = 'github';
       siteConfig = Object.assign({}, SITE_CONFIG_DEFAULTS, data);
       saveSiteConfigLocal();
       updateTelegramConfigField();
-      renderCustomNavTabs();
-      renderCustomTabsAdminList();
+      renderSectionNavTabs();
+      renderSectionsAdminList();
       renderCategoryChipRows();
       renderTypeSelect();
-      renderCategoriesAdminList();
-      refreshAllRecipeLists();
+      refreshAllSectionLists();
       return true;
     }
     return false;
@@ -1365,191 +1394,424 @@ function updateTelegramConfigField() {
 }
 
 /* ================================================================
-   ДОПОЛНИТЕЛЬНЫЕ ВКЛАДКИ (custom nav tabs)
+   РАЗДЕЛЫ САЙТА (вкладки верхней навигации)
    ================================================================
-   Разработчик (вход по GitHub-ключу) может добавить в верхнюю
-   навигацию новую вкладку по образцу «Категории»: тот же список
-   рецептов с фильтром по чипам-категориям и поиском, только под
-   своим названием/иконкой. Список вкладок хранится ВНУТРИ siteConfig
-   (поле customTabs) — то есть уезжает в тот же site-config.json и
-   синхронизируется так же, как Telegram-настройки: пишет только
-   разработчик, читают (и видят у себя в навигации) все посетители.
-   Сами карточки рецептов при этом не копируются и не привязываются
-   к вкладке — вкладка просто показывает тот же общий recipes[] с
-   собственным (независимым от «Категории») состоянием фильтра/поиска.
-   ================================================================ */
-var customTabFilters = {}; // tabId -> текущий выбранный чип-фильтр (как currentCategoryFilter, но отдельно на вкладку)
+   Раньше устройство было такое: одна встроенная вкладка «Категории»
+   со ВСЕМИ рецептами сразу, отдельная встроенная вкладка «Добавить
+   рецепт» и поверх этого — «дополнительные вкладки», которые на
+   самом деле показывали тот же самый общий список рецептов и те же
+   самые общие категории. То есть книга была одна, пиццейная, а
+   вкладки — просто разные окна в неё.
 
-function getCustomTabs() {
-  return Array.isArray(siteConfig.customTabs) ? siteConfig.customTabs : [];
+   Теперь каждая вкладка — самостоятельный РАЗДЕЛ со своей кухней:
+     • свой набор категорий (у пиццерии — Пицца/Тесто/Соусы,
+       у кондитера — Торты/Кремы, у горячего цеха — свои);
+     • свой список рецептов (рецепт принадлежит ровно одному разделу);
+     • своя кнопка «Добавить рецепт» прямо внутри вкладки;
+     • своя роль доступа (tab:<id>) — как и раньше у вкладок.
+   Разделы между собой ничем не связаны: рецепты и категории одного
+   не видны и не мешают другому.
+
+   Бывшая вкладка «Категории» стала обычным разделом с id 'main'
+   (по умолчанию названным «Пицца бар») — её точно так же можно
+   переименовать, удалить и выдать её роль, как любую другую.
+
+   ХРАНЕНИЕ И СОВМЕСТИМОСТЬ СО СТАРЫМИ ДАННЫМИ.
+   Разделы лежат в siteConfig.sections (файл site-config.json), туда
+   же переезжает прежний список customTabs. У категорий появилось
+   поле section, у рецептов — тоже. Старые записи этих полей не
+   имеют, поэтому везде, где они читаются, отсутствующее значение
+   означает «главный раздел» (см. categorySectionId/recipeSectionId).
+   Благодаря этому сайт корректно работает ещё ДО того, как
+   разработчик впервые сохранит перенос (см. migrateToSections).
+   ================================================================ */
+var MAIN_SECTION_ID = 'main';
+
+function defaultSections() {
+  return [{ id: MAIN_SECTION_ID, label: 'Пицца бар', icon: '🍕' }];
 }
 
-/* Создаёт HTML-панель содержимого вкладки (чипы + поиск + список),
-   если её ещё нет в DOM — по структуре повторяет статичную разметку
-   #tab-categories из index.html. Переименование вкладки эту панель не
-   трогает (обновляется только кнопка в навигации, см. renderCustomNavTabs). */
-function ensureCustomTabContent(t) {
-  var paneId = 'tab-custom:' + t.id;
-  if ($(paneId)) return;
-  var container = $('custom-tabs-content');
-  if (!container) return;
-  var chipsHtml = categoryChipsHtml(customTabFilters[t.id] || '', function(id) {
-    return "selectCustomTabChip('" + t.id + "', '" + id + "')";
+/* Список разделов. Если в настройках их ещё нет — собираем на лету
+   из старой схемы: главный раздел плюс прежние «дополнительные
+   вкладки» в том же порядке. */
+function getSections() {
+  if (Array.isArray(siteConfig.sections) && siteConfig.sections.length) return siteConfig.sections;
+  var migrated = defaultSections();
+  if (Array.isArray(siteConfig.customTabs)) {
+    siteConfig.customTabs.forEach(function(t) {
+      if (t && t.id) migrated.push({ id: t.id, label: t.label || 'Вкладка', icon: t.icon || '📁' });
+    });
+  }
+  return migrated;
+}
+
+function sectionById(id) {
+  return getSections().filter(function(s) { return s.id === id; })[0] || null;
+}
+
+function sectionLabel(id) {
+  var s = sectionById(id);
+  return s ? ((s.icon ? s.icon + ' ' : '') + s.label) : 'Раздел';
+}
+
+/* Раздел, в который попадают записи без явной привязки (старые
+   рецепты и категории, созданные до появления разделов). */
+function fallbackSectionId() {
+  if (sectionById(MAIN_SECTION_ID)) return MAIN_SECTION_ID;
+  var all = getSections();
+  return all.length ? all[0].id : MAIN_SECTION_ID;
+}
+
+function recipeSectionId(r) {
+  return (r && r.section) ? r.section : fallbackSectionId();
+}
+
+function recipesForSection(sectionId) {
+  return recipes.filter(function(r) { return recipeSectionId(r) === sectionId; });
+}
+
+/* Первый раздел, доступный ЭТОМУ человеку — куда его вести после
+   сохранения рецепта, выхода из карточки и т.п. Если доступных нет
+   (роли не выданы), возвращаем пустую строку — тогда вызывающий код
+   просто никуда не переключается. */
+function defaultSectionTab() {
+  var visible = getSections().filter(function(s) { return hasSectionAccess(s.id); });
+  return visible.length ? 'section:' + visible[0].id : '';
+}
+
+function goToDefaultSection() {
+  var t = defaultSectionTab();
+  if (t) switchTab(t);
+}
+
+/* ================================================================
+   ПЕРЕНОС СТАРЫХ ДАННЫХ НА СХЕМУ РАЗДЕЛОВ
+   ================================================================
+   Выполняется один раз, у разработчика (только у него есть право
+   записи в GitHub). Всё, что делает: закрепляет вычисленный список
+   разделов в настройках, проставляет section существующим категориям
+   и рецептам и выдаёт роль главного раздела всем, кто уже пользуется
+   сайтом, — чтобы после обновления никто не остался без вкладок.
+   ================================================================ */
+async function migrateToSections() {
+  if (!isDeveloper()) return;
+
+  // ГЛАВНАЯ ПРЕДОСТОРОЖНОСТЬ. Перенос сам, без участия человека,
+  // записывает файлы на GitHub. Делать это можно ТОЛЬКО когда мы точно
+  // видим актуальное содержимое сервера. Если получить его не удалось
+  // (нет сети, отдался кэш, файл не открылся), в памяти лежит локальная
+  // или вовсе зашитая в код копия — опубликовав её, мы бы стёрли всё,
+  // что появилось на сервере позже. Поэтому при малейшем сомнении
+  // перенос откладывается до следующего открытия сайта: он ничего не
+  // ломает и спокойно подождёт.
+  var canWriteConfig = (siteConfigSource === 'github' || siteConfigSource === 'missing');
+  var canWriteRecipes = (dataSource === 'github');
+  if (!canWriteConfig && !canWriteRecipes) return;
+
+  var configChanged = false;
+
+  if (!Array.isArray(siteConfig.sections) || !siteConfig.sections.length) {
+    siteConfig.sections = getSections();
+    configChanged = true;
+  }
+
+  var cats = getRecipeCategories().slice();
+  cats.forEach(function(c) {
+    if (!c.section) { c.section = fallbackSectionId(); configChanged = true; }
   });
+  if (!Array.isArray(siteConfig.categories) || !siteConfig.categories.length) {
+    siteConfig.categories = cats; // стартовый набор ещё ни разу не сохраняли
+    configChanged = true;
+  }
+
+  if (configChanged) {
+    saveSiteConfigLocal();
+    if (canWriteConfig) await syncSiteConfigToGithub();
+  }
+
+  // Рецепты живут в отдельном файле — их сохраняем своим запросом.
+  var recipesChanged = false;
+  recipes.forEach(function(r) {
+    if (!r.section) { r.section = fallbackSectionId(); recipesChanged = true; }
+  });
+  if (recipesChanged) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch (e) {}
+    // Публикуем только если список рецептов действительно получен с
+    // GitHub. Иначе на сервер уехала бы устаревшая копия — например
+    // зашитая в файл SEED_RECIPES, — и свежие рецепты пропали бы.
+    if (canWriteRecipes) await syncToGithub(false);
+  }
+
+  // Роль главного раздела — всем нынешним участникам, иначе после
+  // обновления они увидели бы сайт вообще без единой вкладки.
+  if (canWriteConfig && !siteConfig.mainRoleGranted && participants.length) {
+    var mainRole = 'tab:' + fallbackSectionId();
+    var touched = 0;
+    participants.forEach(function(p) {
+      if (!participantHasRole(p, mainRole)) {
+        setParticipantRoles(p, getParticipantRoles(p).concat([mainRole]));
+        touched++;
+      }
+    });
+    siteConfig.mainRoleGranted = true;
+    saveSiteConfigLocal();
+    await syncSiteConfigToGithub();
+    if (touched) {
+      saveParticipantsLocal();
+      await syncParticipantsToGithub();
+      showToast('✅ Доступ к «' + sectionLabel(fallbackSectionId()) + '» выдан участникам: ' + touched);
+    }
+  }
+}
+
+/* ================================================================
+   ОТРИСОВКА РАЗДЕЛОВ
+   ================================================================ */
+var sectionFilters = {};      // sectionId -> выбранная категория (чип)
+var sectionCatsOpen = {};     // sectionId -> открыт ли блок управления категориями
+
+function hasSectionAccess(sectionId) {
+  if (isAdmin()) return true;
+  var me = getMyParticipantRecord();
+  return !!(me && !me.blocked && participantHasRole(me, 'tab:' + sectionId));
+}
+
+/* Создаёт панель содержимого раздела, если её ещё нет. Структура
+   повторяет прежнюю вкладку «Категории»: поиск, чипы категорий,
+   счётчик и список карточек — плюс панель управления для админа
+   (добавить рецепт, править категории этого раздела). */
+function ensureSectionContent(s) {
+  var paneId = 'tab-section:' + s.id;
+  if ($(paneId)) return;
+  var container = $('sections-content');
+  if (!container) return;
+  var sid = s.id;
   var html = '<div id="' + paneId + '" class="tab-content">' +
     '<div class="search-wrap">' +
       '<svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
-      '<input type="search" class="search-input" id="search-custom-' + t.id + '" placeholder="Поиск по названию рецепта..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderCustomTabList(\'' + t.id + '\'); toggleSearchClear(\'search-custom-' + t.id + '\')">' +
-      '<button type="button" class="search-clear" id="search-custom-' + t.id + '-clear" onclick="clearSearchInput(\'search-custom-' + t.id + '\')" title="Очистить" style="display:none">✕</button>' +
+      '<input type="search" class="search-input" id="search-section-' + sid + '" placeholder="Поиск по названию рецепта..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderSectionList(\'' + sid + '\'); toggleSearchClear(\'search-section-' + sid + '\')">' +
+      '<button type="button" class="search-clear" id="search-section-' + sid + '-clear" onclick="clearSearchInput(\'search-section-' + sid + '\')" title="Очистить" style="display:none">✕</button>' +
     '</div>' +
-    '<div class="chip-row" id="custom-chips-' + t.id + '">' + chipsHtml + '</div>' +
+    '<div class="chip-row" id="section-chips-' + sid + '"></div>' +
+    '<div class="section-toolbar admin-only">' +
+      '<button type="button" class="btn btn-primary btn-sm" onclick="openAddForm(\'' + sid + '\')">➕ Добавить рецепт</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="toggleSectionCategories(\'' + sid + '\')">🏷️ Категории</button>' +
+    '</div>' +
+    '<div class="section-cats" id="section-cats-' + sid + '" style="display:none"></div>' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">' +
-      '<span id="custom-count-' + t.id + '" style="font-size:14px;color:var(--text-muted)">Всего: 0</span>' +
+      '<span id="section-count-' + sid + '" style="font-size:14px;color:var(--text-muted)">Всего: 0</span>' +
     '</div>' +
-    '<div id="custom-list-' + t.id + '"></div>' +
+    '<div id="section-list-' + sid + '"></div>' +
   '</div>';
   container.insertAdjacentHTML('beforeend', html);
 }
 
-function removeCustomTabContentPane(id) {
-  var el = $('tab-custom:' + id);
+function removeSectionContentPane(id) {
+  var el = $('tab-section:' + id);
   if (el && el.parentNode) el.parentNode.removeChild(el);
-  delete customTabFilters[id];
+  delete sectionFilters[id];
+  delete sectionCatsOpen[id];
 }
 
-/* Перерисовывает саму навигацию (.nav-tab кнопки) по текущему списку
-   siteConfig.customTabs — вызывается при старте, после каждой
-   синхронизации site-config.json с GitHub, при смене прав
-   (applyAdminUI) и сразу после локального добавления/переименования/
-   удаления вкладки.
-
-   Показываются только те вкладки, к которым у этого человека реально
-   есть доступ (см. hasCustomTabAccess): у каждой вкладки своя роль, и
-   тот, кому она не выдана, вкладку просто не видит — так же, как
-   сейчас устроена «Закупка». */
-function renderCustomNavTabs() {
-  var container = $('custom-nav-tabs');
+/* Перерисовывает верхнюю навигацию по текущему списку разделов.
+   Показываются только те, к которым у человека есть доступ. */
+function renderSectionNavTabs() {
+  var container = $('section-nav-tabs');
   if (!container) return;
-  var tabs = getCustomTabs().filter(function(t) { return hasCustomTabAccess(t.id); });
-  tabs.forEach(ensureCustomTabContent);
-  // Вкладка, открытая прямо сейчас, но ставшая недоступной (роль сняли
-  // или её отозвали синхронизацией) — уводим человека на «Категории»,
-  // чтобы он не остался на экране, которого у него больше нет.
-  if (currentTab.indexOf('custom:') === 0 && !hasCustomTabAccess(currentTab.slice('custom:'.length))) {
-    switchTab('categories');
+  var visible = getSections().filter(function(s) { return hasSectionAccess(s.id); });
+  visible.forEach(ensureSectionContent);
+
+  // Открытый сейчас раздел стал недоступен (сняли роль, удалили
+  // раздел) — уводим человека на первый доступный.
+  if (currentTab.indexOf('section:') === 0 && !hasSectionAccess(currentTab.slice('section:'.length))) {
+    goToDefaultSection();
   }
-  container.innerHTML = tabs.map(function(t) {
-    var tabName = 'custom:' + t.id;
+
+  container.innerHTML = visible.map(function(s) {
+    var tabName = 'section:' + s.id;
     return '<div class="nav-tab' + (currentTab === tabName ? ' active' : '') + '" data-tab="' + escAttr(tabName) + '" onclick="switchTab(\'' + tabName + '\')">' +
-      '<span class="nav-icon" style="font-size:19px;line-height:1">' + esc(t.icon || '📁') + '</span>' +
-      '<span class="nav-label">' + esc(t.label) + '</span>' +
+      '<span class="nav-icon" style="font-size:19px;line-height:1">' + esc(s.icon || '📁') + '</span>' +
+      '<span class="nav-label">' + esc(s.label) + '</span>' +
     '</div>';
   }).join('');
 }
 
-function selectCustomTabChip(tabId, type) {
-  customTabFilters[tabId] = type;
-  var row = $('custom-chips-' + tabId);
-  if (row) row.querySelectorAll('.chip').forEach(function(chip) { chip.classList.toggle('active', chip.dataset.type === type); });
-  renderCustomTabList(tabId);
+function selectSectionChip(sectionId, catId) {
+  sectionFilters[sectionId] = catId;
+  var row = $('section-chips-' + sectionId);
+  if (row) row.querySelectorAll('.chip').forEach(function(chip) { chip.classList.toggle('active', chip.dataset.type === catId); });
+  renderSectionList(sectionId);
 }
 
-function renderCustomTabList(tabId) {
-  var filter = customTabFilters[tabId] || '';
-  var items = filter
-    ? recipes.filter(function(r) { return r.type === filter; })
-    : recipes.slice();
-  items = applySearch(items, 'search-custom-' + tabId);
-  var listEl = $('custom-list-' + tabId), countEl = $('custom-count-' + tabId);
-  if (listEl && countEl) renderCards(listEl, countEl, items, 'Ничего не найдено');
+function renderSectionList(sectionId) {
+  var listEl = $('section-list-' + sectionId), countEl = $('section-count-' + sectionId);
+  if (!listEl || !countEl) return;
+
+  var cats = categoriesForSection(sectionId);
+  var items = recipesForSection(sectionId);
+  var filter = sectionFilters[sectionId] || '';
+  if (filter) items = items.filter(function(r) { return r.type === filter; });
+  items = applySearch(items, 'search-section-' + sectionId);
+
+  // Пустой раздел: подсказываем следующий шаг вместо безликого «ничего
+  // не найдено» — новый раздел создаётся без единой категории.
+  if (!cats.length && !items.length) {
+    countEl.textContent = 'Всего: 0';
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🏷️</div>' +
+      '<h3>Раздел пока пустой</h3>' +
+      '<p>' + (isAdmin()
+        ? 'Начните с категории — например «Супы» или «Торты», — а затем добавьте в неё первый рецепт.'
+        : 'Здесь пока нет рецептов.') + '</p></div>';
+    return;
+  }
+  renderCards(listEl, countEl, items, 'Ничего не найдено');
 }
 
-/* Список вкладок в самой Админ-панели (карточка "🗂️ Дополнительные
-   вкладки", видна только разработчику) — с кнопками переименовать/удалить. */
-function renderCustomTabsAdminList() {
-  var holder = $('custom-tabs-admin-list');
+/* Блок управления категориями внутри раздела (виден админу по
+   кнопке «🏷️ Категории»). Здесь же они и создаются: категории
+   принадлежат разделу, поэтому и правятся там, где используются. */
+function toggleSectionCategories(sectionId) {
+  sectionCatsOpen[sectionId] = !sectionCatsOpen[sectionId];
+  renderSectionCategoriesAdmin(sectionId);
+}
+
+function renderSectionCategoriesAdmin(sectionId) {
+  var holder = $('section-cats-' + sectionId);
   if (!holder) return;
-  var tabs = getCustomTabs();
-  if (!tabs.length) { holder.innerHTML = '<div class="purchase-home-empty">Дополнительных вкладок пока нет</div>'; return; }
-  holder.innerHTML = tabs.map(function(t) {
+  if (!sectionCatsOpen[sectionId] || !isAdmin()) { holder.style.display = 'none'; return; }
+  holder.style.display = '';
+
+  var cats = categoriesForSection(sectionId);
+  var rows = cats.length ? cats.map(function(c) {
+    var count = recipes.filter(function(r) { return r.type === c.id; }).length;
+    var sizes = categorySizes(c);
     return '<div class="participant-item">' +
-      '<span>' + esc(t.icon || '📁') + ' ' + esc(t.label) + '</span>' +
-      '<div style="display:flex;gap:6px">' +
-        '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameCustomTab(\'' + t.id + '\')">✏️</button>' +
-        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="removeCustomTab(\'' + t.id + '\')">🗑️</button>' +
+      '<div style="min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+        '<span class="badge type-badge" style="background:' + escAttr(c.color || '#666') + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>' +
+        '<span style="font-size:12px;color:var(--text-muted)">' + count + ' рец.' + (sizes.length ? ' · размеров: ' + sizes.length : '') + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:4px;flex-shrink:0">' +
+        '<button type="button" class="purchase-home-icon-btn" title="Список размеров/порций для этой категории" onclick="setCategorySizes(\'' + escAttr(c.id) + '\')">📏</button>' +
+        '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameRecipeCategory(\'' + escAttr(c.id) + '\')">✏️</button>' +
+        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="removeRecipeCategory(\'' + escAttr(c.id) + '\')">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('') : '<div class="purchase-home-empty">В этом разделе ещё нет категорий</div>';
+
+  holder.innerHTML =
+    '<div class="section-cats-title">Категории раздела «' + esc(sectionById(sectionId) ? sectionById(sectionId).label : '') + '»</div>' +
+    rows +
+    '<button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="addRecipeCategory(\'' + escAttr(sectionId) + '\')">+ Добавить категорию</button>';
+}
+
+/* ================================================================
+   УПРАВЛЕНИЕ РАЗДЕЛАМИ (Админ-панель → «🗂️ Вкладки»)
+   ================================================================ */
+function renderSectionsAdminList() {
+  var holder = $('sections-admin-list');
+  if (!holder) return;
+  var list = getSections();
+  holder.innerHTML = list.map(function(s) {
+    var catCount = categoriesForSection(s.id).length;
+    var recCount = recipesForSection(s.id).length;
+    return '<div class="participant-item">' +
+      '<div style="min-width:0">' +
+        '<strong>' + esc(s.icon || '📁') + ' ' + esc(s.label) + '</strong>' +
+        '<br><span style="font-size:12px;color:var(--text-muted)">категорий: ' + catCount + ' · рецептов: ' + recCount + '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:4px;flex-shrink:0">' +
+        '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameSection(\'' + escAttr(s.id) + '\')">✏️</button>' +
+        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="removeSection(\'' + escAttr(s.id) + '\')">🗑️</button>' +
       '</div>' +
     '</div>';
   }).join('');
 }
 
-async function addCustomTab() {
+/* Общая часть всех операций над разделами. */
+async function saveSections(successMessage) {
+  saveSiteConfigLocal();
+  renderSectionNavTabs();
+  renderSectionsAdminList();
+  refreshAllSectionLists();
+  showToast('⏳ Сохраняю...');
+  var ok = await syncSiteConfigToGithub();
+  if (ok) showToast(successMessage);
+  return ok;
+}
+
+async function addSection() {
   if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
-  var label = await customPrompt('Название новой вкладки:', '', '➕ Новая вкладка');
+  var label = await customPrompt('Название раздела — например «Горячий цех», «Кондитер», «Холодный цех»:', '', '➕ Новый раздел');
   if (label === null) return;
   label = (label || '').trim();
   if (!label) { showToast('⚠️ Название не может быть пустым'); return; }
-  var icon = await customPrompt('Иконка вкладки — один эмодзи (необязательно):', '📁', '➕ Новая вкладка — иконка');
+
+  var icon = await customPrompt('Иконка раздела — один эмодзи (необязательно):', '🍽', '➕ Новый раздел — иконка');
   if (icon === null) icon = '';
   icon = (icon || '').trim() || '📁';
 
-  if (!Array.isArray(siteConfig.customTabs)) siteConfig.customTabs = [];
-  siteConfig.customTabs.push({ id: uid(), label: label, icon: icon });
-  saveSiteConfigLocal();
-  renderCustomNavTabs();
-  renderCustomTabsAdminList();
-
-  showToast('⏳ Сохраняю...');
-  var ok = await syncSiteConfigToGithub();
-  if (ok) showToast('✅ Вкладка «' + label + '» добавлена — выдайте её роль участникам в списке ниже');
+  var list = getSections().slice();
+  list.push({ id: uid(), label: label, icon: icon });
+  siteConfig.sections = list;
+  await saveSections('✅ Раздел «' + label + '» создан — выдайте его роль тем, кто должен его видеть');
 }
 
-async function renameCustomTab(id) {
+/* Переименование меняет подпись и иконку; id раздела не трогается,
+   поэтому его рецепты, категории и уже выданная роль остаются. */
+async function renameSection(id) {
   if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
-  var t = getCustomTabs().find(function(x) { return x.id === id; });
-  if (!t) return;
-  var val = await customPrompt('Новое название вкладки:', t.label, '✏️ Переименовать вкладку');
-  if (val === null) return;
-  val = (val || '').trim();
-  if (!val) { showToast('⚠️ Название не может быть пустым'); return; }
-  t.label = val;
-  saveSiteConfigLocal();
-  renderCustomNavTabs();
-  renderCustomTabsAdminList();
-  // Название роли этой вкладки нигде отдельно не хранится — оно берётся
-  // из самой вкладки (см. roleLabel), поэтому достаточно перерисовать
-  // список участников, чтобы новое имя появилось и на бейджах ролей.
-  renderParticipantsList();
+  var list = getSections().slice();
+  var s = list.filter(function(x) { return x.id === id; })[0];
+  if (!s) return;
 
-  showToast('⏳ Сохраняю...');
-  var ok = await syncSiteConfigToGithub();
-  if (ok) showToast('✅ Название вкладки и её роли обновлено');
+  var label = await customPrompt('Новое название раздела:', s.label, '✏️ Переименовать раздел');
+  if (label === null) return;
+  label = (label || '').trim();
+  if (!label) { showToast('⚠️ Название не может быть пустым'); return; }
+
+  var icon = await customPrompt('Иконка раздела — один эмодзи (можно оставить пустым):', s.icon || '', '✏️ Иконка — ' + label);
+  if (icon === null) icon = s.icon || '';
+
+  s.label = label;
+  s.icon = (icon || '').trim();
+  siteConfig.sections = list;
+  renderParticipantsList(); // подпись роли раздела берётся отсюда же
+  await saveSections('✅ Раздел и его роль переименованы');
 }
 
-async function removeCustomTab(id) {
+/* Удаление раздела уносит с собой ЕГО категории и ЕГО рецепты —
+   в отличие от удаления одной категории, где рецепты переносятся.
+   Поэтому спрашиваем явно и показываем, сколько всего пропадёт.
+   Последний оставшийся раздел удалить нельзя. */
+async function removeSection(id) {
   if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
-  var t = getCustomTabs().find(function(x) { return x.id === id; });
-  if (!t) return;
-  // Считаем заранее, у скольких участников была роль этой вкладки —
-  // чтобы честно предупредить, что вместе со вкладкой исчезнет и роль.
+  var list = getSections().slice();
+  if (list.length <= 1) { showToast('⚠️ Должен остаться хотя бы один раздел'); return; }
+  var s = list.filter(function(x) { return x.id === id; })[0];
+  if (!s) return;
+
+  var doomedRecipes = recipesForSection(id);
+  var doomedCats = categoriesForSection(id);
   var roleId = 'tab:' + id;
   var affected = participants.filter(function(x) { return participantHasRole(x, roleId); });
-  var roleWarning = affected.length
-    ? ' Роль «' + t.label + '» тоже исчезнет — сейчас она выдана ' + affected.length + ' участник(ам).'
-    : ' Вместе со вкладкой исчезнет и её роль.';
 
-  var ok = await customConfirm('Удалить вкладку «' + t.label + '»? Сами рецепты никуда не денутся — исчезнет только эта вкладка из навигации.' + roleWarning + ' Действие нельзя отменить.', '🗑️ Удалить вкладку');
+  var ok = await customConfirm(
+    'Удалить раздел «' + s.label + '»?\n\n' +
+    'Вместе с ним будут удалены его категории (' + doomedCats.length + ') и все его рецепты (' + doomedRecipes.length + ').' +
+    (affected.length ? ' Роль раздела исчезнет у участников: ' + affected.length + '.' : '') +
+    '\n\nЭто действие нельзя отменить.',
+    '🗑️ Удалить раздел'
+  );
   if (!ok) return;
 
-  siteConfig.customTabs = getCustomTabs().filter(function(x) { return x.id !== id; });
-  saveSiteConfigLocal();
-  if (currentTab === 'custom:' + id) switchTab('categories');
-  removeCustomTabContentPane(id);
-  renderCustomNavTabs();
-  renderCustomTabsAdminList();
+  siteConfig.sections = list.filter(function(x) { return x.id !== id; });
+  siteConfig.categories = getRecipeCategories().filter(function(c) { return categorySectionId(c) !== id; });
+  if (currentTab === 'section:' + id) goToDefaultSection();
+  removeSectionContentPane(id);
 
-  // Роль удалённой вкладки вычищаем у всех участников — иначе в
-  // participants.json навсегда остались бы висеть 'tab:<id>' на вкладку,
-  // которой больше нет.
+  var hadRecipes = doomedRecipes.length > 0;
+  if (hadRecipes) recipes = recipes.filter(function(r) { return recipeSectionId(r) !== id; });
+
   if (affected.length) {
     affected.forEach(function(x) {
       setParticipantRoles(x, getParticipantRoles(x).filter(function(r) { return r !== roleId; }));
@@ -1558,42 +1820,34 @@ async function removeCustomTab(id) {
     renderParticipantsList();
   }
 
-  showToast('⏳ Сохраняю...');
-  var okSync = await syncSiteConfigToGithub();
+  await saveSections('🗑️ Раздел удалён');
+  if (hadRecipes) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch (e) {}
+    await syncToGithub(false);
+  }
   if (affected.length) await syncParticipantsToGithub();
-  if (okSync) showToast('🗑️ Вкладка и её роль удалены');
 }
 
 /* ================================================================
    РОЛИ УЧАСТНИКОВ (несколько ролей на одного человека)
    ================================================================
-   Раньше у участника было ОДНО поле p.role со строкой
-   'viewer' | 'admin' | 'purchase' — то есть человек мог быть либо
-   админом, либо закупщиком, либо никем, но не двумя сразу. Теперь
-   роли хранятся массивом p.roles, и их можно выдавать сколько угодно
-   одному человеку за один раз (см. editParticipantRoles).
+   У участника не одна роль, а массив p.roles — их можно выдавать
+   пачкой (см. editParticipantRoles).
 
    Идентификаторы ролей:
-     'admin'      — полноценный администратор (как и раньше: назначает
-                    только разработчик и только с подтверждением
-                    GitHub-ключом);
+     'admin'      — полноценный администратор (назначает только
+                    разработчик и только с подтверждением ключом);
      'purchase'   — доступ к вкладке «Закупка»;
-     'tab:<id>'   — доступ к дополнительной вкладке с этим id
-                    (см. блок «ДОПОЛНИТЕЛЬНЫЕ ВКЛАДКИ» выше).
+     'tab:<id>'   — доступ к разделу с этим id.
 
-   Название роли вкладки нигде отдельно не хранится — оно всегда
-   берётся из самой вкладки (t.label/t.icon). Поэтому переименование
-   вкладки автоматически переименовывает и её роль, а удаление вкладки
-   убирает роль из общего списка; сами записи 'tab:<id>' у участников
-   при удалении вкладки вычищаются явно (см. removeCustomTab).
+   Название роли раздела нигде отдельно не хранится — оно берётся из
+   самого раздела. Поэтому переименование раздела переименовывает и
+   его роль, а удаление раздела убирает роль из списка; записи
+   'tab:<id>' у участников при этом вычищаются явно (см. removeSection).
 
-   СОВМЕСТИМОСТЬ СО СТАРЫМИ ЗАПИСЯМИ: participants.json на GitHub
-   может содержать записи ещё со старым одиночным p.role (и его же
-   читают вкладки/устройства, где открыта прошлая версия сайта).
-   Поэтому getParticipantRoles() на лету понимает оба формата, а
-   setParticipantRoles() всегда дописывает и старое поле p.role
-   (admin > purchase > viewer) — чтобы не сломать тех, кто ещё не
-   обновил страницу.
+   СОВМЕСТИМОСТЬ: participants.json может содержать записи со старым
+   одиночным p.role. getParticipantRoles понимает оба формата, а
+   setParticipantRoles всегда дописывает и старое поле.
    ================================================================ */
 function getParticipantRoles(p) {
   if (!p) return [];
@@ -1610,93 +1864,63 @@ function setParticipantRoles(p, roles) {
   var uniq = [];
   (roles || []).forEach(function(r) { if (r && uniq.indexOf(r) === -1) uniq.push(r); });
   p.roles = uniq;
-  // Зеркало в старое поле — для страниц/устройств со старой версией сайта.
   p.role = uniq.indexOf('admin') !== -1 ? 'admin' : (uniq.indexOf('purchase') !== -1 ? 'purchase' : 'viewer');
 }
 
-/* Полный список ролей, которые сейчас существуют на сайте: две
-   встроенные плюс по одной на каждую дополнительную вкладку. Именно
-   отсюда берётся список галочек в окне «Роли» у участника. */
+/* Полный список ролей сайта: две встроенные плюс по одной на раздел. */
 function allRoleDefs() {
   var defs = [
-    { id: 'admin', label: '👑 Администратор', hint: 'Управление участниками и редактирование карточек рецептов' },
+    { id: 'admin', label: '👑 Администратор', hint: 'Управление участниками, рецептами и категориями' },
     { id: 'purchase', label: '🛒 Закупка', hint: 'Доступ к вкладке «Закупка»' }
   ];
-  getCustomTabs().forEach(function(t) {
+  getSections().forEach(function(s) {
     defs.push({
-      id: 'tab:' + t.id,
-      label: (t.icon || '📁') + ' ' + t.label,
-      hint: 'Доступ к вкладке «' + t.label + '»'
+      id: 'tab:' + s.id,
+      label: (s.icon || '📁') + ' ' + s.label,
+      hint: 'Доступ к разделу «' + s.label + '»'
     });
   });
   return defs;
 }
 
-/* Человекочитаемое название роли по её id — для бейджей в списке
-   участников. Для ролей вкладок название всегда берётся из текущей
-   вкладки, поэтому оно само следует за переименованием. */
 function roleLabel(roleId) {
   var def = allRoleDefs().filter(function(d) { return d.id === roleId; })[0];
   if (def) return def.label;
-  // Роль вкладки, которой больше нет (вкладку удалили в другом браузере,
-  // а этот ещё не обновил site-config) — показываем нейтрально.
-  return roleId.indexOf('tab:') === 0 ? '📁 (удалённая вкладка)' : roleId;
-}
-
-/* Доступ к конкретной дополнительной вкладке: админ и разработчик
-   видят все вкладки, обычный участник — только те, чья роль ему
-   выдана. Ровно та же логика, что у hasPurchaseAccess() для «Закупки». */
-function hasCustomTabAccess(tabId) {
-  if (isAdmin()) return true;
-  var me = getMyParticipantRecord();
-  return !!(me && !me.blocked && participantHasRole(me, 'tab:' + tabId));
+  return roleId.indexOf('tab:') === 0 ? '📁 (удалённый раздел)' : roleId;
 }
 
 /* ================================================================
-   КАТЕГОРИИ РЕЦЕПТОВ (чипы «Пицца / Пинца / Тесто / ...»)
+   КАТЕГОРИИ РЕЦЕПТОВ (чипы внутри раздела)
    ================================================================
-   Раньше этот набор был зашит в код в четырёх разных местах сразу
-   (чипы в index.html, выпадающий список «Тип» в форме, эмодзи и
-   подписи бейджей в renderCards, цвета .type-* в styles.css) — то
-   есть добавить категорию можно было только правкой исходников.
-   Теперь весь набор хранится одним списком в siteConfig.categories
-   и уезжает в тот же site-config.json, что и дополнительные вкладки:
-   правит разработчик, видят все посетители.
+   Категория принадлежит одному разделу (поле section) — у пиццерии
+   свои, у кондитера свои. Раньше набор был общий и зашит в код в
+   четырёх местах сразу (разметка чипов, список «Тип» в форме, эмодзи
+   и подписи бейджей, цвета в стилях); теперь он целиком лежит в
+   настройках сайта и правится прямо внутри раздела.
 
-   Каждая категория: { id, label, icon, color, hasSize }.
-     id      — то, что записано в поле recipe.type. НИКОГДА не меняется
-               при переименовании, иначе все рецепты этой категории
-               разом «потеряются»;
-     label   — отображаемое название (чип, бейдж на карточке, пункт
-               в форме — везде одно и то же имя);
-     icon    — эмодзи;
-     color   — цвет бейджа на карточке рецепта (раньше это были
-               классы .type-pizza и т.п. в CSS, теперь задаётся
-               прямо в разметке, чтобы новые категории тоже могли
-               иметь свой цвет без правки стилей);
-     hasSize — показывать ли в форме поле «Размер» (для соусов,
-               теста и заготовок оно бессмысленно).
-
-   Пустой/отсутствующий список в site-config.json означает «ещё
-   ничего не настраивали» — тогда берётся стартовый набор ниже,
-   полностью совпадающий с тем, что было зашито в коде раньше.
-   Поэтому старые сайты после обновления выглядят ровно так же.
+   Поля категории: { id, label, icon, color, sizes, section }
+     id      — то, что записано в recipe.type; при переименовании
+               НЕ меняется, иначе рецепты «потеряются»;
+     sizes   — список вариантов для поля «Размер» в форме рецепта.
+               У пиццы это диаметры, у кондитера — формы, у горячего
+               цеха — порции. Пустой список = поле не показывать.
+               Старое булево поле hasSize понимается как «показывать
+               прежний пиццейный список» (см. categorySizes).
    ================================================================ */
+var LEGACY_PIZZA_SIZES = ['Маленькая (25 см)', 'Средняя (30 см)', 'Большая (35 см)', 'Очень большая (40+ см)'];
+
 function defaultRecipeCategories() {
   return [
-    { id: 'pizza',    label: 'Пицца',     icon: '🍕', color: '#b23a45', hasSize: true },
-    { id: 'pinsa',    label: 'Пинца',     icon: '🫓', color: '#8a6033', hasSize: true },
-    { id: 'dough',    label: 'Тесто',     icon: '🌾', color: '#5b6b85', hasSize: false },
-    { id: 'sauce',    label: 'Соусы',     icon: '🥫', color: '#3d7a5c', hasSize: false },
-    { id: 'prep',     label: 'Заготовки', icon: '🧂', color: '#7c5aa3', hasSize: false },
-    { id: 'focaccia', label: 'Фокачча',   icon: '🫓', color: '#a3821f', hasSize: true },
-    { id: 'burger',   label: 'Бургер',    icon: '🍔', color: '#94502a', hasSize: false }
+    { id: 'pizza',    label: 'Пицца',     icon: '🍕', color: '#b23a45', sizes: LEGACY_PIZZA_SIZES.slice(), section: MAIN_SECTION_ID },
+    { id: 'pinsa',    label: 'Пинца',     icon: '🫓', color: '#8a6033', sizes: LEGACY_PIZZA_SIZES.slice(), section: MAIN_SECTION_ID },
+    { id: 'dough',    label: 'Тесто',     icon: '🌾', color: '#5b6b85', sizes: [], section: MAIN_SECTION_ID },
+    { id: 'sauce',    label: 'Соусы',     icon: '🥫', color: '#3d7a5c', sizes: [], section: MAIN_SECTION_ID },
+    { id: 'prep',     label: 'Заготовки', icon: '🧂', color: '#7c5aa3', sizes: [], section: MAIN_SECTION_ID },
+    { id: 'focaccia', label: 'Фокачча',   icon: '🫓', color: '#a3821f', sizes: LEGACY_PIZZA_SIZES.slice(), section: MAIN_SECTION_ID },
+    { id: 'burger',   label: 'Бургер',    icon: '🍔', color: '#94502a', sizes: [], section: MAIN_SECTION_ID }
   ];
 }
 
-/* Цвета для бейджей новых категорий — берутся по очереди, чтобы
-   свежедобавленная категория сразу отличалась от соседних и не
-   пришлось выбирать цвет вручную. */
 var CATEGORY_COLOR_PALETTE = [
   '#b23a45', '#3d7a5c', '#5b6b85', '#8a6033', '#7c5aa3',
   '#a3821f', '#94502a', '#2f6f7e', '#8a3f6b', '#4a6f2f'
@@ -1707,117 +1931,112 @@ function getRecipeCategories() {
   return (Array.isArray(list) && list.length) ? list : defaultRecipeCategories();
 }
 
+function categorySectionId(c) {
+  return (c && c.section) ? c.section : fallbackSectionId();
+}
+
+function categoriesForSection(sectionId) {
+  return getRecipeCategories().filter(function(c) { return categorySectionId(c) === sectionId; });
+}
+
 function recipeCategoryById(id) {
   return getRecipeCategories().filter(function(c) { return c.id === id; })[0] || null;
 }
 
-function firstRecipeCategoryId() {
-  var cats = getRecipeCategories();
+/* Варианты для поля «Размер». Старое булево hasSize приводим к
+   прежнему пиццейному списку — чтобы у уже заполненных категорий
+   ничего не изменилось. */
+function categorySizes(c) {
+  if (!c) return [];
+  if (Array.isArray(c.sizes)) return c.sizes;
+  return c.hasSize ? LEGACY_PIZZA_SIZES.slice() : [];
+}
+
+function firstCategoryIdForSection(sectionId) {
+  var cats = categoriesForSection(sectionId);
   return cats.length ? cats[0].id : '';
 }
 
-/* Собирает строку чипов: «Все» плюс по чипу на каждую категорию.
-   onclickFor(id) должен вернуть JS-вызов, который выполнится по клику —
-   у главной вкладки «Категории» и у дополнительных вкладок он разный,
-   а сама разметка чипов одна и та же. */
-function categoryChipsHtml(activeType, onclickFor) {
-  var html = '<span class="chip' + (!activeType ? ' active' : '') + '" data-type="" onclick="' + escAttr(onclickFor('')) + '">Все</span>';
-  getRecipeCategories().forEach(function(c) {
+/* Строка чипов раздела: «Все» плюс по чипу на каждую его категорию. */
+function categoryChipsHtml(sectionId, activeType) {
+  var html = '<span class="chip' + (!activeType ? ' active' : '') + '" data-type="" onclick="selectSectionChip(\'' + sectionId + '\', \'\')">Все</span>';
+  categoriesForSection(sectionId).forEach(function(c) {
     html += '<span class="chip' + (activeType === c.id ? ' active' : '') + '" data-type="' + escAttr(c.id) + '"' +
-      ' onclick="' + escAttr(onclickFor(c.id)) + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>';
+      ' onclick="selectSectionChip(\'' + sectionId + '\', \'' + escAttr(c.id) + '\')">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>';
   });
   return html;
 }
 
-/* Перерисовывает ВСЕ строки чипов сразу: и на главной вкладке
-   «Категории», и внутри каждой уже созданной дополнительной вкладки
-   (их панели создаются один раз и живут в DOM, поэтому обновить их
-   нужно явно — см. ensureCustomTabContent). */
+/* Перерисовывает чипы во всех уже созданных панелях разделов. */
 function renderCategoryChipRows() {
-  var ids = getRecipeCategories().map(function(c) { return c.id; });
-
-  // Фильтр, указывающий на удалённую категорию, сбрасываем на «Все» —
-  // иначе список молча остался бы пустым без единого активного чипа.
-  if (currentCategoryFilter && ids.indexOf(currentCategoryFilter) === -1) currentCategoryFilter = '';
-  var mainRow = $('category-chips');
-  if (mainRow) {
-    mainRow.innerHTML = categoryChipsHtml(currentCategoryFilter, function(id) {
-      return "selectCategoryChip('" + id + "')";
-    });
-  }
-
-  getCustomTabs().forEach(function(t) {
-    if (customTabFilters[t.id] && ids.indexOf(customTabFilters[t.id]) === -1) customTabFilters[t.id] = '';
-    var row = $('custom-chips-' + t.id);
+  getSections().forEach(function(s) {
+    var row = $('section-chips-' + s.id);
     if (!row) return;
-    row.innerHTML = categoryChipsHtml(customTabFilters[t.id] || '', function(id) {
-      return "selectCustomTabChip('" + t.id + "', '" + id + "')";
-    });
+    var ids = categoriesForSection(s.id).map(function(c) { return c.id; });
+    if (sectionFilters[s.id] && ids.indexOf(sectionFilters[s.id]) === -1) sectionFilters[s.id] = '';
+    row.innerHTML = categoryChipsHtml(s.id, sectionFilters[s.id] || '');
   });
 }
 
-/* Выпадающий список «Тип» в форме добавления/редактирования рецепта. */
+function refreshAllSectionLists() {
+  getSections().forEach(function(s) {
+    if ($('section-list-' + s.id)) renderSectionList(s.id);
+    renderSectionCategoriesAdmin(s.id);
+  });
+}
+
+/* Выпадающий список «Тип» в форме рецепта — только категории того
+   раздела, в который сейчас добавляется рецепт. */
 function renderTypeSelect() {
   var sel = $('f-type');
   if (!sel) return;
   var keep = sel.value;
-  sel.innerHTML = getRecipeCategories().map(function(c) {
+  var cats = categoriesForSection(currentFormSection());
+  sel.innerHTML = cats.map(function(c) {
     return '<option value="' + escAttr(c.id) + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</option>';
   }).join('');
-  if (keep && recipeCategoryById(keep)) sel.value = keep;
+  if (keep && cats.some(function(c) { return c.id === keep; })) sel.value = keep;
 }
 
-/* Перерисовать все видимые списки карточек — нужно после переименования
-   или переноса рецептов между категориями, чтобы бейджи на карточках
-   обновились сразу, без перезагрузки страницы. */
-function refreshAllRecipeLists() {
-  if (!recipes.length) return;
-  if ($('categories-list')) renderCategoriesList();
-  getCustomTabs().forEach(function(t) {
-    if ($('custom-list-' + t.id)) renderCustomTabList(t.id);
+/* Заполняет список «Размер» вариантами выбранной категории. */
+function renderSizeSelect(categoryId, keepValue) {
+  var sel = $('f-size');
+  var group = $('f-size-group');
+  if (!sel || !group) return;
+  var sizes = categorySizes(recipeCategoryById(categoryId));
+  if (!sizes.length) { group.style.display = 'none'; sel.innerHTML = ''; return; }
+  group.style.display = '';
+  var html = '<option value="">Выберите...</option>';
+  var known = false;
+  sizes.forEach(function(v) {
+    if (v === keepValue) known = true;
+    html += '<option value="' + escAttr(v) + '">' + esc(v) + '</option>';
   });
+  // Значение из уже сохранённого рецепта, которого нет в текущем
+  // списке (список правили после), не теряем — показываем как есть.
+  if (keepValue && !known) html += '<option value="' + escAttr(keepValue) + '">' + esc(keepValue) + ' (прежнее)</option>';
+  sel.innerHTML = html;
+  if (keepValue) sel.value = keepValue;
 }
 
-/* Список категорий в Админ-панели (карточка «🏷️ Категории рецептов»,
-   видна только разработчику) — с количеством рецептов в каждой и
-   кнопками «показывать размер / переименовать / удалить». */
-function renderCategoriesAdminList() {
-  var holder = $('categories-admin-list');
-  if (!holder) return;
-  var cats = getRecipeCategories();
-  holder.innerHTML = cats.map(function(c) {
-    var count = recipes.filter(function(r) { return r.type === c.id; }).length;
-    return '<div class="participant-item">' +
-      '<div style="min-width:0;display:flex;align-items:center;gap:8px">' +
-        '<span class="badge type-badge" style="background:' + escAttr(c.color || '#666') + '">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>' +
-        '<span style="font-size:12px;color:var(--text-muted)">' + count + ' рец.' + (c.hasSize ? ' · с размером' : '') + '</span>' +
-      '</div>' +
-      '<div style="display:flex;gap:4px;flex-shrink:0">' +
-        '<button type="button" class="purchase-home-icon-btn" title="' + (c.hasSize ? 'Убрать поле «Размер» из формы' : 'Показывать поле «Размер» в форме') + '" onclick="toggleRecipeCategorySize(\'' + escAttr(c.id) + '\')">📏</button>' +
-        '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameRecipeCategory(\'' + escAttr(c.id) + '\')">✏️</button>' +
-        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить" onclick="removeRecipeCategory(\'' + escAttr(c.id) + '\')">🗑️</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-/* Общая часть для всех трёх операций: сохранить локально, обновить
-   всё, что показывает категории, и опубликовать на GitHub. */
+/* ================================================================
+   ОПЕРАЦИИ НАД КАТЕГОРИЯМИ
+   ================================================================ */
 async function saveRecipeCategories(successMessage) {
   saveSiteConfigLocal();
   renderCategoryChipRows();
   renderTypeSelect();
-  renderCategoriesAdminList();
-  refreshAllRecipeLists();
+  refreshAllSectionLists();
   showToast('⏳ Сохраняю...');
   var ok = await syncSiteConfigToGithub();
   if (ok) showToast(successMessage);
   return ok;
 }
 
-async function addRecipeCategory() {
-  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
-  var label = await customPrompt('Название категории:', '', '➕ Новая категория');
+async function addRecipeCategory(sectionId) {
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
+  sectionId = sectionId || fallbackSectionId();
+  var label = await customPrompt('Название категории в разделе «' + (sectionById(sectionId) || {}).label + '»:', '', '➕ Новая категория');
   if (label === null) return;
   label = (label || '').trim();
   if (!label) { showToast('⚠️ Название не может быть пустым'); return; }
@@ -1826,23 +2045,22 @@ async function addRecipeCategory() {
   if (icon === null) icon = '';
   icon = (icon || '').trim();
 
-  var cats = getRecipeCategories().slice(); // slice: если сейчас используется стартовый набор, работаем с копией
+  var cats = getRecipeCategories().slice();
   cats.push({
     id: uid(),
     label: label,
     icon: icon,
     color: CATEGORY_COLOR_PALETTE[cats.length % CATEGORY_COLOR_PALETTE.length],
-    hasSize: true
+    sizes: [],
+    section: sectionId
   });
   siteConfig.categories = cats;
+  sectionCatsOpen[sectionId] = true;
   await saveRecipeCategories('✅ Категория «' + label + '» добавлена');
 }
 
-/* Переименование меняет только подпись и иконку — id категории
-   остаётся прежним, поэтому все рецепты, уже помеченные этой
-   категорией, никуда не деваются. */
 async function renameRecipeCategory(id) {
-  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var cats = getRecipeCategories().slice();
   var c = cats.filter(function(x) { return x.id === id; })[0];
   if (!c) return;
@@ -1861,41 +2079,57 @@ async function renameRecipeCategory(id) {
   await saveRecipeCategories('✅ Категория переименована');
 }
 
-/* Показывать ли в форме рецепта поле «Размер» (25/30/35 см) — для
-   соусов, теста и заготовок оно только мешает. */
-async function toggleRecipeCategorySize(id) {
-  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+/* Список вариантов поля «Размер» для категории. Именно это делает
+   форму универсальной: у пиццы тут диаметры, у кондитера — формы
+   («Ø 18 см», «Ø 24 см»), у горячего цеха — порции («Порция 250 г»).
+   Пустой список означает, что поля «Размер» у этой категории нет. */
+async function setCategorySizes(id) {
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var cats = getRecipeCategories().slice();
   var c = cats.filter(function(x) { return x.id === id; })[0];
   if (!c) return;
-  c.hasSize = !c.hasSize;
+
+  var current = categorySizes(c).join(', ');
+  var val = await customPrompt(
+    'Варианты поля «Размер» для категории «' + c.label + '» — через запятую.\n\n' +
+    'Например: Ø 25 см, Ø 30 см, Ø 35 см — или Порция 250 г, Порция 400 г.\n' +
+    'Оставьте пустым, чтобы убрать поле «Размер» у этой категории.',
+    current, '📏 Размеры — ' + c.label
+  );
+  if (val === null) return;
+
+  c.sizes = (val || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean);
+  delete c.hasSize; // старое булево поле больше не участвует
   siteConfig.categories = cats;
   if (currentTab === 'add') onTypeChange();
-  await saveRecipeCategories(c.hasSize ? '📏 Поле «Размер» включено для «' + c.label + '»' : '📏 Поле «Размер» убрано у «' + c.label + '»');
+  await saveRecipeCategories(c.sizes.length
+    ? '📏 Сохранено вариантов: ' + c.sizes.length
+    : '📏 Поле «Размер» убрано у «' + c.label + '»');
 }
 
-/* Удаление категории. Если в ней есть рецепты — сначала спрашиваем,
-   в какую категорию их перенести, и переносим: рецепты при удалении
-   категории не пропадают никогда. Последнюю оставшуюся категорию
-   удалить нельзя — иначе форму добавления рецепта было бы нечем
-   заполнить. */
+/* Удаление категории: если в ней есть рецепты, сначала спрашиваем,
+   в какую категорию ТОГО ЖЕ раздела их перенести. Рецепты при
+   удалении категории не пропадают никогда. */
 async function removeRecipeCategory(id) {
-  if (!isDeveloper()) { showToast('🔒 Доступно только разработчику (вход по GitHub-ключу)'); return; }
+  if (!isAdmin()) { showToast('🔒 Доступно только владельцу или администратору'); return; }
   var cats = getRecipeCategories().slice();
-  if (cats.length <= 1) { showToast('⚠️ Должна остаться хотя бы одна категория'); return; }
   var c = cats.filter(function(x) { return x.id === id; })[0];
   if (!c) return;
+  var sectionId = categorySectionId(c);
+  var siblings = categoriesForSection(sectionId).filter(function(x) { return x.id !== id; });
 
   var affected = recipes.filter(function(r) { return r.type === id; });
   var moveTo = null;
 
   if (affected.length) {
-    var options = cats.filter(function(x) { return x.id !== id; }).map(function(x) {
-      return { value: x.id, label: (x.icon ? x.icon + ' ' : '') + x.label };
-    });
+    if (!siblings.length) {
+      showToast('⚠️ Это единственная категория раздела — сначала создайте другую, чтобы перенести в неё рецепты');
+      return;
+    }
+    var options = siblings.map(function(x) { return { value: x.id, label: (x.icon ? x.icon + ' ' : '') + x.label }; });
     moveTo = await customSelect(
       'В категории «' + c.label + '» сейчас рецептов: ' + affected.length + '.\n\n' +
-      'Выберите, в какую категорию их перенести — после этого категория «' + c.label + '» будет удалена.',
+      'Выберите, в какую категорию этого же раздела их перенести — после этого «' + c.label + '» будет удалена.',
       options, options[0].value, '🗑️ Удалить категорию'
     );
     if (moveTo === null) return;
@@ -1911,8 +2145,6 @@ async function removeRecipeCategory(id) {
     ? '🗑️ Категория удалена, рецептов перенесено: ' + affected.length
     : '🗑️ Категория удалена');
 
-  // Рецепты хранятся отдельно от настроек (recipes.json), поэтому после
-  // переноса их нужно сохранить и опубликовать своим запросом.
   if (affected.length) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch (e) {}
     await syncToGithub(false);
@@ -2841,7 +3073,7 @@ function applyAdminUI() {
   // участника с ролью 'purchase' и открывает ему ровно вкладку "Закупка".
   var meForPurchase = getMyParticipantRecord();
   document.body.classList.toggle('is-purchase-role', !!(meForPurchase && !meForPurchase.blocked && participantHasRole(meForPurchase, 'purchase')));
-  renderCustomNavTabs(); // права изменились — пересобираем список доступных дополнительных вкладок
+  renderSectionNavTabs(); // права изменились — пересобираем список доступных разделов
   if (!isAdmin()) purchaseTemplateEditMode = false; // выход из режима — сбрасываем и режим редактирования шаблона закупки
   var btn = $('admin-toggle-btn');
   if (btn) {
@@ -2870,7 +3102,7 @@ async function toggleAdmin() {
         saveParticipantsLocal();
       }
       applyAdminUI();
-      if (currentTab === 'add' || currentTab === 'admin' || currentTab === 'purchase') switchTab('categories');
+      if (currentTab === 'add' || currentTab === 'admin' || currentTab === 'purchase') goToDefaultSection();
       showToast('⏳ Сохраняю...');
       var savedLeave = await syncParticipantsToGithub();
       if (savedLeave) showToast('🔒 Вы вышли — права сняты, запись удалена из списка участников');
@@ -2889,7 +3121,7 @@ async function toggleAdmin() {
       }
       applyAdminUI();
       showToast('🔒 Режим редактирования выключен, ключ удалён из браузера');
-      if (currentTab === 'add' || currentTab === 'admin') switchTab('categories');
+      if (currentTab === 'add' || currentTab === 'admin') goToDefaultSection();
     }
     return;
   }
@@ -3306,15 +3538,20 @@ var dataSource = 'local'; // 'github' | 'local' — откуда реально 
 async function syncFromGithub() {
   try {
     var res = await fetch('./' + GH_DATA_PATH + '?_=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) return; // файла ещё нет или открыто локально — тихий фолбэк на localStorage
+    if (!res.ok) {
+      // 404 — файла рецептов на сервере ещё нет (новый сайт), писать
+      // туда безопасно. Любой другой код — связи нет, и в памяти
+      // осталась локальная копия: публиковать её поверх нельзя.
+      dataSource = (res.status === 404) ? 'missing' : 'local';
+      return;
+    }
     var data = await res.json();
     if (Array.isArray(data)) {
       recipes = data;
       dataSource = 'github';
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); } catch(e) {}
-      if (currentTab === 'categories') renderCategoriesList();
-      else if (currentTab === 'categories') renderCategoriesList();
-      else if (currentTab === 'admin') renderAdminPanel();
+      refreshAllSectionLists();
+      if (currentTab === 'admin') renderAdminPanel();
     }
   } catch (e) {
     // Тихий фолбэк: например file:// не позволяет fetch по CORS-политике браузера
@@ -3366,7 +3603,7 @@ function exportSnapshot() {
   if (!recipes.length) { showToast('⚠️ Список пуст — нечего публиковать'); return; }
 
   var tabBeforeExport = currentTab;
-  switchTab('categories'); // чистое стартовое состояние для нового файла
+  goToDefaultSection(); // чистое стартовое состояние для нового файла
 
   try {
     var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
@@ -3397,13 +3634,13 @@ function exportSnapshot() {
     showToast('⚠️ Ошибка: ' + e.message);
   }
 
-  switchTab(tabBeforeExport === 'add' ? 'categories' : (tabBeforeExport || 'categories'));
+  if (tabBeforeExport && tabBeforeExport !== 'add') switchTab(tabBeforeExport); else goToDefaultSection();
 }
 
 /* ================================================================
    TAB NAVIGATION
    ================================================================ */
-let currentTab = 'categories';
+let currentTab = '';
 
 function switchTab(name) {
   if (name === currentTab) return;
@@ -3413,18 +3650,18 @@ function switchTab(name) {
   // попасть на вкладку "add" в чистом (не редактируемом) состоянии ему
   // нельзя. Заход в режиме редактирования (editingRecipe уже установлен
   // из editFromDetail ДО вызова switchTab) этим правилом не затрагивается.
-  if (name === 'add' && isAdmin() && !isDeveloper() && !editingRecipe) {
-    showToast('🔒 Добавлять новые рецепты может только разработчик — обычный админ может редактировать уже существующие карточки');
+  if (name === 'add' && !isAdmin()) {
+    showToast('🔒 Добавлять и редактировать рецепты могут администратор и разработчик');
     return;
   }
   if (name === 'purchase' && !hasPurchaseAccess()) {
     showToast('🔒 Вкладка «Закупка» доступна только администратору и участникам с ролью «Закупка»');
     return;
   }
-  // У каждой дополнительной вкладки своя роль — без неё вкладка не
-  // открывается, даже если кто-то попробует вызвать switchTab напрямую.
-  if (name.indexOf('custom:') === 0 && !hasCustomTabAccess(name.slice('custom:'.length))) {
-    showToast('🔒 Эта вкладка доступна только участникам с её ролью');
+  // У каждого раздела своя роль — без неё он не открывается, даже если
+  // кто-то попробует вызвать switchTab напрямую.
+  if (name.indexOf('section:') === 0 && !hasSectionAccess(name.slice('section:'.length))) {
+    showToast('🔒 Этот раздел доступен только участникам с его ролью');
     return;
   }
   if (location.hash.indexOf('#recipe=') === 0) {
@@ -3442,8 +3679,12 @@ function switchTab(name) {
   currentTab = name;
   if (leavingAdmin) unsubscribeOnlineUsers(); // не держим лишний канал открытым вне админ-панели
 
-  if (name === 'categories') renderCategoriesList();
-  if (name.indexOf('custom:') === 0) renderCustomTabList(name.slice('custom:'.length));
+  if (name.indexOf('section:') === 0) {
+    var openedSection = name.slice('section:'.length);
+    renderCategoryChipRows();
+    renderSectionList(openedSection);
+    renderSectionCategoriesAdmin(openedSection);
+  }
   if (name === 'admin') {
     renderAdminPanel(); renderParticipantsList(); updateTelegramConfigField();
     syncParticipantsFromGithub().then(function() { renderParticipantsList(); renderOnlineUsersList(); });
@@ -3462,13 +3703,41 @@ function switchTab(name) {
 }
 
 /* ================================================================
-   Открыть форму добавления с предустановленным типом
-   (вызывается из кнопок "Новая пицца" / "Новый соус")
+   ФОРМА РЕЦЕПТА: В КАКОЙ РАЗДЕЛ ДОБАВЛЯЕМ
+   ================================================================
+   Форма одна на весь сайт, но рецепт всегда принадлежит конкретному
+   разделу: список «Тип» показывает только его категории, и туда же
+   человек возвращается после сохранения. Раздел задаётся кнопкой
+   «➕ Добавить рецепт» внутри самого раздела (openAddForm) либо
+   берётся из редактируемого рецепта (editFromDetail).
    ================================================================ */
+var pendingAddSection = '';
 var pendingAddType = '';
-function openAddForm(type) {
-  pendingAddType = type || firstRecipeCategoryId();
+
+function currentFormSection() {
+  if (editingRecipe) return recipeSectionId(editingRecipe);
+  if (pendingAddSection && sectionById(pendingAddSection)) return pendingAddSection;
+  return fallbackSectionId();
+}
+
+function openAddForm(sectionId) {
+  if (!isAdmin()) { showToast('🔒 Добавлять рецепты могут администратор и разработчик'); return; }
+  pendingAddSection = (sectionId && sectionById(sectionId)) ? sectionId : fallbackSectionId();
+  if (!categoriesForSection(pendingAddSection).length) {
+    showToast('⚠️ Сначала создайте в этом разделе хотя бы одну категорию — кнопка «🏷️ Категории»');
+    return;
+  }
+  pendingAddType = firstCategoryIdForSection(pendingAddSection);
+  editingRecipe = null;
   switchTab('add');
+}
+
+/* Уйти из формы обратно в тот раздел, с которым работали. */
+function closeAddForm() {
+  editingRecipe = null;
+  var target = 'section:' + currentFormSection();
+  if (hasSectionAccess(currentFormSection())) switchTab(target);
+  else goToDefaultSection();
 }
 
 /* Заголовок формы и подпись категории теперь берутся из самой
@@ -3485,12 +3754,14 @@ function onTypeChange() {
   var sel = $('f-type');
   if (!sel) return;
   var type = sel.value;
-  var cat = recipeCategoryById(type);
-  var sizeGroup = $('f-size-group');
-  if (sizeGroup) sizeGroup.style.display = (cat && cat.hasSize) ? '' : 'none';
+  // Список «Размер» свой у каждой категории (диаметры у пиццы, формы
+  // у кондитера, порции у горячего цеха) — см. setCategorySizes.
+  var sizeEl = $('f-size');
+  renderSizeSelect(type, sizeEl ? sizeEl.value : '');
   var titleEl = $('form-title');
   if (titleEl) {
-    titleEl.textContent = (editingRecipe ? '✏️ Редактирование' : '➕ Новый рецепт') + categoryTitleSuffix(type);
+    titleEl.textContent = (editingRecipe ? '✏️ Редактирование' : '➕ Новый рецепт') +
+      ' · ' + sectionLabel(currentFormSection()) + categoryTitleSuffix(type);
   }
 }
 
@@ -3848,11 +4119,14 @@ function previewVideoRow(input) {
 
 function resetForm() {
   editingRecipe = null;
-  renderTypeSelect(); // категории могли измениться с прошлого открытия формы
-  var type = recipeCategoryById(pendingAddType) ? pendingAddType : firstRecipeCategoryId();
-  pendingAddType = firstRecipeCategoryId();
+  renderTypeSelect(); // категории раздела могли измениться с прошлого открытия формы
+  var section = currentFormSection();
+  var inSection = categoriesForSection(section).some(function(c) { return c.id === pendingAddType; });
+  var type = inSection ? pendingAddType : firstCategoryIdForSection(section);
+  pendingAddType = type;
   $('f-type').value = type;
-  $('form-title').textContent = '➕ Новый рецепт' + categoryTitleSuffix(type);
+  renderSizeSelect(type, '');
+  $('form-title').textContent = '➕ Новый рецепт · ' + sectionLabel(section) + categoryTitleSuffix(type);
   $('f-name').value = '';
   $('f-time').value = '';
   $('f-size').value = '';
@@ -3872,7 +4146,9 @@ function resetForm() {
 
 async function saveRecipe() {
   if (!isAdmin()) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
-  if (!editingRecipe && !isDeveloper()) { showToast('🔒 Создавать новые рецепты может только разработчик'); return; }
+  // Создавать рецепты теперь может и обычный админ (шеф своего цеха),
+  // а не только разработчик: разделов стало много, и вести каждый
+  // должен тот, кто за него отвечает.
   var name = $('f-name').value.trim();
   if (!name) { showToast('⚠️ Укажите название рецепта'); return; }
 
@@ -3925,7 +4201,8 @@ async function saveRecipe() {
 
   var recipe = {
     id: recipeId,
-    type: $('f-type').value || firstRecipeCategoryId(),
+    type: $('f-type').value || firstCategoryIdForSection(currentFormSection()),
+    section: currentFormSection(),
     name: name,
     photo: photoValue,
     time: parseInt($('f-time').value) || null,
@@ -3956,7 +4233,7 @@ async function saveRecipe() {
   if (!saved) return; // Could not save - abort
 
   resetForm();
-  switchTab('categories');
+  closeAddForm();
 }
 
 /* ================================================================
@@ -4026,41 +4303,15 @@ function clearSearchInput(inputId) {
   input.value = '';
   toggleSearchClear(inputId);
   input.focus();
-  if (inputId === 'search-categories') renderCategoriesList();
   if (inputId === 'purchase-home-search') renderPurchaseHomeList();
-  if (inputId.indexOf('search-custom-') === 0) renderCustomTabList(inputId.slice('search-custom-'.length));
-}
-
-/* ================================================================
-   ВКЛАДКА "РЕЦЕПТЫ" — единый список всех типов
-   ================================================================ */
-/* ================================================================
-   ВКЛАДКА "КАТЕГОРИИ" — фильтр по типу через чипы
-   ================================================================ */
-var currentCategoryFilter = '';
-
-function selectCategoryChip(type) {
-  currentCategoryFilter = type;
-  document.querySelectorAll('#category-chips .chip').forEach(function(chip) {
-    chip.classList.toggle('active', chip.dataset.type === type);
-  });
-  renderCategoriesList();
-}
-
-function renderCategoriesList() {
-  var items = currentCategoryFilter
-    ? recipes.filter(function(r) { return r.type === currentCategoryFilter; })
-    : recipes.slice();
-  items = applySearch(items, 'search-categories');
-  renderCards($('categories-list'), $('categories-count'), items, 'Ничего не найдено');
+  if (inputId.indexOf('search-section-') === 0) renderSectionList(inputId.slice('search-section-'.length));
 }
 
 /* ================================================================
    ВКЛАДКА "АДМИН-ПАНЕЛЬ"
    ================================================================ */
 function renderAdminPanel() {
-  renderCustomTabsAdminList();
-  renderCategoriesAdminList();
+  renderSectionsAdminList();
   var countEl = $('admin-total-count');
   if (countEl) countEl.textContent = recipes.length + ' шт.';
   var panelBtn = $('admin-panel-toggle-btn');
@@ -6052,8 +6303,9 @@ function openDetail(id, autoplayVideo) {
     history.pushState({ recipeId: id }, '', shareUrl);
   }
 
-  // Возврат всегда на единый список "Рецепты"
-  var originTab = 'categories';
+  // Возврат — в тот раздел, которому принадлежит рецепт (а не в один
+  // общий список, как было, когда книга была одна на всё).
+  var originTab = 'section:' + recipeSectionId(r);
   document.querySelectorAll('.nav-tab').forEach(function(t) { t.classList.remove('active'); });
   var originTabEl = document.querySelector('.nav-tab[data-tab="' + originTab + '"]');
   if (originTabEl) originTabEl.classList.add('active');
@@ -6181,7 +6433,7 @@ window.addEventListener('popstate', function() {
   if (location.hash.indexOf('#recipe=') === 0) {
     openRecipeFromHash();
   } else if (currentTab === 'detail') {
-    switchTab('categories');
+    goToDefaultSection();
   }
 });
 
@@ -6193,7 +6445,8 @@ function editFromDetail(id) {
   }
   if (!r) return;
 
-  var recType = recipeCategoryById(r.type) ? r.type : firstRecipeCategoryId();
+  pendingAddSection = recipeSectionId(r);
+  var recType = recipeCategoryById(r.type) ? r.type : firstCategoryIdForSection(pendingAddSection);
   pendingAddType = recType;
   // editingRecipe выставляем ДО switchTab('add') — так switchTab видит,
   // что это редактирование уже существующей карточки (а не создание
@@ -6236,7 +6489,7 @@ async function deleteRecipe(id) {
   recipes = recipes.filter(function(r) { return r.id !== id; });
   saveAll();
   showToast('🗑 Рецепт удалён');
-  switchTab('categories');
+  goToDefaultSection();
 }
 
 /* ================================================================
@@ -6656,7 +6909,7 @@ function unlockGate() {
    если поле заметно "уехало" от того места, где было, тут же силой
    возвращаем его в кадр через scrollIntoView. */
 function initSearchScrollJumpGuard() {
-  var GUARDED_IDS = ['purchase-home-search', 'search-categories', 'purchase-search-positions'];
+  var GUARDED_IDS = ['purchase-home-search', 'purchase-search-positions'];
   GUARDED_IDS.forEach(function(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -6686,9 +6939,8 @@ async function initApp() {
 
   loadParticipantsLocal(); // сначала то, что уже знаем локально (на случай отсутствия сети)
   loadSiteConfigLocal();
-  renderCustomNavTabs(); // сразу из локального кэша, не дожидаясь сети — см. syncSiteConfigFromGithub ниже за свежими данными
-  renderCategoryChipRows(); // чипы категорий и список «Тип» в форме тоже собираются из настроек, а не зашиты в разметку
-  renderTypeSelect();
+  renderSectionNavTabs(); // сразу из локального кэша, не дожидаясь сети — см. syncSiteConfigFromGithub ниже за свежими данными
+  renderCategoryChipRows(); // чипы категорий и список «Тип» в форме собираются из настроек, а не зашиты в разметку
 
   // Отмечаем "я тут" максимально рано — до какой-либо проверки одобрения
   // или блокировки, чтобы в списке "Онлайн" было видно вообще всех, кто
@@ -6727,10 +6979,15 @@ async function initApp() {
 
   var hasDeepLink = /^#recipe=/.test(location.hash);
 
+  // Разделы и их роли: переносим старые данные и раздаём роль главного
+  // раздела (разово, у разработчика — см. migrateToSections).
+  renderSectionNavTabs();
+
   if (hasDeepLink) {
     showDetailLoading(); // сразу показываем "Загрузка рецепта...", без мелькания общего списка
   } else {
-    renderCategoriesList();
+    goToDefaultSection();
+    refreshAllSectionLists();
   }
 
   openRecipeFromHash(false); // если рецепт уже есть в локальном кэше — откроется сразу, минуя загрузку
@@ -6739,8 +6996,10 @@ async function initApp() {
     openRecipeFromHash(true); // финальная попытка на свежих данных с GitHub
     if (hasDeepLink && currentTab !== 'detail') {
       // Ссылка была, но рецепт так и не нашёлся — показываем обычный список вместо "вечной загрузки"
-      switchTab('categories');
+      goToDefaultSection();
     }
+    refreshAllSectionLists();
+    migrateToSections();
   });
 
   // Tab click handlers
