@@ -177,11 +177,7 @@
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
       <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseText()">📄 Текстовый файл</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseExcel()">📊 Excel</button>
       <button type="button" class="btn btn-ghost btn-sm" onclick="copyPurchaseReorder()">🔁 Скопировать дозаказ</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderText()">📄 Дозаказ — текст</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="downloadPurchaseReorderExcel()">📊 Дозаказ — Excel</button>
     </div>
 
     <!-- "Общий список" и "Общий отчёт" имеют смысл только для встроенных
@@ -205,11 +201,7 @@
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по заведению и его поставщикам — с уже указанным остатком по каждому:</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (заведение + поставщики)</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseText()">📄 Текстовый файл (все)</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseExcel()">📊 Excel (все)</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderText()">📄 Дозаказ — текст (все)</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="downloadAllPurchaseReorderExcel()">📊 Дозаказ — Excel (все)</button>
         </div>
       </div>
     </div>
