@@ -523,7 +523,7 @@
     <div class="modal-actions" id="send-purchase-step-actions">
       <button class="btn btn-ghost btn-sm" onclick="cancelSendAllPurchase()">Отмена</button>
       <button class="btn btn-ghost btn-sm" id="send-purchase-skip-btn" onclick="sendAllPurchaseSkip()">Пропустить</button>
-      <button class="btn btn-primary btn-sm" id="send-purchase-copy-btn" onclick="sendAllPurchaseOpenAndCopy()">📋 Скопировать и открыть чат</button>
+      <a class="btn btn-primary btn-sm" id="send-purchase-copy-btn" href="#" rel="noopener" onclick="sendAllPurchaseOpenAndCopy(event)">📋 Скопировать и открыть чат</a>
       <button class="btn btn-success btn-sm" id="send-purchase-next-btn" onclick="sendAllPurchaseNext()" disabled>Отправил(а) → Далее</button>
     </div>
     <!-- Финальный шаг рассылки — показывается вместо шага выше, когда все
