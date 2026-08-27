@@ -14,52 +14,71 @@
       "label": "Пицца",
       "icon": "🍕",
       "color": "#b23a45",
-      "hasSize": true
+      "hasSize": true,
+      "section": "main"
     },
     {
       "id": "pinsa",
       "label": "Пинца",
       "icon": "🫓",
       "color": "#8a6033",
-      "hasSize": true
+      "hasSize": true,
+      "section": "main"
     },
     {
       "id": "dough",
       "label": "Тесто",
       "icon": "🌾",
       "color": "#5b6b85",
-      "hasSize": false
+      "hasSize": false,
+      "section": "main"
     },
     {
       "id": "sauce",
       "label": "Соусы",
       "icon": "🥫",
       "color": "#3d7a5c",
-      "hasSize": false
+      "hasSize": false,
+      "section": "main"
     },
     {
       "id": "prep",
       "label": "Заготовки",
       "icon": "🧂",
       "color": "#7c5aa3",
-      "hasSize": false
+      "hasSize": false,
+      "section": "main"
     },
     {
       "id": "focaccia",
       "label": "Фокачча",
       "icon": "🫓",
       "color": "#a3821f",
-      "hasSize": true
+      "hasSize": true,
+      "section": "main"
     },
     {
       "id": "burger",
       "label": "Бургер",
       "icon": "🍔",
       "color": "#94502a",
-      "hasSize": false
+      "hasSize": false,
+      "section": "main"
     }
   ],
-  "repoOwner": "IPACTAMAHI",
+  "repoOwner": "ipactamahi",
   "repoName": "pizza",
-  "repoBranch": "main"
+  "repoBranch": "main",
+  "sections": [
+    {
+      "id": "main",
+      "label": "Пицца бар",
+      "icon": "🍕"
+    },
+    {
+      "id": "pmtbp6cdzl2wfz",
+      "label": "Горячий цех",
+      "icon": "🔥"
+    }
+  ]
 }
