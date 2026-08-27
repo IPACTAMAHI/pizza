@@ -5725,7 +5725,25 @@ function initFloatingBackButton() {
 document.addEventListener('DOMContentLoaded', function() {
   initApp();
   initFloatingBackButton();
+  initStickySearchOffset();
 });
+
+// Прописывает реальную высоту липкой панели вкладок (.nav-tabs) в
+// CSS-переменную --nav-h, чтобы поисковые строки (.search-wrap, см.
+// styles.css) могли прилипать сразу под ней без наложения — высота
+// панели зависит от размера шрифта/экрана устройства, поэтому лучше
+// измерить её реально, а не подбирать одно число вручную. Пересчитываем
+// и при повороте экрана/изменении размера окна.
+function initStickySearchOffset() {
+  var nav = document.querySelector('.nav-tabs');
+  if (!nav) return;
+  function apply() {
+    document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+  }
+  apply();
+  window.addEventListener('resize', apply);
+  window.addEventListener('orientationchange', apply);
+}
 
 async function initApp() {
   await verifyStoredAdminSession(); // снимает флаг админа, если за ним нет рабочего GitHub-ключа — ДО любых проверок isAdmin()
