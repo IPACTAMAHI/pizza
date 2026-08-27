@@ -4864,9 +4864,10 @@ function purchaseReportHeaderTitle(kind) {
 function buildPurchaseReportText(cat) {
   var today = new Date().toLocaleDateString('ru-RU');
   var data = buildPurchaseReportData(cat);
+  var greeting = 'Доброго времени!';
   var header = purchaseCategoryIcon(cat) + ' ' + purchaseReportHeaderTitle(data.kind) + ' — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
-  if (!data.lines.length) return header + '\n\nНет позиций.';
-  return header + '\n\n' + data.lines.join('\n');
+  if (!data.lines.length) return greeting + '\n\n' + header + '\n\nНет позиций.';
+  return greeting + '\n\n' + header + '\n\n' + data.lines.join('\n');
 }
 
 function fallbackCopyText(text, successMsg) {
