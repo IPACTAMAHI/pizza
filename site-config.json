@@ -51,13 +51,6 @@
       "icon": "🍔",
       "color": "#94502a",
       "hasSize": false
-    },
-    {
-      "id": "pmtbp3g8hrc2u7",
-      "label": "Горячий цех",
-      "icon": "🍽",
-      "color": "#2f6f7e",
-      "hasSize": true
     }
   ],
   "repoOwner": "IPACTAMAHI",
