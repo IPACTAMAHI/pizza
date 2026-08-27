@@ -3790,6 +3790,7 @@ function renderPurchaseHomeSearchResults(holder, query, rawQuery) {
     var row = entry.row;
     var res = purchaseResultDisplay(row);
     var reorderUnit = row.reorderUnit || 'кг';
+    var hasValue = (row.residual !== '' && row.residual != null) || (row.reorder !== '' && row.reorder != null);
     return '<div class="purchase-row" data-id="' + row.id + '">' +
       '<div class="purchase-row-readonly-name">' + esc(row.name) +
         '<span class="purchase-row-meta">' + esc(c.icon || '📦') + ' ' + esc(c.label) +
@@ -3798,26 +3799,52 @@ function renderPurchaseHomeSearchResults(holder, query, rawQuery) {
       '</div>' +
       '<div class="purchase-row-fields purchase-row-fields-combined">' +
         '<label class="purchase-field"><span>Остаток</span>' +
-          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
-            'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + c.id + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\')">' +
+          '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-residual" id="purchase-home-residual-' + row.id + '" placeholder="2.3" value="' + escAttr(row.residual) + '" ' +
+            'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + c.id + '\',\'' + row.id + '\',\'residual\',this.value); recomputePurchaseRow(\'' + row.id + '\'); togglePurchaseHomeConfirmBtn(\'' + row.id + '\')">' +
         '</label>' +
         '<div class="purchase-field"><span>Докупить</span>' +
           '<div class="purchase-result ' + res.cls + '" data-result-for="' + row.id + '">' + res.text + '</div>' +
         '</div>' +
         '<label class="purchase-field purchase-field-reorder"><span>🔁 Дозаказ</span>' +
           '<div class="purchase-reorder-group">' +
-            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
-              'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + c.id + '\',\'' + row.id + '\',\'reorder\',this.value)">' +
+            '<input type="number" inputmode="decimal" step="any" min="0" class="purchase-reorder" id="purchase-home-reorder-' + row.id + '" placeholder="1" value="' + escAttr(row.reorder) + '" ' +
+              'oninput="autosizePurchaseInput(this); updatePurchaseField(\'' + c.id + '\',\'' + row.id + '\',\'reorder\',this.value); togglePurchaseHomeConfirmBtn(\'' + row.id + '\')">' +
             '<select class="purchase-reorder-unit" onchange="handlePurchaseReorderUnitChange(this,\'' + c.id + '\',\'' + row.id + '\')">' +
               purchaseUnitOptionsHtml(reorderUnit) +
             '</select>' +
           '</div>' +
         '</label>' +
       '</div>' +
+      '<button type="button" class="btn btn-primary btn-sm purchase-home-confirm-btn" id="purchase-home-confirm-' + row.id + '" ' +
+        'style="display:' + (hasValue ? 'block' : 'none') + '" onclick="confirmPurchaseHomeSearchEntry(\'' + row.id + '\')">✅ ОК — сохранить и найти следующее</button>' +
     '</div>';
   }).join('');
 
   autosizeAllPurchaseInputs(holder);
+}
+
+// Показывает/скрывает кнопку "✅ ОК" под конкретной найденной позицией
+// в поиске на главной "Закупка" (см. renderPurchaseHomeSearchResults) —
+// кнопка появляется, как только хотя бы в одном из полей ("Остаток"
+// или "🔁 Дозаказ") этой позиции есть значение, и прячется обратно,
+// если оба поля снова очистили.
+function togglePurchaseHomeConfirmBtn(rowId) {
+  var btn = $('purchase-home-confirm-' + rowId);
+  if (!btn) return;
+  var residualEl = $('purchase-home-residual-' + rowId);
+  var reorderEl = $('purchase-home-reorder-' + rowId);
+  var hasValue = (residualEl && residualEl.value !== '') || (reorderEl && reorderEl.value !== '');
+  btn.style.display = hasValue ? 'block' : 'none';
+}
+
+// Нажатие "✅ ОК" в результатах поиска на главной "Закупка": значения
+// уже сохранены по мере ввода (см. oninput на полях выше), поэтому здесь
+// достаточно просто сбросить строку поиска — это возвращает главный
+// экран к обычному списку заведений/поставщиков и сразу освобождает
+// поле для поиска следующего ингредиента, ничего не открывая вручную.
+function confirmPurchaseHomeSearchEntry(rowId) {
+  showToast('✅ Сохранено');
+  clearSearchInput('purchase-home-search');
 }
 
 /* "Общий список — все поставщики" и "Общий отчёт" по смыслу относятся
