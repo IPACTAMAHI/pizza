@@ -64,6 +64,14 @@
       "color": "#94502a",
       "hasSize": false,
       "section": "main"
+    },
+    {
+      "id": "pmtbql2qtgrpbl",
+      "label": "первые блюда",
+      "icon": "🍽",
+      "color": "#2f6f7e",
+      "sizes": [],
+      "section": "pmtbp6cdzl2wfz"
     }
   ],
   "repoOwner": "ipactamahi",
