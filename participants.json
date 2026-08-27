@@ -45,13 +45,14 @@
   {
     "id": "S2NP-BUJF",
     "fingerprint": "",
-    "name": "",
+    "name": "Тестер",
     "addedAt": 1787866008570,
     "blocked": false,
-    "claimed": false,
+    "claimed": true,
     "roles": [
       "tab:main"
     ],
-    "role": "viewer"
+    "role": "viewer",
+    "claimedAt": 1787866024377
   }
 ]
