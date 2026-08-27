@@ -6,7 +6,10 @@
     "addedAt": 1787469428320,
     "blocked": false,
     "role": "viewer",
-    "blockedAt": null
+    "blockedAt": null,
+    "roles": [
+      "tab:main"
+    ]
   },
   {
     "id": "A6B7-E60A",
@@ -14,7 +17,10 @@
     "name": "Вита",
     "addedAt": 1787476188384,
     "blocked": false,
-    "role": "viewer"
+    "role": "viewer",
+    "roles": [
+      "tab:main"
+    ]
   },
   {
     "id": "3C14-95E3",
@@ -22,6 +28,9 @@
     "name": "Вова",
     "addedAt": 1787571064635,
     "blocked": false,
-    "role": "viewer"
+    "role": "viewer",
+    "roles": [
+      "tab:main"
+    ]
   }
 ]
