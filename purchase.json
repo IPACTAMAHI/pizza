@@ -144,6 +144,14 @@
       "icon": "🚚",
       "builtin": false,
       "workshop": "hot"
+    },
+    {
+      "id": "sup1787865527565btvsu",
+      "label": "Метро",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "",
+      "venue": "vpmtc0x7kfezeh4"
     }
   ],
   "data": {
@@ -727,7 +735,8 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup1787865527565btvsu": []
   },
   "customUnits": []
 }
