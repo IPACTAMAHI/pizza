@@ -1,7 +1,13 @@
 {
   "adminTelegram": "Vladislav_Who",
   "adminTelegramGroup": "",
-  "customTabs": [],
+  "customTabs": [
+    {
+      "id": "pmtbp5fmegnpgc",
+      "label": "Горячий цех",
+      "icon": "📁"
+    }
+  ],
   "categories": [
     {
       "id": "pizza",
