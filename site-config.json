@@ -110,6 +110,12 @@
       "label": "Route 20",
       "icon": "🏠",
       "purchase": true
+    },
+    {
+      "id": "vpmtc0x7kfezeh4",
+      "label": "Ребра",
+      "icon": "🏠",
+      "purchase": false
     }
   ]
 }
