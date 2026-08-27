@@ -23,5 +23,14 @@
     "addedAt": 1787571064635,
     "blocked": false,
     "role": "viewer"
+  },
+  {
+    "id": "L20V-HDB4",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787827783936,
+    "blocked": false,
+    "role": "viewer",
+    "claimed": false
   }
 ]
