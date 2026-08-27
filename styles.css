@@ -206,6 +206,30 @@
   .chip:active { transform: scale(.94); }
   .chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
 
+  /* Панель управления внутри раздела (видна только админу): добавить
+     рецепт и открыть список категорий ЭТОГО раздела. Раньше добавление
+     рецепта было отдельной вкладкой в верхней навигации, общей на весь
+     сайт; теперь оно живёт внутри того раздела, куда рецепт и попадёт. */
+  .section-toolbar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin: 12px 0 4px;
+  }
+  .section-toolbar .btn { flex: 1; min-width: 150px; justify-content: center; }
+
+  /* Раскрывающийся список категорий раздела — тут они и создаются. */
+  .section-cats {
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+  }
+  .section-cats-title {
+    font-size: 12px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .04em;
+    margin-bottom: 10px;
+  }
+
   /* Админ-панель */
   .admin-panel-card {
     background: var(--glass-bg);
