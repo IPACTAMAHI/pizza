@@ -146,11 +146,10 @@
       "workshop": "hot"
     },
     {
-      "id": "sup1787865527565btvsu",
-      "label": "Метро",
-      "icon": "🚚",
-      "builtin": false,
-      "workshop": "",
+      "id": "ws17878656176691145k",
+      "label": "Ребра",
+      "icon": "🏭",
+      "builtin": true,
       "venue": "vpmtc0x7kfezeh4"
     }
   ],
@@ -736,14 +735,7 @@
         "norm": ""
       }
     ],
-    "sup1787865527565btvsu": [
-      {
-        "id": "p1787865530510sxwr3",
-        "name": "211",
-        "unit": "кг",
-        "norm": ""
-      }
-    ]
+    "ws17878656176691145k": []
   },
   "customUnits": []
 }
