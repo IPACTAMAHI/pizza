@@ -91,7 +91,7 @@
 <div id="tab-categories" class="tab-content active">
   <div class="search-wrap">
     <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-    <input type="text" class="search-input" id="search-categories" placeholder="Поиск по названию рецепта..." oninput="renderCategoriesList(); toggleSearchClear('search-categories')">
+    <input type="search" class="search-input" id="search-categories" name="search-categories-field" placeholder="Поиск по названию рецепта..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderCategoriesList(); toggleSearchClear('search-categories')">
     <button type="button" class="search-clear" id="search-categories-clear" onclick="clearSearchInput('search-categories')" title="Очистить" style="display:none">✕</button>
   </div>
   <div class="chip-row" id="category-chips">
@@ -121,7 +121,7 @@
   <div id="purchase-home-view">
     <div class="search-wrap">
       <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" class="search-input" id="purchase-home-search" placeholder="Поиск по названию ингредиента..." oninput="renderPurchaseHomeList(); toggleSearchClear('purchase-home-search')">
+      <input type="search" class="search-input" id="purchase-home-search" name="purchase-home-search-field" placeholder="Поиск по названию ингредиента..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderPurchaseHomeList(); toggleSearchClear('purchase-home-search')">
       <button type="button" class="search-clear" id="purchase-home-search-clear" onclick="clearSearchInput('purchase-home-search')" title="Очистить" style="display:none">✕</button>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
@@ -160,7 +160,7 @@
 
     <div class="search-wrap" id="purchase-search-wrap" style="display:none">
       <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" class="search-input" id="purchase-search-positions" placeholder="Поиск позиции по названию..." oninput="handlePurchaseSearchInput()">
+      <input type="search" class="search-input" id="purchase-search-positions" name="purchase-search-positions-field" placeholder="Поиск позиции по названию..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="handlePurchaseSearchInput()">
       <button type="button" class="search-clear" id="purchase-search-positions-clear" onclick="clearPurchaseSearchInput()" title="Очистить" style="display:none">✕</button>
     </div>
 
