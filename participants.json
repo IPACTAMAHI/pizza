@@ -32,5 +32,17 @@
     "roles": [
       "tab:main"
     ]
+  },
+  {
+    "id": "HT3P-ULU2",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787849597929,
+    "blocked": false,
+    "claimed": false,
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
