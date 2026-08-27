@@ -92,6 +92,11 @@
       "id": "pmtbqzxi2ees6b",
       "label": "Холодный цех",
       "icon": "🥗"
+    },
+    {
+      "id": "pmtbr2awvwird4",
+      "label": "Кондитер",
+      "icon": "🎂"
     }
   ],
   "mainRoleGranted": true
