@@ -1,4 +1,66 @@
 {
   "adminTelegram": "Vladislav_Who",
-  "adminTelegramGroup": ""
+  "adminTelegramGroup": "",
+  "customTabs": [],
+  "categories": [
+    {
+      "id": "pizza",
+      "label": "Пицца",
+      "icon": "🍕",
+      "color": "#b23a45",
+      "hasSize": true
+    },
+    {
+      "id": "pinsa",
+      "label": "Пинца",
+      "icon": "🫓",
+      "color": "#8a6033",
+      "hasSize": true
+    },
+    {
+      "id": "dough",
+      "label": "Тесто",
+      "icon": "🌾",
+      "color": "#5b6b85",
+      "hasSize": false
+    },
+    {
+      "id": "sauce",
+      "label": "Соусы",
+      "icon": "🥫",
+      "color": "#3d7a5c",
+      "hasSize": false
+    },
+    {
+      "id": "prep",
+      "label": "Заготовки",
+      "icon": "🧂",
+      "color": "#7c5aa3",
+      "hasSize": false
+    },
+    {
+      "id": "focaccia",
+      "label": "Фокачча",
+      "icon": "🫓",
+      "color": "#a3821f",
+      "hasSize": true
+    },
+    {
+      "id": "burger",
+      "label": "Бургер",
+      "icon": "🍔",
+      "color": "#94502a",
+      "hasSize": false
+    },
+    {
+      "id": "pmtbp3g8hrc2u7",
+      "label": "Горячий цех",
+      "icon": "🍽",
+      "color": "#2f6f7e",
+      "hasSize": true
+    }
+  ],
+  "repoOwner": "IPACTAMAHI",
+  "repoName": "pizza",
+  "repoBranch": "main"
 }
