@@ -80,5 +80,6 @@
       "label": "Горячий цех",
       "icon": "🔥"
     }
-  ]
+  ],
+  "mainRoleGranted": true
 }
