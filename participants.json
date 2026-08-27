@@ -30,7 +30,7 @@
     "name": "тест",
     "addedAt": 1787827783936,
     "blocked": false,
-    "role": "purchase",
+    "role": "viewer",
     "claimed": true,
     "claimedAt": 1787827842504
   }
