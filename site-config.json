@@ -74,7 +74,7 @@
       "section": "pmtbp6cdzl2wfz"
     }
   ],
-  "repoOwner": "ipactamahi",
+  "repoOwner": "IPACTAMAHI",
   "repoName": "pizza",
   "repoBranch": "main",
   "sections": [
@@ -87,6 +87,11 @@
       "id": "pmtbp6cdzl2wfz",
       "label": "Горячий цех",
       "icon": "🔥"
+    },
+    {
+      "id": "pmtbqzxi2ees6b",
+      "label": "Холодный цех",
+      "icon": "🥗"
     }
   ],
   "mainRoleGranted": true
