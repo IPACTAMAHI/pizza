@@ -144,7 +144,25 @@
   .admin-toggle { right: 14px; }
   .export-toggle { left: 14px; }
 
-  .search-wrap { position: relative; margin-bottom: 14px; scroll-margin-top: 60px; }
+  /* Поисковая строка "прилипает" сразу под липкой панелью вкладок
+     (.nav-tabs), а не просто лежит в потоке страницы. Раньше при каждом
+     нажатии клавиши список результатов ниже перерисовывался и менял
+     высоту — из-за этого позиция самого поля на экране скакала, и
+     Mobile Safari (у которого при открытой клавиатуре и так включена
+     автоматическая подстройка скролла к сфокусированному полю) на
+     каждое такое изменение реагировал резким прыжком скролла в начало
+     страницы. Если поле зафиксировано на экране и не двигается от
+     перерисовки списка под ним, скроллу незачем "подстраиваться" — и
+     прыжки прекращаются. Отступ top берётся из --nav-h (высота
+     .nav-tabs, вычисляется в JS, см. initStickySearchOffset в app.js). */
+  .search-wrap {
+    position: sticky; top: var(--nav-h, 64px); z-index: 80;
+    margin: 0 -16px 14px; scroll-margin-top: 60px;
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    padding: 10px 16px 8px;
+  }
   .search-wrap .search-icon {
     position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
     width: 18px; height: 18px;
