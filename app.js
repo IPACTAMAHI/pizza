@@ -5536,22 +5536,34 @@ function isMobileDevice() {
    Для остального (инвайт-ссылки групп, Viber, произвольные сайты)
    текст туда не подставить — остаётся полагаться на буфер обмена,
    prefilled: false. Что не распознано — возвращается как есть. */
+/* Разбирает сохранённую ссылку поставщика/цеха (c.link) и приводит её к
+   ссылке для прямого перехода в приложение — БЕЗ автоподстановки текста.
+   Раньше для WhatsApp и личных чатов Telegram текст передавался прямо в
+   ссылке (?text=...), но именно это и вызывало системное окно "Сайт
+   пытается открыть другое приложение" при КАЖДОМ нажатии: ссылка с
+   ?text= — это не прямая Universal Link, а промежуточная страница
+   (wa.me / t.me), которая сама через свой скрипт передаёт управление
+   приложению через кастомную схему (whatsapp://, tg://) — и вот этот
+   шаг ОС подтверждает каждый раз, без возможности запомнить выбор.
+   Обычная ссылка БЕЗ query-параметров — настоящая Universal Link:
+   приложение открывается сразу, без промежуточной страницы и без
+   всплывающего окна. Текст всё равно уже лежит в буфере обмена (см.
+   copyTextToClipboard в sendAllPurchaseOpenAndCopy) — его нужно вставить
+   вручную (Ctrl+V / зажать → «Вставить») в открывшемся чате. */
 function resolvePurchaseAppLink(rawLink, text) {
   var link = (rawLink || '').trim();
   if (!link) return { url: link, prefilled: false };
-  var encodedText = encodeURIComponent(text || '');
 
   // WhatsApp: wa.me/<телефон> или (api.)whatsapp.com/send?phone=<телефон>
   var waMatch = link.match(/(?:wa\.me\/|whatsapp\.com\/send\?[^#]*phone=)(\d{6,15})/i);
   if (waMatch) {
-    return { url: 'https://wa.me/' + waMatch[1] + '?text=' + encodedText, prefilled: true };
+    return { url: 'https://wa.me/' + waMatch[1], prefilled: false };
   }
 
-  // Telegram: t.me/<username> — но НЕ инвайт-ссылка группы (t.me/+... или /joinchat/...),
-  // для неё текст никуда не подставить, ссылку просто открываем как есть.
+  // Telegram: t.me/<username> — но НЕ инвайт-ссылка группы (t.me/+... или /joinchat/...).
   var tgMatch = link.match(/t(?:elegram)?\.me\/([a-zA-Z0-9_]{4,32})(?:[/?]|$)/i);
   if (tgMatch && !/t(?:elegram)?\.me\/(\+|joinchat\/)/i.test(link)) {
-    return { url: 'https://t.me/' + tgMatch[1] + '?text=' + encodedText, prefilled: true };
+    return { url: 'https://t.me/' + tgMatch[1], prefilled: false };
   }
 
   // Viber: ссылка вида viber://chat?number=... или страница с номером в query
