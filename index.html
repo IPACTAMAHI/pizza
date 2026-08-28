@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260827n">
+<link rel="stylesheet" href="styles.css?v=20260827u">
 </head>
 <body>
 
@@ -78,7 +78,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
 <!-- HEADER -->
 <div class="header">
-  <button class="header-corner-btn export-toggle developer-only" id="export-toggle-btn" onclick="exportSnapshot()" title="Скачать резервную копию рецептов">
+  <button class="header-corner-btn export-toggle" data-perm="site.export" id="export-toggle-btn" onclick="exportSnapshot()" title="Скачать резервную копию рецептов">
     <span class="icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
     <span class="label">Экспорт</span>
   </button>
@@ -156,19 +156,32 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
     <h3 id="purchase-detail-title" style="margin-bottom:14px"></h3>
 
+    <!-- Контакты поставщика. Заполняются кнопкой «📇 Контакты» в режиме
+         редактирования; если не заполнено ни одно поле, блок остаётся
+         пустым и на экране его не видно вовсе. -->
+    <div id="purchase-detail-contacts"></div>
+
     <!-- Управление самой карточкой цеха/поставщика (не позициями) —
          доступно только разработчику: добавить к цеху, переименовать,
          загрузить прайс. "Завершить редактирование" — тот же переключатель,
          что включает правку позиций ниже (см. togglePurchaseTemplateEdit) —
          закрывается ТОЛЬКО после успешного сохранения на GitHub. -->
-    <div class="developer-only" id="purchase-template-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none">🔗 Добавить к цеху</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none">✏️ Переименовать</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none">📥 Загрузить прайс</button>
+    <!-- Панель инструментов карточки. Кнопки компактные и с иконками:
+         их тут до шести, и полноразмерными они занимали целый экран на
+         телефоне. На узких экранах подписи прячутся, остаются значки
+         (название всплывает по долгому нажатию — см. title).
+         Отдельной кнопки «Сохранить шаблон» здесь нет намеренно:
+         «Завершить редактирование» делает ровно то же самое (сохраняет
+         через savePurchaseTemplateNow) и вдобавок закрывает режим, а
+         промежуточные правки и так уходят автосохранением. -->
+    <div data-perm="purchase.template" id="purchase-template-controls" class="tool-bar" style="margin-bottom:12px">
+      <button type="button" class="tool-btn tool-btn-primary" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()" title="Редактировать шаблон"><span class="tool-btn-icon">✏️</span><span class="tool-btn-label">Редактировать шаблон</span></button>
+      <button type="button" class="tool-btn" id="purchase-rename-btn" onclick="renamePurchaseCategory()" style="display:none" title="Переименовать"><span class="tool-btn-icon">🏷️</span><span class="tool-btn-label">Переименовать</span></button>
+      <button type="button" class="tool-btn" id="purchase-link-workshop-btn" onclick="linkPurchaseSupplierWorkshop()" style="display:none" title="Привязать к цеху"><span class="tool-btn-icon">🔗</span><span class="tool-btn-label">К цеху</span></button>
+      <button type="button" class="tool-btn" id="purchase-import-btn" onclick="triggerPurchaseImport()" style="display:none" title="Загрузить прайс"><span class="tool-btn-icon">📥</span><span class="tool-btn-label">Прайс</span></button>
       <input type="file" id="purchase-import-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="display:none" onchange="handlePurchaseImportFile(this.files[0]); this.value='';">
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-edit-toggle-btn" onclick="togglePurchaseTemplateEdit()">✏️ Редактировать шаблон</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-link-contact-btn" onclick="setPurchaseContactLink()" style="display:none">🔗 Ссылка для отправки</button>
-      <button type="button" class="btn btn-success btn-sm" id="purchase-save-template-btn" onclick="savePurchaseTemplateNow()" style="display:none">💾 Сохранить шаблон</button>
+      <button type="button" class="tool-btn" id="purchase-link-contact-btn" onclick="setPurchaseContactLink()" style="display:none" title="Ссылка для отправки"><span class="tool-btn-icon">📨</span><span class="tool-btn-label">Ссылка</span></button>
+      <button type="button" class="tool-btn" id="purchase-contacts-btn" onclick="setPurchaseContacts()" style="display:none" title="Контакты поставщика"><span class="tool-btn-icon">📇</span><span class="tool-btn-label">Контакты</span></button>
     </div>
 
     <div class="ingr-calc-hint" id="purchase-hint" style="margin-bottom:14px">
@@ -184,18 +197,18 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
     <div id="purchase-list"></div>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 18px">
-      <button type="button" class="btn btn-ghost btn-sm" id="purchase-add-btn" onclick="addPurchaseRow()" style="flex:1;min-width:160px">+ Добавить ингредиент</button>
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки везде</button>
+    <div class="tool-bar" style="margin:4px 0 18px">
+      <button type="button" class="tool-btn tool-btn-primary" id="purchase-add-btn" onclick="addPurchaseRow()" title="Добавить ингредиент"><span class="tool-btn-icon">➕</span><span class="tool-btn-label">Ингредиент</span></button>
+      <button type="button" class="tool-btn purchase-access-only" id="purchase-reset-residuals-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки"><span class="tool-btn-icon">🧹</span><span class="tool-btn-label">Сбросить остатки</span></button>
     </div>
 
     <div style="margin-bottom:14px">
       <span id="purchase-summary" style="font-size:13px;color:var(--text-muted)"></span>
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-      <button type="button" class="btn btn-primary btn-sm" onclick="copyPurchaseResult()">📋 Скопировать результат</button>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="copyPurchaseReorder()">🔁 Скопировать дозаказ</button>
+    <div class="tool-bar" style="margin-bottom:8px">
+      <button type="button" class="tool-btn tool-btn-primary" onclick="copyPurchaseResult()" title="Скопировать результат"><span class="tool-btn-icon">📋</span><span class="tool-btn-label">Результат</span></button>
+      <button type="button" class="tool-btn" onclick="copyPurchaseReorder()" title="Скопировать дозаказ"><span class="tool-btn-icon">🔁</span><span class="tool-btn-label">Дозаказ</span></button>
     </div>
 
     <!-- "Общий список" и "Общий отчёт" имеют смысл только для встроенных
@@ -217,9 +230,9 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
       <div style="margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--glass-border)">
         <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" id="purchase-combined-report-hint">Общий отчёт по цеху и его поставщикам — с уже указанным остатком по каждому:</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button type="button" class="btn btn-primary btn-sm" onclick="copyAllPurchaseResults()">📋 Скопировать всё (заведение + поставщики)</button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="copyAllPurchaseReorder()">🔁 Скопировать дозаказ (все)</button>
+        <div class="tool-bar">
+          <button type="button" class="tool-btn tool-btn-primary" onclick="copyAllPurchaseResults()" title="Скопировать всё — цех и его поставщики"><span class="tool-btn-icon">📋</span><span class="tool-btn-label">Всё по цеху</span></button>
+          <button type="button" class="tool-btn" onclick="copyAllPurchaseReorder()" title="Скопировать дозаказ по всем"><span class="tool-btn-icon">🔁</span><span class="tool-btn-label">Дозаказ по всем</span></button>
         </div>
       </div>
     </div>
@@ -239,7 +252,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="site.export">
     <div class="admin-panel-row">
       <span>Резервная копия рецептов</span>
       <button class="btn btn-ghost btn-sm" onclick="exportSnapshot()">⬇️ Скачать recipes.json</button>
@@ -247,7 +260,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <p class="admin-panel-hint">Сохраняет текущую базу файлом recipes.json — резервная копия на случай, если данные придётся восстанавливать вручную.</p>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="site.settings">
     <div class="admin-panel-row">
       <span>Синхронизация с GitHub</span>
       <button class="btn btn-ghost btn-sm" onclick="openGithubSettings()">⚙️ Настроить</button>
@@ -255,12 +268,14 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <p class="admin-panel-hint">После настройки каждое изменение автоматически публикуется в репозиторий.</p>
     <p class="admin-panel-hint" id="gh-sync-status" style="margin-top: 10px; font-weight: 600; color: rgb(143, 227, 172);">🟢 Последняя публикация успешна: 05.08.2026, 12:34:57</p>
     <p class="admin-panel-hint" id="gh-sync-link">📥 Сейчас показаны данные, реально полученные с GitHub только что.<br><a href="https://github.com/IPACTAMAHI/pizza/blob/main/recipes.json" target="_blank" rel="noopener" style="color:var(--accent)">Открыть recipes.json на GitHub →</a></p>
-    <button class="btn btn-success btn-sm" onclick="forceSyncNow()" style="margin-top:12px;width:100%">🔄 Синхронизировать сейчас</button>
-    <button class="btn btn-ghost btn-sm" onclick="testGithubConnection()" style="margin-top:8px;width:100%">🧪 Проверить соединение</button>
+    <div class="tool-bar" style="margin-top:12px">
+      <button class="tool-btn tool-btn-primary" onclick="forceSyncNow()" title="Синхронизировать сейчас"><span class="tool-btn-icon">🔄</span><span class="tool-btn-label">Синхронизировать</span></button>
+      <button class="tool-btn" onclick="testGithubConnection()" title="Проверить соединение с GitHub"><span class="tool-btn-icon">🧪</span><span class="tool-btn-label">Проверить связь</span></button>
+    </div>
     <p class="admin-panel-hint" id="gh-test-result" style="margin-top: 8px; color: rgb(143, 227, 172);">🟢 Всё в порядке: доступ к репозиторию "IPACTAMAHI/pizza" есть, права на запись есть.</p>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="site.settings">
     <div class="admin-panel-row">
       <span>Фото шапки</span>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('header-photo-input').click()">📷 Изменить</button>
@@ -269,7 +284,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <p class="admin-panel-hint">Фото на самом верху сайта, за заголовком «Книга рецептов».</p>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="site.settings">
     <div class="admin-panel-row">
       <span>Фото заднего фона</span>
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bg-photo-input').click()">🖼️ Изменить</button>
@@ -285,7 +300,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="venue.manage">
     <div class="admin-panel-row">
       <span>🏠 Заведения сети</span>
       <button class="btn btn-primary btn-sm" onclick="addVenue()">+ Добавить заведение</button>
@@ -304,7 +319,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <div id="venues-admin-list" style="margin-top:10px"></div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="section.manage">
     <div class="admin-panel-row">
       <span>🗂️ Разделы (вкладки)</span>
       <button class="btn btn-primary btn-sm" onclick="addSection()">+ Добавить раздел</button>
@@ -323,7 +338,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <div id="sections-admin-list" style="margin-top:10px"></div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="site.settings">
     <div class="admin-panel-row">
       <span>📤 Telegram для приёма кодов</span>
     </div>
@@ -338,7 +353,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="site.settings">
     <div class="admin-panel-row">
       <span>👥 Telegram-группа для приёма заявок</span>
     </div>
@@ -354,7 +369,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
-  <div class="admin-panel-card developer-only">
+  <div class="admin-panel-card" data-perm="participant.block">
     <div class="admin-panel-row">
       <span>🟢 Онлайн — все посетители сайта</span>
       <span id="online-count-badge" style="color:var(--text-muted);font-size:12px"></span>
@@ -370,19 +385,35 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <div id="online-list" style="margin-top:10px"></div>
   </div>
 
+  <!-- Права роли «Администратор». Настраивает только разработчик:
+       именно этой карточкой раздаются все остальные возможности, и
+       передавать её кому-то ещё небезопасно. -->
+  <div class="admin-panel-card developer-only">
+    <div class="admin-panel-row">
+      <span>🛡 Права роли «Администратор»</span>
+      <button class="btn btn-primary btn-sm" onclick="editAdminRolePermissions()">⚙️ Настроить</button>
+    </div>
+    <p class="admin-panel-hint">
+      Что по умолчанию может человек с ролью «Администратор». Изменение действует сразу на всех
+      админов сети — кроме тех, кому что-то настроено лично (кнопкой «🛡 Права» в списке участников:
+      личная настройка сильнее роли).
+    </p>
+    <div id="admin-perms-summary" style="margin-top:10px"></div>
+  </div>
+
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
       <span>👥 Участники (доступ по ключу)</span>
-      <button class="btn btn-primary btn-sm developer-only" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
+      <button class="btn btn-primary btn-sm" data-perm="participant.keys" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
     </div>
-    <p class="admin-panel-hint developer-only">
+    <p class="admin-panel-hint" data-perm="participant.keys">
       Нажмите «🔑 Сгенерировать ключ» и передайте его человеку любым способом (голосом, в Telegram и т.п.).
       При первом заходе на сайт он введёт имя, затем этот ключ — и сразу попадёт в книгу рецептов, без
       ожидания и без ручного одобрения: ключ и есть одобрение. Этот же ключ можно использовать в любом
       количестве браузеров и устройств — доступ будет открыт всюду, где он введён. Заблокировать человека
       можно кнопкой «🚫 Блок» ниже — это закроет доступ сразу во всех браузерах с этим ключом.
     </p>
-    <p class="admin-panel-hint developer-only">
+    <p class="admin-panel-hint" data-perm="participant.keys">
       Старый способ (человек сам присылает код устройства в Telegram, а вы вставляете его кнопкой ниже)
       по-прежнему работает как запасной вариант — но привязан к конкретному браузеру и не переносится
       сам собой на другие.
@@ -608,7 +639,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260827n"></script>
+<script src="app.js?v=20260827u"></script>
 
 
 
