@@ -58,5 +58,17 @@
     ],
     "role": "viewer",
     "claimedAt": 1787940841623
+  },
+  {
+    "id": "6H1C-LBNK",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787956271280,
+    "blocked": false,
+    "claimed": false,
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
