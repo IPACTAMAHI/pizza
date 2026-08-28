@@ -90,5 +90,17 @@
     ],
     "role": "admin",
     "claimedAt": 1787927074252
+  },
+  {
+    "id": "WFRI-R2DF",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787940792491,
+    "blocked": false,
+    "claimed": false,
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
