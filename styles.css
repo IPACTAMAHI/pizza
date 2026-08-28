@@ -214,7 +214,7 @@
     display: flex; gap: 8px; flex-wrap: wrap;
     margin: 12px 0 4px;
   }
-  .section-toolbar .btn { flex: 1; min-width: 150px; justify-content: center; }
+  .section-toolbar.tool-bar { gap: 6px; }
 
   /* Раскрывающийся список категорий раздела — тут они и создаются. */
   .section-cats {
@@ -1203,6 +1203,188 @@
   body.is-admin .nav-tab.purchase-access-only.tab-hidden,
   body.is-purchase-role .nav-tab.purchase-access-only.tab-hidden { display: none !important; }
 
+  /* ===== ВЫБОР ЗНАЧКА (эмодзи) =====
+     Список открывается в обычном модальном окне: сверху рекомендованные
+     под конкретный случай, ниже общий набор группами. */
+  .modal-emoji {
+    max-height: 46vh;
+    overflow-y: auto;
+    margin: 12px 0 4px;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .emoji-group-title {
+    margin: 10px 0 6px;
+    font-size: 11.5px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .emoji-group-title:first-child { margin-top: 0; }
+  .emoji-grid {
+    display: grid;
+    /* Кнопки крупные: значок выбирают пальцем с телефона, мелкая сетка
+       приводила бы к промахам. */
+    grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+    gap: 6px;
+  }
+  .emoji-btn {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,.05);
+    font-size: 22px; line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease, transform .1s ease, border-color .15s ease;
+  }
+  .emoji-btn:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.25); }
+  .emoji-btn:active { transform: scale(.9); }
+  /* Значок, стоящий сейчас, — чтобы при переименовании было видно, что
+     менять не обязательно. */
+  .emoji-btn.is-current { border-color: var(--accent); background: rgba(226,86,75,.2); }
+
+  /* ===== КОМПАКТНАЯ ПАНЕЛЬ ИНСТРУМЕНТОВ =====
+     Раньше такие ряды собирались из полноразмерных кнопок: шесть штук
+     с длинными подписями занимали на телефоне почти целый экран и
+     читались как список ссылок. Теперь это одна панель со значками —
+     подписи прячутся на узких экранах, название остаётся в title. */
+  .tool-bar {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 6px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .tool-btn {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,.05);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12.5px; font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none; appearance: none;
+    transition: background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .tool-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+  .tool-btn:active { transform: scale(.94); }
+  .tool-btn:disabled { opacity: .5; cursor: default; }
+  .tool-btn-icon { font-size: 15px; line-height: 1; }
+  .tool-btn-primary { background: var(--accent-grad); color: #fff; box-shadow: var(--shadow-accent); }
+  .tool-btn-primary:hover { filter: brightness(1.08); background: var(--accent-grad); color: #fff; }
+  .tool-btn-danger { background: rgba(231,76,60,.16); color: #ff9b90; }
+  .tool-btn-danger:hover { background: rgba(231,76,60,.28); color: #ffb3aa; }
+
+  /* Признак «уже заполнено» (ссылка для отправки, контакты). Точкой, а
+     не словом: она видна и когда подпись скрыта. */
+  .tool-btn.is-done::after {
+    content: '';
+    position: absolute; top: 5px; right: 5px;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--success, #2ecc71);
+  }
+
+  /* Панель раздела уже имеет свои отступы — не задваиваем рамку. */
+  .section-toolbar.tool-bar { width: fit-content; max-width: 100%; }
+
+  /* ===== ОТМЕТКА «КТО И КОГДА ИЗМЕНИЛ» ===== */
+  .edit-stamp {
+    margin: -6px 0 16px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+  .edit-stamp-inline {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+
+  /* ===== ПРАВА =====
+     Сводка набора роли и пометка о личных настройках участника. */
+  .perm-summary { font-size: 12.5px; line-height: 1.55; color: var(--text-muted); }
+  .perm-summary-line { margin-bottom: 6px; }
+  .perm-summary-line strong { color: var(--text); }
+  .perm-badge { background: rgba(226,86,75,.18); border-color: rgba(226,86,75,.35); }
+
+  /* ===== УЧАСТНИКИ ПО ЗАВЕДЕНИЯМ =====
+     Список собирается сворачиваемыми группами — по одной на точку. */
+  .participants-group { margin-bottom: 10px; }
+  .participants-group-head {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%;
+    padding: 11px 13px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    font-family: inherit; font-size: 14px; font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease;
+  }
+  .participants-group-head:hover { background: rgba(255,255,255,.09); }
+  .participants-group-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* Счётчик виден и у свёрнутой группы: сколько там людей, полезно
+     знать, не разворачивая. */
+  .participants-group-count {
+    flex-shrink: 0;
+    min-width: 24px; padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.1);
+    color: var(--text-muted);
+    font-size: 12px; font-weight: 700; text-align: center;
+  }
+  .participants-group-caret {
+    flex-shrink: 0;
+    color: var(--text-muted); font-size: 12px;
+    transition: transform .18s ease;
+  }
+  .participants-group.is-open .participants-group-caret { transform: rotate(90deg); }
+  .participants-group-body { padding-top: 8px; }
+
+  /* ===== КОНТАКТЫ ПОСТАВЩИКА =====
+     Телефон, почта и сайт. Показываются только заполненные — сам блок
+     не рисуется, если не заполнено ничего. */
+  .purchase-contacts {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px;
+  }
+  .purchase-contact {
+    display: inline-flex; align-items: center; gap: 5px;
+    max-width: 100%;
+    padding: 4px 10px;
+    border-radius: 14px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    font-size: 12px; font-weight: 600;
+    text-decoration: none;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    transition: background .15s ease, color .15s ease;
+  }
+  .purchase-contact:hover { background: rgba(255,255,255,.12); color: var(--text); }
+  .purchase-contact-icon { font-size: 12.5px; }
+
+  /* На экране открытого поставщика контакты крупнее: там их читают и
+     нажимают, а не просматривают мельком в списке. */
+  .purchase-contacts-detail { margin: -6px 0 14px; }
+  .purchase-contacts-detail .purchase-contact { font-size: 13px; padding: 7px 13px; }
+
   /* ===== АКТУАЛЬНОСТЬ РЕЦЕПТА =====
      Статус («Актуально» / «Убрано с меню» / «Не актуально (сезонное)»)
      виден только админу и разработчику: сотруднику неактуальные
@@ -1268,6 +1450,13 @@
        три подписи туда не помещаются и ломают вёрстку карточки. */
     .recipe-card .status-opt-label { display: none; }
     .recipe-card .status-opt { padding: 5px 9px; font-size: 13px; }
+
+    /* То же самое с панелью инструментов: значки остаются, подписи
+       уходят — кроме главной кнопки, по которой должно быть сразу
+       понятно, что вообще делает эта панель. */
+    .tool-btn:not(.tool-btn-primary) .tool-btn-label { display: none; }
+    .tool-btn:not(.tool-btn-primary) { padding: 9px 11px; }
+    .tool-btn-primary { font-size: 12px; }
   }
   @media (min-width: 901px) {
     .header { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
