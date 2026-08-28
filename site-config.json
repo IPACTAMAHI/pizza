@@ -101,14 +101,6 @@
       "label": "Кондитер",
       "icon": "🎂",
       "venue": "venue-main"
-    },
-    {
-      "id": "pmtdg7z83ktlgy",
-      "label": "вфыв",
-      "icon": "🍽️",
-      "venue": "venue-main",
-      "updatedAt": 1787951604243,
-      "updatedBy": "Разработчик"
     }
   ],
   "mainRoleGranted": true,
