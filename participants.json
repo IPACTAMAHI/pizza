@@ -81,13 +81,14 @@
   {
     "id": "N2R6-4GHG",
     "fingerprint": "",
-    "name": "",
+    "name": "N2R6-4GHG",
     "addedAt": 1787926923626,
     "blocked": false,
-    "claimed": false,
+    "claimed": true,
     "roles": [
       "admin"
     ],
-    "role": "admin"
+    "role": "admin",
+    "claimedAt": 1787927074252
   }
 ]
