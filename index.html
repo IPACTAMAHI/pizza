@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260827v">
+<link rel="stylesheet" href="styles.css?v=20260828b">
 </head>
 <body>
 
@@ -385,6 +385,22 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <div id="online-list" style="margin-top:10px"></div>
   </div>
 
+  <!-- Журнал действий. Виден всем, у кого открыта админ-панель:
+       вопрос «кто поменял норму» возникает у любого из них, а не
+       только у владельца сайта. -->
+  <div class="admin-panel-card admin-only">
+    <div class="admin-panel-row">
+      <span>🧾 История изменений</span>
+    </div>
+    <p class="admin-panel-hint">
+      Кто и что менял: рецепты, недельные нормы, цеха и поставщиков, роли и права.
+      Нажмите на имя, чтобы оставить только его действия. История одного человека также
+      открывается кнопкой «🧾 История» в его строке ниже.
+    </p>
+    <div id="activity-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
+    <div id="activity-log-list" style="margin-top:10px"></div>
+  </div>
+
   <!-- Права роли «Администратор». Настраивает только разработчик:
        именно этой карточкой раздаются все остальные возможности, и
        передавать её кому-то ещё небезопасно. -->
@@ -639,7 +655,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260827v"></script>
+<script src="app.js?v=20260828b"></script>
 
 
 
