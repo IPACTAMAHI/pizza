@@ -62,14 +62,15 @@
   {
     "id": "K918-S0EF",
     "fingerprint": "",
-    "name": "",
+    "name": "Натали",
     "addedAt": 1787986071169,
     "blocked": false,
-    "claimed": false,
+    "claimed": true,
     "roles": [
       "purchase",
       "tab:pmtbp6cdzl2wfz"
     ],
-    "role": "purchase"
+    "role": "purchase",
+    "claimedAt": 1787986293828
   }
 ]
