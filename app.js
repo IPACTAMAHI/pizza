@@ -843,6 +843,15 @@ async function requireAccessKey(name) {
     }
     var p = participants.filter(function(x) { return x.id === normalized; })[0];
 
+    // Отозванный ключ отвергаем отдельно от «не найден»: этот отказ
+    // работает даже по устаревшей копии, потому что написан в самих
+    // данных, а не выводится из их отсутствия.
+    if (p && isRevokedRecord(p)) {
+      registerFailedKeyAttempt();
+      await customConfirm('Этот ключ отозван администратором и больше не действует. Если доступ нужен — попросите новый ключ.', '🔒 Ключ отозван');
+      continue;
+    }
+
     if (!p) {
       registerFailedKeyAttempt();
       await customConfirm('Такой ключ не найден. Проверьте, что ввели его без ошибок и целиком (формат XXXX-XXXX). Если не поможет — получите новый ключ у администратора.', '⚠️ Ключ не найден');
@@ -1373,7 +1382,7 @@ function reconcileClaimedKeysFromPresence() {
   Object.keys(onlineUsers).forEach(function(id) {
     var entry = onlineUsers[id];
     var p = participants.filter(function(x) { return x.id === id; })[0];
-    if (p && p.claimed === false) {
+    if (p && !isRevokedRecord(p) && p.claimed === false) {
       p.claimed = true;
       p.claimedAt = p.claimedAt || (entry && entry.lastSeen) || Date.now();
       if (!p.name && entry && entry.name) p.name = entry.name;
@@ -1447,7 +1456,7 @@ function renderOnlineUsersList() {
   var ids = Object.keys(onlineUsers);
   var entries = ids.map(function(id) {
     var e = onlineUsers[id] || {};
-    var participant = participants.filter(function(p) { return p.id === id; })[0] || null;
+    var participant = activeParticipants(participants).filter(function(p) { return p.id === id; })[0] || null;
     return {
       id: id,
       lastSeen: e.lastSeen || 0,
@@ -3227,10 +3236,51 @@ function resendTelegramRequest() {
 /* Находит запись об ЭТОМ устройстве в списке участников — по коду
    устройства или (если код изменился, например из-за инкогнито) по
    отпечатку браузера. */
+/* ================================================================
+   ОТЗЫВ КЛЮЧА («надгробие» вместо стирания записи)
+   ================================================================
+   Ключ — это и есть id записи участника, поэтому раньше удаление
+   просто выбрасывало её из списка. Работало это почти всегда: при
+   вводе ключа сайт спрашивает GitHub API напрямую, а не отстающую
+   копию с Pages, и удалённого не пускает.
+
+   Но оставалась щель. Если API в этот момент недоступен (нет сети или
+   исчерпан лимит запросов — а он общий на весь Wi-Fi заведения),
+   проверка откатывается на копию с Pages. Копия отстаёт до минуты, и
+   в ней удалённый ещё есть — значит в это окно уволенный сотрудник
+   мог войти по старому ключу.
+
+   Поэтому запись теперь не стирается, а помечается отозванной. Отказ
+   написан в самих данных, и его видно даже в устаревшей копии — то
+   есть и без работающего API. Из списков и подсчётов такие записи
+   исключены, человеку они не видны, а через месяц вычищаются совсем
+   (см. purgeOldRevoked) — к тому времени копия давно обновилась. */
+function isRevokedRecord(p) {
+  return !!(p && p.revoked);
+}
+
+var REVOKED_KEEP_MS = 30 * 24 * 60 * 60 * 1000;
+
+/* Убирает надгробия старше месяца: их работа сделана, дальше они
+   только занимают место в файле. */
+function purgeOldRevoked(list) {
+  var now = Date.now();
+  return (list || []).filter(function(p) {
+    if (!isRevokedRecord(p)) return true;
+    return (now - (p.revokedAt || 0)) < REVOKED_KEEP_MS;
+  });
+}
+
+/* Живые участники — то, что показывается и считается. */
+function activeParticipants(list) {
+  return (list || []).filter(function(p) { return !isRevokedRecord(p); });
+}
+
 function findMyRecordIn(list) {
   var myId = getDeviceId();
   var myFp = getDeviceFingerprint();
   return (list || []).filter(function(p) {
+    if (isRevokedRecord(p)) return false; // ключ отозван — записи для нас нет
     if (p.id === myId) return true;
     if (myFp && p.fingerprint && p.fingerprint === myFp) return true;
     return false;
@@ -3359,8 +3409,11 @@ function renderParticipantsList() {
   // не воспользовался (claimed === false) — это ещё не люди, поэтому
   // они не считаются ни "активными", ни участниками вообще: у них
   // своя отдельная вкладка ниже.
-  var unclaimedKeys = participants.filter(function(p) { return p.claimed === false; });
-  var realParticipants = participants.filter(function(p) { return p.claimed !== false; });
+  // Отозванные ключи не показываем нигде: для администратора этих
+  // людей больше нет, запись живёт только ради самого отказа.
+  var visible = activeParticipants(participants);
+  var unclaimedKeys = visible.filter(function(p) { return p.claimed === false; });
+  var realParticipants = visible.filter(function(p) { return p.claimed !== false; });
 
   var total = realParticipants.length;
   var blockedCount = realParticipants.filter(function(p) { return p.blocked; }).length;
@@ -3958,7 +4011,16 @@ async function removeParticipant(id) {
   if (!can('participant.remove')) { denyToast('participant.remove'); return; }
   var ok = await customConfirm('Удалить эту запись из списка участников?');
   if (!ok) return;
-  participants = participants.filter(function(x) { return x.id !== id; });
+  // Помечаем запись отозванной вместо удаления — иначе в тот короткий
+  // промежуток, пока копия на Pages не обновилась, старый ключ ещё
+  // сработал бы (см. комментарий у isRevokedRecord).
+  var victim = participants.filter(function(x) { return x.id === id; })[0];
+  if (victim) {
+    victim.revoked = true;
+    victim.revokedAt = Date.now();
+    victim.revokedBy = currentActorLabel();
+  }
+  participants = purgeOldRevoked(participants);
   renderParticipantsList();
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
