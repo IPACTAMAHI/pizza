@@ -58,5 +58,18 @@
     ],
     "role": "viewer",
     "claimedAt": 1787940841623
+  },
+  {
+    "id": "K918-S0EF",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1787986071169,
+    "blocked": false,
+    "claimed": false,
+    "roles": [
+      "purchase",
+      "tab:pmtbp6cdzl2wfz"
+    ],
+    "role": "purchase"
   }
 ]
