@@ -5,8 +5,12 @@
     --accent: #e2564b;
     --accent-2: #d9a54e;
     --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 55%, #b23a30);
-    --text: #f7f4ef;
-    --text-muted: #b9b3ab;
+    --text: #f8f6f2;
+    /* Вторичный текст стал светлее: на прежнем #b9b3ab подписи под
+       названиями рецептов читались с трудом, особенно на телефоне при
+       ярком свете. Контраст к фону карточки теперь около 7:1. */
+    --text-muted: #cbc5bc;
+    --text-faint: #9b958d;
     --success: #3fb579;
     --warning: #d9a54e;
 
@@ -54,7 +58,10 @@
     pointer-events: none;
     z-index: -2;
     background:
-      linear-gradient(rgba(10,10,12,.92), rgba(8,8,10,.97)),
+      /* Фото оставлено, но приглушено почти до фактуры: под текстом оно
+         не должно спорить с содержимым. Заметно только по краям, где
+         карточек нет. */
+      linear-gradient(rgba(9,9,11,.965), rgba(7,7,9,.985)),
       url(images/site-background.jpg);
     background-size: cover;
     background-position: center;
@@ -185,9 +192,19 @@
   .search-clear:active { transform: translateY(-50%) scale(.9); }
 
   /* Чипы категорий (вкладка "Категории") */
-  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* Категории идут одной строкой с прокруткой: три ряда чипов съедали
+     треть экрана до того, как начинался сам список. */
+  .chip-row {
+    display: flex; gap: 6px;
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
   .chip {
-    padding: 9px 15px;
+    flex-shrink: 0;
+    padding: 7px 13px;
     border-radius: 20px;
     background: rgba(255,255,255,.06);
     backdrop-filter: blur(8px);
@@ -195,6 +212,7 @@
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 600;
+    white-space: nowrap;
     cursor: pointer;
     border: 1px solid var(--glass-border);
     touch-action: manipulation;
@@ -477,7 +495,20 @@
   .nav-tab.active .nav-label { border-bottom-color: var(--accent); }
 
   /* ===== CONTENT AREA ===== */
-  .tab-content { display: none; padding: 16px; max-width: 800px; margin: 0 auto; }
+  .tab-content { display: none; padding: 16px; max-width: 820px; margin: 0 auto; }
+
+  /* На большом экране список идёт в несколько колонок: раньше контент
+     держался узкой полосой по центру, и на мониторе помещалось пять
+     рецептов из сорока двух — остальное приходилось прокручивать. */
+  @media (min-width: 900px) {
+    .tab-content { max-width: 1180px; padding: 20px 24px; }
+    .cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
+    .cards-grid .recipe-card { margin-bottom: 0; }
+  }
+  @media (min-width: 1320px) {
+    .tab-content { max-width: 1480px; }
+    .cards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
   .tab-content.active { display: block; animation: fadeIn .25s ease; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -487,9 +518,9 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    padding: 11px 12px;
-    margin-bottom: 9px;
+    border-radius: 16px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
     cursor: pointer;
     transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
     display: flex;
@@ -511,14 +542,22 @@
   }
 
   .card-thumb {
-    width: 76px; height: 76px; border-radius: 12px;
+    width: 64px; height: 64px; border-radius: 11px;
     object-fit: cover; flex-shrink: 0;
     background: var(--surface);
     box-shadow: 0 4px 14px rgba(0,0,0,.18);
     border: 1px solid rgba(255,255,255,.08);
   }
   .card-info { flex: 1; min-width: 0; }
-  .card-info h3 { font-family: var(--font-display); font-weight: 600; font-size: 16px; line-height: 1.25; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Название — основной ориентир в списке, поэтому крупнее и без
+     курсивной подачи: важнее скорость чтения, чем стиль. */
+  .card-info h3 {
+    font-family: var(--font-body);
+    font-weight: 700; font-size: 16px; line-height: 1.3;
+    letter-spacing: -.1px;
+    margin-bottom: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 18px; padding-left: 4px; }
   .card-share-btn {
@@ -540,9 +579,10 @@
   .card-share-btn:hover { background: rgba(226,86,75,.16); }
   .card-share-btn:hover svg { stroke: var(--accent); }
   .badge {
-    font-size: 11px; padding: 3px 9px;
-    border-radius: 20px; background: rgba(255,255,255,.09);
+    font-size: 11.5px; padding: 3px 9px;
+    border-radius: 20px; background: rgba(255,255,255,.1);
     color: var(--text);
+    font-weight: 600;
   }
   .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
   .badge-video-active {
@@ -1299,6 +1339,67 @@
   /* Панель раздела уже имеет свои отступы — не задваиваем рамку. */
   .section-toolbar.tool-bar { width: fit-content; max-width: 100%; }
 
+  /* Неактивная кнопка подтверждения — пока обязательное поле пустое.
+     Видно, что нажимать пока нечего, и понятно, что дело в поле. */
+  .modal-actions .btn.is-disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    filter: grayscale(.4);
+  }
+  .modal-actions .btn.is-disabled:active { transform: none; }
+
+  /* Метка заведения у ключа — чтобы не путать её с ролями. */
+  .venue-badge { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+
+  /* Кнопка удаления фото — поверх снимка в форме рецепта. */
+  .photo-upload { position: relative; }
+  .photo-remove-btn {
+    position: absolute; top: 8px; right: 8px;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.2);
+    /* Тёмная подложка: фото бывает любым, и без неё значок терялся бы
+       на светлых снимках. */
+    background: rgba(20,20,24,.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .photo-remove-btn:hover { background: rgba(231,76,60,.85); }
+  .photo-remove-btn:active { transform: scale(.9); }
+
+  /* ===== ЖУРНАЛ ДЕЙСТВИЙ ===== */
+  .activity-item {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--glass-border);
+  }
+  .activity-head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-bottom: 3px;
+  }
+  .activity-head strong { font-size: 13.5px; }
+  /* Время справа и приглушённое: в журнале сначала читают «кто и что»,
+     а время нужно уже вторым шагом. */
+  .activity-time { margin-left: auto; flex-shrink: 0; font-size: 11.5px; color: var(--text-muted); }
+  .activity-what { font-size: 13px; color: var(--text); }
+  .activity-where { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .activity-details {
+    margin-top: 4px;
+    font-size: 12px; line-height: 1.5;
+    color: var(--text-muted);
+    word-break: break-word;
+  }
+  .activity-modal-list { max-height: 48vh; overflow-y: auto; margin-top: 10px; text-align: left; }
+
   /* ===== ОТМЕТКА «КТО И КОГДА ИЗМЕНИЛ» ===== */
   .edit-stamp {
     margin: -6px 0 16px;
@@ -1357,6 +1458,19 @@
   .participants-group.is-open .participants-group-caret { transform: rotate(90deg); }
   .participants-group-body { padding-top: 8px; }
 
+  /* ===== НЕСКОЛЬКО ПОЛЕЙ В ОДНОМ ОКНЕ =====
+     Так заполняют контакты поставщика: все поля сразу, а не по одному
+     окну на каждое. */
+  .modal-fields { display: flex; flex-direction: column; gap: 12px; margin: 14px 0 4px; }
+  .modal-field { display: block; }
+  .modal-field-label {
+    display: block; margin-bottom: 5px;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--text-muted);
+  }
+  .modal-field input { margin-bottom: 0; }
+  .modal-field-hint { display: block; margin-top: 4px; font-size: 11.5px; color: var(--text-muted); }
+
   /* ===== КОНТАКТЫ ПОСТАВЩИКА =====
      Телефон, почта и сайт. Показываются только заполненные — сам блок
      не рисуется, если не заполнено ничего. */
@@ -1366,6 +1480,10 @@
   }
   .purchase-contact {
     display: inline-flex; align-items: center; gap: 5px;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    -webkit-tap-highlight-color: transparent;
     max-width: 100%;
     padding: 4px 10px;
     border-radius: 14px;
@@ -1392,8 +1510,37 @@
 
   /* Строка фильтра по актуальности. Слегка отделена от чипов категорий
      сверху, чтобы две строки отбора не читались как одна длинная. */
-  .status-filter-row { margin: 10px 0 2px; }
-  .status-chip { font-size: 12.5px; padding: 8px 13px; }
+  /* Фильтр актуальности собран в один блок с разделителями — так видно,
+     что это один переключатель на четыре положения, а не четыре
+     самостоятельные кнопки рядом с чипами категорий. */
+  .status-filter-row {
+    margin: 8px 0 2px;
+    display: inline-flex; gap: 0;
+    padding: 3px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--glass-border);
+    max-width: 100%;
+  }
+  .status-chip {
+    font-size: 12.5px; padding: 7px 12px;
+    border-radius: 9px;
+    background: transparent; border-color: transparent;
+    box-shadow: none;
+  }
+  .status-chip.active { background: var(--accent-grad); box-shadow: none; }
+
+  /* ===== ПЛАВНОСТЬ =====
+     Появление и переходы делаем короткими: интерфейсом пользуются на
+     кухне, между делом, и медленная анимация там раздражает. */
+  .recipe-card { animation-duration: .28s; }
+  .tab-content.active { animation: fadeIn .2s ease; }
+  .chip, .status-opt, .tool-btn, .nav-tab { transition-duration: .15s; }
+  /* Уважаем системную настройку «меньше движения». */
+  @media (prefers-reduced-motion: reduce) {
+    .recipe-card, .tab-content.active { animation: none; }
+    * { transition-duration: .01ms !important; }
+  }
 
   /* Приглушённая карточка: рецепт на месте, но в работе его сейчас нет.
      Пунктирная рамка слева отличает такие карточки от актуальных даже
@@ -1408,9 +1555,14 @@
   /* Переключатель статуса. Кнопки узкие и в один ряд — их жмут с
      телефона прямо в списке, не открывая рецепт. */
   .card-status-switch {
-    display: flex; gap: 5px; flex-wrap: wrap;
+    display: flex; gap: 4px; flex-wrap: wrap;
     margin-top: 7px;
   }
+  /* В списке у переключателя остаются одни значки: три подписи на каждой
+     из сорока карточек превращали список в стену кнопок. Полные названия
+     видны в самой карточке рецепта и во всплывающей подсказке. */
+  .recipe-card .status-opt-label { display: none; }
+  .recipe-card .status-opt { padding: 5px 9px; font-size: 13px; }
   .status-opt {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 5px 10px;
