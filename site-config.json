@@ -72,6 +72,16 @@
       "color": "#2f6f7e",
       "sizes": [],
       "section": "pmtbp6cdzl2wfz"
+    },
+    {
+      "id": "pmteyesb187orz",
+      "label": "2",
+      "icon": "🍕",
+      "color": "#8a3f6b",
+      "sizes": [],
+      "section": "pmteybxn9r94c8",
+      "updatedAt": 1788042621133,
+      "updatedBy": "Разработчик"
     }
   ],
   "repoOwner": "IPACTAMAHI",
@@ -103,11 +113,11 @@
       "venue": "venue-main"
     },
     {
-      "id": "pmteyd8ziu5cd0",
-      "label": "й",
+      "id": "pmteybxn9r94c8",
+      "label": "1",
       "icon": "🍕",
       "venue": "vpmtc0x7kfezeh4",
-      "updatedAt": 1788042549438,
+      "updatedAt": 1788042488085,
       "updatedBy": "Разработчик"
     }
   ],
