@@ -234,6 +234,18 @@ const EMOJI_LIBRARY = [
   { group: 'Метки', items: ['📁', '🗂️', '🏷️', '⭐', '✅', '❤️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🆕', '🔝'] }
 ];
 
+/* Набор полей в одном окне. Раньше несколько значений спрашивались
+   подряд, по одному окну на каждое: телефон → почта → сайт. Это
+   раздражало (три подтверждения ради одной карточки) и мешало
+   исправлять — увидев опечатку в телефоне, приходилось проходить всю
+   цепочку заново. Теперь все поля показываются сразу. */
+function ensureModalFieldsDom() {
+  if ($('app-modal-fields')) return;
+  var input = $('app-modal-input');
+  if (!input) return;
+  input.insertAdjacentHTML('afterend', '<div class="modal-fields" id="app-modal-fields" style="display:none"></div>');
+}
+
 function ensureModalEmojiDom() {
   if ($('app-modal-emoji')) return;
   var overlay = $('app-modal-overlay');
@@ -297,6 +309,7 @@ function ensureModalFooterDom() {
 function showModal(opts) {
   ensureModalDom();
   ensureModalChecklistDom();
+  ensureModalFieldsDom();
   ensureModalEmojiDom();
   ensureModalFooterDom();
   return new Promise(function(resolve) {
@@ -312,6 +325,7 @@ function showModal(opts) {
     var codeWrap = $('app-modal-code-entry-wrap');
     var codeLink = $('app-modal-code-entry');
     var checklistEl = $('app-modal-checklist');
+    var fieldsEl = $('app-modal-fields');
     var footerEl = $('app-modal-footer');
 
     titleEl.textContent = opts.title || '';
@@ -369,6 +383,27 @@ function showModal(opts) {
       }
     }
 
+    // Несколько полей сразу: opts.withFields = [{key, label, value,
+    // placeholder, inputType}]. Возвращается объект {key: значение}.
+    if (fieldsEl) {
+      if (opts.withFields && opts.withFields.length) {
+        fieldsEl.style.display = '';
+        fieldsEl.innerHTML = opts.withFields.map(function(f) {
+          return '<label class="modal-field">' +
+            '<span class="modal-field-label">' + esc(f.label) + '</span>' +
+            '<input type="' + escAttr(f.inputType || 'text') + '" data-field-key="' + escAttr(f.key) + '"' +
+              ' value="' + escAttr(f.value || '') + '"' +
+              ' placeholder="' + escAttr(f.placeholder || '') + '"' +
+              ' autocapitalize="off" autocorrect="off" spellcheck="false">' +
+            (f.hint ? '<span class="modal-field-hint">' + esc(f.hint) + '</span>' : '') +
+          '</label>';
+        }).join('');
+      } else {
+        fieldsEl.style.display = 'none';
+        fieldsEl.innerHTML = '';
+      }
+    }
+
     // Сетка эмодзи. Нажатие сразу закрывает окно с выбранным значком:
     // выбор значка — законченное действие, подтверждать его отдельной
     // кнопкой было бы лишним шагом.
@@ -394,11 +429,31 @@ function showModal(opts) {
     if (devWrap) devWrap.style.display = opts.devLogin ? '' : 'none';
     if (codeWrap) codeWrap.style.display = opts.enterCode ? '' : 'none';
 
+    // Обязательное поле: пока не введено осмысленное значение, кнопка
+    // подтверждения неактивна. Раньше окно на пустой ввод просто
+    // открывалось заново, и это выглядело как «кнопка не работает».
+    var minLen = opts.requireInput ? (opts.minInputLength || 1) : 0;
+    function syncRequired() {
+      if (!minLen) return;
+      var ok = inputEl.value.trim().length >= minLen;
+      okBtn.disabled = !ok;
+      okBtn.classList.toggle('is-disabled', !ok);
+    }
+    inputEl.oninput = syncRequired;
+    syncRequired();
+
     overlay.classList.add('show');
     if (opts.withInput) setTimeout(function() { inputEl.focus(); }, 60);
+    else if (opts.withFields && opts.withFields.length) setTimeout(function() {
+      var first = fieldsEl.querySelector('input');
+      if (first) first.focus();
+    }, 60);
 
     function cleanup(result) {
       overlay.classList.remove('show');
+      okBtn.disabled = false;
+      okBtn.classList.remove('is-disabled');
+      inputEl.oninput = null;
       okBtn.onclick = null;
       cancelBtn.onclick = null;
       inputEl.onkeydown = null;
@@ -408,6 +463,7 @@ function showModal(opts) {
     }
 
     okBtn.onclick = function() {
+      if (minLen && inputEl.value.trim().length < minLen) return; // защита на случай нажатия с клавиатуры
       if (opts.withChecklist) {
         // Отключённые галочки (например «Администратор» у обычного админа)
         // тоже попадают в результат, если они отмечены, — иначе сохранение
@@ -418,11 +474,18 @@ function showModal(opts) {
         });
         cleanup(picked);
       }
+      else if (opts.withFields) {
+        var values = {};
+        fieldsEl.querySelectorAll('input[data-field-key]').forEach(function(inp) {
+          values[inp.dataset.fieldKey] = inp.value.trim();
+        });
+        cleanup(values);
+      }
       else if (opts.withSelect) cleanup(selectEl.value);
       else cleanup(opts.withInput ? inputEl.value : true);
     };
     cancelBtn.onclick = function() {
-      cleanup((opts.withInput || opts.withSelect || opts.withChecklist) ? null : false);
+      cleanup((opts.withInput || opts.withSelect || opts.withChecklist || opts.withFields) ? null : false);
     };
     inputEl.onkeydown = function(e) {
       if (e.key === 'Enter') { e.preventDefault(); okBtn.onclick(); }
@@ -667,11 +730,22 @@ async function ensureParticipantName() {
   var name = localStorage.getItem(DEVICE_NAME_KEY);
   if (name) return; // уже представлялись раньше в этом браузере
 
+  var warning = '';   // что сказать, если в прошлый раз ввели не то
+  var typed = '';     // уже набранное — чтобы не заставлять печатать заново
+
   while (true) {
     var entered = await showModal({
       title: '👋 Добро пожаловать в Route 20',
-      message: 'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом. Продолжить можно только после того, как вы представитесь.',
+      message: (warning ? warning + '\n\n' : '') +
+        'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом. Без имени продолжить нельзя.',
       withInput: true,
+      inputValue: typed,
+      placeholder: 'Имя и фамилия',
+      // Имя обязательно: администратор раздаёт доступ по именам, и
+      // безымянная запись в списке участников бесполезна — непонятно,
+      // кому её блокировать или продлевать.
+      requireInput: true,
+      minInputLength: 2,
       hideCancel: true,
       okText: 'Продолжить',
       devLogin: true
@@ -683,13 +757,24 @@ async function ensureParticipantName() {
       continue; // ключ не ввели/не подошёл — снова показываем экран знакомства
     }
 
-    if (entered && entered.trim()) {
-      var finalName = entered.trim();
-      localStorage.setItem(DEVICE_NAME_KEY, finalName);
-      await requireAccessKey(finalName); // просит ключ, выданный администратором, и сама привязывает к нему устройство
-      return;
+    var finalName = (entered || '').trim().replace(/\s+/g, ' ');
+    typed = finalName;
+
+    // Кнопка «Продолжить» и так неактивна при пустом поле, но проверку
+    // дублируем: сюда можно попасть, например, нажав Enter.
+    if (finalName.length < 2) {
+      warning = '⚠️ Пожалуйста, укажите имя — хотя бы два символа.';
+      continue;
     }
-    // имя пустое — показываем экран знакомства ещё раз
+    // Имя из одних цифр или знаков администратору ничего не скажет.
+    if (!/[\p{L}]/u.test(finalName)) {
+      warning = '⚠️ Похоже, это не имя. Напишите, как вас зовут, буквами.';
+      continue;
+    }
+
+    localStorage.setItem(DEVICE_NAME_KEY, finalName);
+    await requireAccessKey(finalName); // просит ключ, выданный администратором, и сама привязывает к нему устройство
+    return;
   }
 }
 
@@ -2061,7 +2146,9 @@ function ensureSectionContent(s) {
     '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">' +
       '<span id="section-count-' + sid + '" style="font-size:14px;color:var(--text-muted)">Всего: 0</span>' +
     '</div>' +
-    '<div id="section-list-' + sid + '"></div>' +
+    // Класс cards-grid включает многоколоночную раскладку на широком
+    // экране (см. styles.css). На телефоне это обычный столбец.
+    '<div class="cards-grid" id="section-list-' + sid + '"></div>' +
   '</div>';
   container.insertAdjacentHTML('beforeend', html);
 }
@@ -2288,6 +2375,7 @@ async function addVenue() {
   var id = 'v' + uid();
   list.push(stampEdit({ id: id, label: label, icon: icon, purchase: false }));
   siteConfig.venues = list;
+  logActivity('создал заведение', 'Сеть', label);
   var ok = await saveVenues('✅ Заведение «' + label + '» создано — оно пустое, добавьте в него разделы');
   if (ok) setCurrentVenue(id); // сразу переводим туда, иначе непонятно, где создавать разделы
 }
@@ -2306,12 +2394,14 @@ async function renameVenue(id) {
   var icon = await pickEmoji('venue', v.icon || '', '✏️ Значок заведения «' + label + '»');
   if (icon === null) icon = v.icon || '';
 
+  var wasVenueName = v.label;
   v.label = label;
   v.icon = (icon || '').trim();
   stampEdit(v);
   siteConfig.venues = list;
   renderParticipantsList(); // в подписях ролей указано заведение — обновляем
   updateVenueSwitcher();
+  logActivity('переименовал заведение', 'Сеть', wasVenueName + ' → ' + label);
   await saveVenues('✅ Заведение переименовано');
 }
 
@@ -2339,6 +2429,7 @@ async function toggleVenuePurchase(id) {
   }
   siteConfig.venues = list;
   renderParticipantsList(); // роль закупки этой точки появляется/исчезает в списке ролей
+  logActivity(v.purchase ? 'подключил вкладку «Закупка»' : 'убрал вкладку «Закупка»', v.label, '');
   await saveVenues(v.purchase
     ? '✅ Вкладка «Закупка» добавлена — заведите в ней цеха и поставщиков'
     : '✅ Вкладка «Закупка» убрана');
@@ -2359,11 +2450,15 @@ async function removeVenue(id) {
   var doomedRecipes = 0;
   doomedSections.forEach(function(s) { doomedRecipes += recipesForSection(s.id).length; });
   var doomedPurchase = purchaseCategories.filter(function(c) { return purchaseCategoryVenueId(c) === id; }).length;
+  var doomedKeys = participants.filter(function(p) {
+    return !isRevokedRecord(p) && participantVenueId(p) === id;
+  }).length;
 
   var ok = await customConfirm(
     'Удалить заведение «' + v.label + '» со всем содержимым?\n\n' +
     'Пропадут: разделов — ' + doomedSections.length + ', рецептов — ' + doomedRecipes +
     (doomedPurchase ? ', цехов и поставщиков в закупке — ' + doomedPurchase : '') + '.\n\n' +
+    (doomedKeys ? 'Ключи доступа этого заведения (' + doomedKeys + ') перестанут действовать — их владельцы потеряют доступ.\n\n' : '') +
     'Это действие необратимо.',
     '🗑️ Удалить заведение'
   );
@@ -2389,8 +2484,25 @@ async function removeVenue(id) {
     syncPurchaseToGithub();
   }
 
+  // Ключи закрытой точки отзываем в том же действии: оставить их
+  // рабочими значило бы, что люди уволенной смены продолжают заходить
+  // на сайт, просто не видя своих вкладок.
+  var revokedCount = revokeVenueKeys(id, v.label);
+  if (revokedCount) {
+    renderParticipantsList();
+    await syncParticipantsToGithub();
+    // Тем, кто сейчас на сайте, доступ закрываем сразу, не дожидаясь
+    // фоновой проверки.
+    for (var ki = 0; ki < participants.length; ki++) {
+      var pk = participants[ki];
+      if (pk.revoked && pk.revokedAt && (Date.now() - pk.revokedAt) < 5000) await signalDeviceKick(pk.id);
+    }
+  }
+
   if (currentVenue === id) currentVenue = '';
-  await saveVenues('🗑 Заведение «' + v.label + '» удалено');
+  logActivity('удалил заведение', 'Сеть', v.label + ' (разделов: ' + doomedSections.length +
+    ', рецептов: ' + doomedRecipes + (revokedCount ? ', отозвано ключей: ' + revokedCount : '') + ')');
+  await saveVenues('🗑 Заведение «' + v.label + '» удалено' + (revokedCount ? ' · отозвано ключей: ' + revokedCount : ''));
   setCurrentVenue(fallbackVenueId());
 }
 
@@ -2454,6 +2566,7 @@ async function addSection() {
   var venue = currentVenueId();
   list.push(stampEdit({ id: uid(), label: label, icon: icon, venue: venue }));
   siteConfig.sections = list;
+  logActivity('создал раздел', venueLabel(venue), label);
   await saveSections('✅ Раздел «' + label + '» создан в «' + venueLabel(venue) + '» — выдайте его роль тем, кто должен его видеть');
 }
 
@@ -2473,11 +2586,13 @@ async function renameSection(id) {
   var icon = await pickEmoji('section', s.icon || '', '✏️ Значок раздела «' + label + '»');
   if (icon === null) icon = s.icon || '';
 
+  var was = s.label;
   s.label = label;
   s.icon = (icon || '').trim();
   stampEdit(s);
   siteConfig.sections = list;
   renderParticipantsList(); // подпись роли раздела берётся отсюда же
+  logActivity('переименовал раздел', venueLabel(sectionVenueId(s)), was + ' → ' + label);
   await saveSections('✅ Раздел и его роль переименованы');
 }
 
@@ -2607,6 +2722,44 @@ function allRoleDefs() {
     });
   });
   return defs;
+}
+
+/* Роли, относящиеся к одному заведению: его вкладки, его закупка и
+   его администратор. Общая роль главного администратора сюда не
+   входит — её выдают отдельно и осознанно, а не мимоходом при
+   создании ключа для точки. */
+function rolesForVenue(venueId) {
+  var v = venueById(venueId);
+  if (!v) return [];
+  var mine = [adminRoleId(venueId), purchaseRoleId(venueId)];
+  sectionsForVenue(venueId).forEach(function(s) { mine.push('tab:' + s.id); });
+  return allRoleDefs().filter(function(d) { return mine.indexOf(d.id) !== -1; });
+}
+
+/* Заведение, для которого выдан ключ. У ключей, созданных до появления
+   сети, привязки нет — считаем их ключами первой точки. */
+function participantVenueId(p) {
+  return (p && p.venue) ? p.venue : fallbackVenueId();
+}
+
+/* Отзыв всех ключей заведения. Вызывается при удалении точки: её люди
+   не должны сохранять доступ, а сами ключи — оставаться рабочими.
+   Отзываем так же, как при удалении участника, — пометкой, чтобы отказ
+   работал даже по устаревшей копии данных (см. isRevokedRecord). */
+function revokeVenueKeys(venueId, venueName) {
+  var affected = participants.filter(function(p) {
+    return !isRevokedRecord(p) && participantVenueId(p) === venueId;
+  });
+  if (!affected.length) return 0;
+  var by = currentActorLabel();
+  affected.forEach(function(p) {
+    p.revoked = true;
+    p.revokedAt = Date.now();
+    p.revokedBy = by;
+    p.revokedReason = 'удалено заведение «' + venueName + '»';
+  });
+  participants = purgeOldRevoked(participants);
+  return affected.length;
 }
 
 function roleLabel(roleId) {
@@ -3443,6 +3596,12 @@ function renderParticipantsList() {
         '<div style="min-width:0">' +
           '<strong>🔑 ' + esc(p.id) + '</strong>' +
           '<br><span style="font-size:12px;color:var(--text-muted)">ещё не использован' + (dateStr ? ' · создан ' + dateStr : '') + '</span>' +
+          // Для какого заведения выдан ключ — у неиспользованного это
+          // единственный способ понять, кому он предназначался: ролей
+          // может не быть вовсе.
+          ((getVenues().length > 1 && venueById(participantVenueId(p)))
+            ? '<br><span class="role-badge venue-badge">' + esc(venueLabel(participantVenueId(p))) + '</span>'
+            : '') +
           rolesHtml +
         '</div>' +
         '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
@@ -3528,7 +3687,10 @@ async function editAdminRolePermissions() {
   applyPermissionVisibility();
   showToast('⏳ Сохраняю...');
   var ok = await syncSiteConfigToGithub();
-  if (ok) showToast('✅ Права роли сохранены (' + picked.length + ' из ' + PERMISSIONS.length + ')');
+  if (ok) {
+    logActivity('изменил права роли «Администратор»', 'Настройки', 'разрешено ' + picked.length + ' из ' + PERMISSIONS.length);
+    showToast('✅ Права роли сохранены (' + picked.length + ' из ' + PERMISSIONS.length + ')');
+  }
 }
 
 /* Личные права участника. Окно показывает ИТОГОВЫЙ набор человека, а
@@ -3575,6 +3737,11 @@ async function editParticipantPermissions(id) {
   if (!ok) return;
   renderParticipantsList();
   applyPermissionVisibility();
+  logActivity('изменил личные права', 'Участники', who + ': ' +
+    (allow.length ? 'открыто ' + allow.map(function(x) { return permissionById(x).label; }).join(', ') : '') +
+    (allow.length && deny.length ? '; ' : '') +
+    (deny.length ? 'закрыто ' + deny.map(function(x) { return permissionById(x).label; }).join(', ') : '') +
+    (!allow.length && !deny.length ? 'сброшено к роли' : ''));
   showToast(allow.length || deny.length
     ? '✅ Права сохранены: +' + allow.length + ', −' + deny.length + ' к роли'
     : '✅ Личные права убраны — действует роль');
@@ -3627,6 +3794,11 @@ function toggleParticipantGroup(key) {
 /* Заведения, к которым относится участник (по его ролям). */
 function participantVenueIds(p) {
   var out = [];
+  // Заведение ключа — само по себе принадлежность к точке: у только что
+  // выданного ключа ролей может ещё не быть, но в списке он должен
+  // лежать в своей группе, а не в «Без ролей».
+  var keyVenue = participantVenueId(p);
+  if (venueById(keyVenue) && p && p.venue) out.push(keyVenue);
   getParticipantRoles(p).forEach(function(role) {
     var venue = null;
     if (role.indexOf('tab:') === 0) {
@@ -3717,6 +3889,15 @@ function participantItemHtml(p, presenceAvailable) {
     var rolesHtml = myRoles.length
       ? '<br>' + myRoles.map(function(r) { return '<span class="role-badge">' + esc(roleLabel(r)) + '</span>'; }).join('')
       : '';
+    // Для какого заведения выдан ключ. Важно именно у неиспользованных
+    // ключей: ролей там может не быть вовсе, и иначе непонятно, кому
+    // этот ключ вообще предназначался.
+    var keyVenue = participantVenueId(p);
+    if (getVenues().length > 1 && venueById(keyVenue)) {
+      rolesHtml = '<br><span class="role-badge venue-badge">' + esc(venueLabel(keyVenue)) + '</span>' +
+        (rolesHtml ? rolesHtml.replace('<br>', '') : '');
+    }
+
     // Если человеку что-то настроено лично, это должно быть видно сразу:
     // иначе непонятно, почему у двух админов разные возможности.
     var ov = participantPermOverrides(p);
@@ -3756,6 +3937,7 @@ function participantItemHtml(p, presenceAvailable) {
         // Личные права — поверх роли. Кнопка только у разработчика: он
         // один решает, кому расширить или урезать возможности.
         (isDeveloper() ? '<button class="btn btn-ghost btn-sm" onclick="editParticipantPermissions(\'' + escAttr(p.id) + '\')" title="Расширить или ограничить возможности лично для этого человека">🛡 Права</button>' : '') +
+        '<button class="btn btn-ghost btn-sm" onclick="showParticipantHistory(\'' + escAttr(p.id) + '\')" title="Что этот человек менял и когда">🧾 История</button>' +
         '<button class="btn btn-sm ' + (p.blocked ? 'btn-success' : 'btn-danger') + '" onclick="toggleParticipantBlock(\'' + escAttr(p.id) + '\')" title="' + (p.blocked ? 'Вернуть доступ' : 'Закрыть доступ, запись останется в списке') + '">' + (p.blocked ? '🔓 Открыть' : '🚫 Блок') + '</button>' +
         '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить запись насовсем — не то же самое, что блокировка">✕</button>' +
       '</div>' +
@@ -3832,7 +4014,11 @@ async function editParticipantRoles(id) {
   applyAdminUI(); // если роли поменяли самому себе — сразу пересобираем доступные вкладки
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
-  if (saved) showToast(picked.length ? '✅ Роли сохранены' : '✅ Все роли сняты');
+  if (saved) {
+    logActivity('изменил роли участника', 'Участники',
+      (p.name || p.id) + ': ' + (picked.length ? picked.map(roleLabel).join(', ') : 'все роли сняты'));
+    showToast(picked.length ? '✅ Роли сохранены' : '✅ Все роли сняты');
+  }
   // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 
   if (!wasAdmin && willAdmin) {
@@ -3906,6 +4092,28 @@ async function prepareAdminHandoffMessage(p) {
 async function generateInviteKey() {
   if (!can('participant.keys')) { denyToast('participant.keys'); return; }
 
+  // Ключ всегда выдаётся ДЛЯ КОНКРЕТНОГО ЗАВЕДЕНИЯ. Иначе в сети из
+  // нескольких точек непонятно, чей это ключ: роли-то видны, а вот
+  // «кому он вообще предназначался» — нет. А главное, при закрытии
+  // точки надо разом отозвать все её ключи, и без привязки понять,
+  // какие именно, было бы нельзя (см. revokeVenueKeys).
+  var venues = getVenues();
+  var venueId = currentVenueId();
+  if (venues.length > 1) {
+    venueId = await customSelect(
+      'Для какого заведения этот ключ? Роли ниже будут выданы в его границах, а при удалении заведения ключ перестанет действовать.',
+      venues.map(function(v) { return { value: v.id, label: (v.icon ? v.icon + ' ' : '') + v.label }; }),
+      currentVenueId(),
+      '🔑 Новый ключ — заведение'
+    );
+    if (!venueId) return; // отменили выбор
+  }
+  // Список заведений строится из живых точек, поэтому ключ для
+  // удалённого заведения создать нельзя в принципе — его просто нет
+  // среди вариантов. Проверяем ещё раз на случай, если точку успели
+  // удалить в другой вкладке, пока окно было открыто.
+  if (!venueById(venueId)) { showToast('⚠️ Такого заведения больше нет — обновите страницу'); return; }
+
   var id;
   do {
     id = Math.random().toString(36).slice(2, 6).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -3921,14 +4129,16 @@ async function generateInviteKey() {
   var roles = await showModal({
     title: '🔑 Новый ключ — что откроется',
     message: 'Отметьте, что человек увидит сразу после ввода ключа. Без ролей ему будет доступна только вкладка «Категории». Изменить роли можно в любой момент и потом — кнопкой «🎭 Роли» в списке.',
-    withChecklist: allRoleDefs().map(function(d) {
+    // Роли показываем только те, что относятся к выбранному заведению
+    // (плюс общие) — иначе легко случайно открыть человеку чужую точку.
+    withChecklist: rolesForVenue(venueId).map(function(d) {
       return { value: d.id, label: d.label, hint: d.hint, checked: false, disabled: false };
     }),
     okText: '🔑 Создать ключ'
   });
   if (roles === null) return; // отменили — ключ не создаём
 
-  var record = { id: id, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, claimed: false };
+  var record = { id: id, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, claimed: false, venue: venueId };
   setParticipantRoles(record, roles);
   participants.push(record);
   participantsFilter = 'keys';
@@ -3937,13 +4147,15 @@ async function generateInviteKey() {
   var ok = await syncParticipantsToGithub();
   if (!ok) return; // при ok===false внутри syncParticipantsToGithub уже показан toast с точной причиной
 
+  logActivity('создал ключ доступа', venueLabel(venueId), roles.length ? roles.map(roleLabel).join(', ') : 'без ролей');
+
   var rolesLine = roles.length
     ? 'Сразу после входа ему будет доступно: ' + roles.map(roleLabel).join(', ') + '.'
     : 'Ролей не выдано — человек увидит только вкладку «Категории».';
 
   await showModal({
     title: '🔑 Ключ создан',
-    message: 'Передайте этот ключ человеку любым способом (голосом, в Telegram и т.п.). При первом заходе на сайт он введёт его и сразу получит доступ — одобрять его вручную не нужно.\n\n' + rolesLine,
+    message: 'Ключ заведения «' + venueLabel(venueId) + '».\n\nПередайте его человеку любым способом (голосом, в Telegram и т.п.). При первом заходе на сайт он введёт его и сразу получит доступ — одобрять его вручную не нужно.\n\n' + rolesLine,
     messageHtml: '<div style="display:flex;justify-content:center;margin:10px 0 4px">' + copyChipHtml('🔑', 'Ключ', id, '📋 Ключ скопирован') + '</div>',
     withInput: false,
     hideCancel: true,
@@ -4003,7 +4215,10 @@ async function toggleParticipantBlock(id) {
   showToast('⏳ Сохраняю...');
   var saved = await syncParticipantsToGithub();
   if (saved && willBlock) await signalDeviceKick(id); // выкинуть сразу, а не ждать перезагрузки
-  if (saved) showToast(willBlock ? '🚫 Доступ закрыт' : '🔓 Доступ открыт');
+  if (saved) {
+    logActivity(willBlock ? 'заблокировал участника' : 'разблокировал участника', 'Участники', p.name || p.id);
+    showToast(willBlock ? '🚫 Доступ закрыт' : '🔓 Доступ открыт');
+  }
   // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
 }
 
@@ -4031,6 +4246,7 @@ async function removeParticipant(id) {
   // нет — доступ закроется при следующем открытии (фоновая проверка).
   if (saved) {
     await signalDeviceKick(id);
+    logActivity('отозвал ключ доступа', 'Участники', (victim && victim.name) || id);
     showToast('🗑 Удалено — доступ закрыт');
   }
   // при saved===false внутри syncParticipantsToGithub уже показан toast с точной причиной — не перезаписываем его
@@ -4083,10 +4299,11 @@ function currentActorLabel() {
 
 /* Ставит отметку об изменении. Возвращает сам объект — удобно для
    цепочек. */
-function stampEdit(obj) {
+function stampEdit(obj, whatChanged) {
   if (!obj) return obj;
   obj.updatedAt = Date.now();
   obj.updatedBy = currentActorLabel();
+  if (whatChanged) obj.updatedWhat = whatChanged;
   return obj;
 }
 
@@ -4095,7 +4312,215 @@ function formatEditStamp(obj) {
   var d = new Date(obj.updatedAt);
   if (isNaN(d.getTime())) return '';
   var when = d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  return 'Последнее изменение: ' + when + (obj.updatedBy ? ' · ' + obj.updatedBy : '');
+  // Без «что именно» отметка отвечала только на половину вопроса:
+  // видно, кто трогал, но не видно зачем.
+  return 'Последнее изменение: ' + when + (obj.updatedBy ? ' · ' + obj.updatedBy : '') +
+    (obj.updatedWhat ? ' · ' + obj.updatedWhat : '');
+}
+
+/* ================================================================
+   ЖУРНАЛ ДЕЙСТВИЙ
+   ================================================================
+   Отметки «кто изменил» в самой записи мало: она отвечает только на
+   вопрос «кто трогал последним», и то лишь у того объекта, который
+   человек сейчас открыл. На кухне же спрашивают иначе — «кто поменял
+   недельную норму муки» и «что вообще делал этот админ на прошлой
+   неделе». Для этого нужен отдельный журнал.
+
+   Журнал лежит в activity.json рядом с остальными данными и пишется
+   тем же механизмом. Хранится не больше ACTIVITY_LIMIT последних
+   записей: файл читают все админы при открытии панели, и он не должен
+   разрастаться бесконечно.
+
+   В записи хранится ЧТО сделано словами, а не код действия: роли и
+   названия со временем меняются, а история должна остаться понятной
+   такой, какой была в момент действия.
+   ================================================================ */
+const ACTIVITY_PATH = 'activity.json';
+const ACTIVITY_LIMIT = 400;
+
+var activityLog = [];
+
+function loadActivityLocal() {
+  try {
+    var raw = localStorage.getItem('r20_activity');
+    var parsed = raw ? JSON.parse(raw) : null;
+    activityLog = Array.isArray(parsed) ? parsed : [];
+  } catch (e) { activityLog = []; }
+}
+
+function saveActivityLocal() {
+  try { localStorage.setItem('r20_activity', JSON.stringify(activityLog)); } catch (e) {}
+}
+
+async function syncActivityFromGithub() {
+  try {
+    var res = await fetch('./' + ACTIVITY_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return; // журнала ещё нет — первая запись его и создаст
+    var data = await res.json();
+    if (Array.isArray(data)) {
+      activityLog = mergeActivity(data, activityLog);
+      saveActivityLocal();
+      if (currentTab === 'admin') renderActivityLog();
+    }
+  } catch (e) {
+    console.warn('syncActivityFromGithub:', e);
+  }
+}
+
+/* Слияние по id. Журнал пишут несколько человек сразу, и без слияния
+   тот, кто сохранил вторым, стёр бы чужие записи, сделанные пока он
+   работал. */
+function mergeActivity(a, b) {
+  var seen = {};
+  var out = [];
+  (a || []).concat(b || []).forEach(function(r) {
+    if (!r || !r.id || seen[r.id]) return;
+    seen[r.id] = true;
+    out.push(r);
+  });
+  out.sort(function(x, y) { return (y.at || 0) - (x.at || 0); });
+  return out.slice(0, ACTIVITY_LIMIT);
+}
+
+function syncActivityToGithub() {
+  return queueGithubWrite('activity', async function() {
+    var cfg = getGithubConfig();
+    if (!cfg || !cfg.token) return false; // у обычного участника токена нет — журнал ведут те, кто пишет данные
+    // Перед записью подмешиваем серверную версию: пока человек работал,
+    // журнал могли пополнить в другом заведении.
+    try {
+      var res = await fetch('./' + ACTIVITY_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        var remote = await res.json();
+        if (Array.isArray(remote)) activityLog = mergeActivity(activityLog, remote);
+      }
+    } catch (e) {}
+    var put = await putJsonToGithub(ACTIVITY_PATH, activityLog, 'Журнал действий (' + new Date().toLocaleString('ru-RU') + ')');
+    if (!put.ok) console.warn('syncActivityToGithub:', put.error);
+    return put.ok;
+  });
+}
+
+var activitySyncTimer = null;
+function scheduleActivitySync() {
+  clearTimeout(activitySyncTimer);
+  // Пауза больше, чем у данных: журнал вторичен, и несколько действий
+  // подряд лучше отправить одной записью файла.
+  activitySyncTimer = setTimeout(function() { syncActivityToGithub(); }, 2500);
+}
+
+/* Главная функция: записать действие.
+   what  — что сделано, словами и в прошедшем времени («изменил недельные нормы»)
+   where — где это произошло («Закупка · Хорека», «Пицца бар»)
+   details — необязательные подробности («Мука: 20 → 25 кг») */
+function logActivity(what, where, details) {
+  var me = getMyParticipantRecord();
+  var entry = {
+    id: uid(),
+    at: Date.now(),
+    who: currentActorLabel(),
+    whoId: (me && me.id) || (isDeveloper() ? 'developer' : ''),
+    venue: venueLabel(currentVenueId()),
+    what: what,
+    where: where || '',
+    details: details || ''
+  };
+  activityLog = mergeActivity([entry], activityLog);
+  saveActivityLocal();
+  if (currentTab === 'admin') renderActivityLog();
+  scheduleActivitySync();
+  return entry;
+}
+
+/* Человеческое «когда»: для сегодняшних действий время, для остальных
+   дата. В журнале обычно смотрят последнее, и полная дата у каждой
+   строки только мешает читать. */
+function formatActivityTime(at) {
+  var d = new Date(at);
+  if (isNaN(d.getTime())) return '';
+  var now = new Date();
+  var sameDay = d.toDateString() === now.toDateString();
+  var yesterday = new Date(now.getTime() - 86400000).toDateString() === d.toDateString();
+  var time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return 'сегодня, ' + time;
+  if (yesterday) return 'вчера, ' + time;
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ', ' + time;
+}
+
+/* Отрисовка журнала в админ-панели. Фильтр по человеку хранится в
+   переменной, а не в разметке: список перерисовывается при каждой
+   новой записи, и выбор не должен теряться. */
+var activityFilterWho = '';
+
+function renderActivityLog() {
+  var holder = $('activity-log-list');
+  if (!holder) return;
+
+  var list = activityLog.slice();
+  if (activityFilterWho) list = list.filter(function(r) { return r.who === activityFilterWho; });
+
+  var filterRow = $('activity-filter-row');
+  if (filterRow) {
+    var people = [];
+    activityLog.forEach(function(r) { if (r.who && people.indexOf(r.who) === -1) people.push(r.who); });
+    filterRow.innerHTML = ['<span class="chip' + (activityFilterWho ? '' : ' active') + '" onclick="setActivityFilter(\'\')">Все</span>']
+      .concat(people.map(function(w) {
+        return '<span class="chip' + (activityFilterWho === w ? ' active' : '') + '" onclick="setActivityFilter(\'' + escAttr(w) + '\')">' + esc(w) + '</span>';
+      })).join('');
+  }
+
+  if (!list.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">' +
+      (activityFilterWho ? 'У этого человека пока нет записей.' : 'Пока ничего не менялось — записи появятся после первого изменения.') +
+      '</p>';
+    return;
+  }
+
+  holder.innerHTML = list.slice(0, 60).map(function(r) {
+    return '<div class="activity-item">' +
+      '<div class="activity-head">' +
+        '<strong>' + esc(r.who || 'Неизвестно') + '</strong>' +
+        '<span class="activity-time">' + esc(formatActivityTime(r.at)) + '</span>' +
+      '</div>' +
+      '<div class="activity-what">' + esc(r.what) + (r.where ? ' <span class="activity-where">· ' + esc(r.where) + '</span>' : '') + '</div>' +
+      (r.details ? '<div class="activity-details">' + esc(r.details) + '</div>' : '') +
+    '</div>';
+  }).join('') +
+  (list.length > 60 ? '<p class="admin-panel-hint">Показаны последние 60 из ' + list.length + '.</p>' : '');
+}
+
+function setActivityFilter(who) {
+  activityFilterWho = who;
+  renderActivityLog();
+}
+
+/* История одного человека — из строки участника. Показывается окном,
+   чтобы не уводить со списка. */
+async function showParticipantHistory(id) {
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+  var who = p ? (p.name || p.id) : id;
+  var mine = activityLog.filter(function(r) { return r.whoId === id || (p && p.name && r.who && r.who.indexOf(p.name) !== -1); });
+
+  var html = mine.length
+    ? '<div class="activity-modal-list">' + mine.slice(0, 40).map(function(r) {
+        return '<div class="activity-item">' +
+          '<div class="activity-head"><strong>' + esc(r.what) + '</strong>' +
+          '<span class="activity-time">' + esc(formatActivityTime(r.at)) + '</span></div>' +
+          (r.where ? '<div class="activity-where">' + esc(r.where) + '</div>' : '') +
+          (r.details ? '<div class="activity-details">' + esc(r.details) + '</div>' : '') +
+        '</div>';
+      }).join('') + '</div>'
+    : '<p class="admin-panel-hint">Записей пока нет.</p>';
+
+  await showModal({
+    title: '🧾 История — ' + who,
+    message: mine.length ? ('Действий в журнале: ' + mine.length) : '',
+    messageHtml: html,
+    withInput: false,
+    hideCancel: true,
+    okText: 'Закрыть'
+  });
 }
 
 /* ================================================================
@@ -5149,11 +5574,27 @@ function compressImage(file, opts) {
 
 function renderPhotoPreview(dataUrl) {
   var area = $('photo-area');
+  var fileInput = '<input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">';
   if (dataUrl) {
-    area.innerHTML = '<img src="' + dataUrl + '" alt="Фото"><input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">';
+    // Кнопка удаления лежит поверх снимка. Нажатие гасим stopPropagation:
+    // сама область по клику открывает выбор файла, и без этого удаление
+    // тут же предлагало бы выбрать новое фото.
+    area.innerHTML = '<img src="' + escAttr(resolvePhotoSrc(dataUrl)) + '" alt="Фото">' +
+      '<button type="button" class="photo-remove-btn" title="Удалить фото" onclick="event.stopPropagation(); removeFormPhoto()">🗑</button>' +
+      fileInput;
   } else {
-    area.innerHTML = '<span class="placeholder-icon">📷</span><span class="placeholder-text">Нажмите чтобы добавить фото</span><input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhoto(this)">';
+    area.innerHTML = '<span class="placeholder-icon">📷</span><span class="placeholder-text">Нажмите чтобы добавить фото</span>' + fileInput;
   }
+}
+
+/* Убрать фото в форме рецепта. Само сохранение произойдёт, когда
+   человек нажмёт «Сохранить», — как и с любым другим полем формы. */
+function removeFormPhoto() {
+  currentPhotoData = null;
+  var hidden = $('f-photo-data');
+  if (hidden) hidden.value = '';
+  renderPhotoPreview(null);
+  showToast('🗑 Фото убрано — не забудьте сохранить рецепт');
 }
 
 /* ================================================================
@@ -5482,10 +5923,11 @@ function resetForm() {
 }
 
 async function saveRecipe() {
-  if (!isAdmin()) { showToast('🔒 Сохранение доступно только в режиме редактирования'); return; }
-  // Создавать рецепты теперь может и обычный админ (шеф своего цеха),
-  // а не только разработчик: разделов стало много, и вести каждый
-  // должен тот, кто за него отвечает.
+  // Право проверяем по тому, что именно происходит: добавление нового
+  // рецепта и правка существующего — разные права, и человеку могут
+  // открыть только одно из них.
+  var savePerm = editingRecipe ? 'recipe.edit' : 'recipe.add';
+  if (!can(savePerm)) { denyToast(savePerm); return; }
   var name = $('f-name').value.trim();
   if (!name) { showToast('⚠️ Укажите название рецепта'); return; }
 
@@ -5554,6 +5996,7 @@ async function saveRecipe() {
     // целиком, и без явного переноса она бы потерялась.
     updatedAt: Date.now(),
     updatedBy: currentActorLabel(),
+    updatedWhat: editingRecipe ? 'отредактировал карточку' : 'создал карточку',
     videos: videos,
     ingredients: ingredients,
     steps: steps
@@ -5566,9 +6009,11 @@ async function saveRecipe() {
     }
     if (idx >= 0) recipes[idx] = recipe;
     else recipes.push(recipe);
+    logActivity('изменил рецепт', sectionLabel(recipeSectionId(recipe)), recipe.name);
     showToast('✅ Рецепт обновлён');
   } else {
     recipes.push(recipe);
+    logActivity('добавил рецепт', sectionLabel(recipeSectionId(recipe)), recipe.name);
     var addedCat = recipeCategoryById(recipe.type);
     showToast('✅ Рецепт добавлен' + (addedCat ? ' — ' + (addedCat.icon ? addedCat.icon + ' ' : '') + addedCat.label : '') + '!');
   }
@@ -5615,10 +6060,11 @@ function setRecipeStatus(id, status) {
   if (recipeStatus(r) === status) return; // нажали на уже выбранный — ничего не делаем
 
   r.status = status;
-  stampEdit(r); // смена актуальности — тоже изменение карточки
+  stampEdit(r, 'изменил актуальность на «' + statusMeta(status).label + '»');
   if (!saveAll()) return;
 
   var m = statusMeta(status);
+  logActivity('изменил актуальность рецепта', sectionLabel(recipeSectionId(r)), r.name + ': ' + m.label);
   showToast(m.icon + ' «' + r.name + '» — ' + m.label +
     (status === 'active' ? '' : '. Сотрудники этот рецепт больше не видят'));
   refreshAllSectionLists();
@@ -5703,6 +6149,8 @@ function clearSearchInput(inputId) {
    ВКЛАДКА "АДМИН-ПАНЕЛЬ"
    ================================================================ */
 function renderAdminPanel() {
+  renderActivityLog();
+  syncActivityFromGithub(); // в фоне: у коллег могли появиться новые записи
   renderAdminPermsSummary();
   renderVenuesAdminList();
   renderSectionsAdminList();
@@ -5955,6 +6403,40 @@ var purchaseCustomUnits = [];
    свой остаток. Это защищает от случайной правки шаблона на лету. */
 var purchaseTemplateEditMode = false;
 
+/* Снимок позиций на момент входа в режим правки. По нему при выходе
+   считается, что именно человек изменил: писать в журнал каждое
+   нажатие клавиши бессмысленно, а «трогал шаблон» — бесполезно.
+   Нужен именно ответ «кто поменял недельную норму муки». */
+var purchaseTemplateSnapshot = null;
+
+function makePurchaseSnapshot(cat) {
+  var out = {};
+  purchaseRowsFor(cat).forEach(function(r) {
+    out[r.id] = { name: r.name, unit: r.unit, norm: r.norm };
+  });
+  return out;
+}
+
+/* Сравнивает снимок с текущим состоянием и описывает изменения
+   словами. Возвращает массив строк вида «Мука: норма 20 → 25». */
+function describePurchaseChanges(before, cat) {
+  var lines = [];
+  var now = makePurchaseSnapshot(cat);
+  Object.keys(now).forEach(function(id) {
+    var a = before[id], b = now[id];
+    if (!a) { lines.push('добавлена позиция «' + b.name + '»'); return; }
+    var parts = [];
+    if ((a.name || '') !== (b.name || '')) parts.push('название ' + a.name + ' → ' + b.name);
+    if ((a.unit || '') !== (b.unit || '')) parts.push('единица ' + (a.unit || '—') + ' → ' + (b.unit || '—'));
+    if (String(a.norm || '') !== String(b.norm || '')) parts.push('недельная норма ' + (a.norm || '—') + ' → ' + (b.norm || '—'));
+    if (parts.length) lines.push(b.name + ': ' + parts.join(', '));
+  });
+  Object.keys(before).forEach(function(id) {
+    if (!now[id]) lines.push('удалена позиция «' + before[id].name + '»');
+  });
+  return lines;
+}
+
 async function togglePurchaseTemplateEdit() {
   if (!can('purchase.template')) { denyToast('purchase.template'); return; }
   if (purchaseTemplateEditMode) {
@@ -5970,8 +6452,24 @@ async function togglePurchaseTemplateEdit() {
     if (toggleBtn) toggleBtn.disabled = false;
     if (!ok) return;
     purchaseTemplateEditMode = false;
+
+    // Записываем в журнал именно то, что изменилось. Если не изменилось
+    // ничего — молчим: «зашёл и вышел» истории не нужен.
+    if (purchaseTemplateSnapshot) {
+      var c = purchaseCategoryById(currentPurchaseCategory);
+      var changes = describePurchaseChanges(purchaseTemplateSnapshot, currentPurchaseCategory);
+      if (changes.length) {
+        logActivity(
+          'изменил шаблон закупки',
+          'Закупка · ' + venueLabel(currentVenueId()) + ' · ' + (c ? c.label : ''),
+          changes.slice(0, 8).join('; ') + (changes.length > 8 ? ' и ещё ' + (changes.length - 8) : '')
+        );
+      }
+      purchaseTemplateSnapshot = null;
+    }
   } else {
     purchaseTemplateEditMode = true;
+    purchaseTemplateSnapshot = makePurchaseSnapshot(currentPurchaseCategory);
   }
   renderPurchaseList();
   updatePurchaseTemplateControls();
@@ -6436,6 +6934,7 @@ function addPurchaseWorkshop() {
     if (!val) return;
     var id = 'ws' + Date.now() + Math.random().toString(36).slice(2, 7);
     purchaseCategories.push(stampEdit({ id: id, label: val, icon: '🏭', builtin: true, venue: currentVenueId() }));
+    logActivity('добавил цех в закупку', 'Закупка · ' + venueLabel(currentVenueId()), val);
     purchaseData[id] = [];
     purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
     savePurchaseData();
@@ -6462,6 +6961,7 @@ function addPurchaseSupplier() {
       if (workshop === null) workshop = ''; // отменили выбор цеха — сам поставщик всё равно добавляем, просто без привязки
       var id = 'sup' + Date.now() + Math.random().toString(36).slice(2, 7);
       purchaseCategories.push(stampEdit({ id: id, label: val, icon: '🚚', builtin: false, workshop: workshop, venue: currentVenueId() }));
+      logActivity('добавил поставщика', 'Закупка · ' + venueLabel(currentVenueId()), val);
       purchaseData[id] = [];
       purchaseTemplateEditMode = true; // сразу входим в режим редактирования — дальше сразу добавляют позиции
       savePurchaseData();
@@ -6522,14 +7022,45 @@ function purchaseContacts(c) {
 function purchaseContactsHtml(c, extraClass) {
   var list = purchaseContacts(c);
   if (!list.length) return ''; // ничего не заполнено — блока нет совсем
+  // Нажатие не уводит сразу, а спрашивает, что сделать: позвонить или
+  // скопировать. Номер нужен по-разному — набрать с этого телефона или
+  // передать кому-то в переписке, и угадывать за человека не стоит.
   return '<div class="purchase-contacts' + (extraClass ? ' ' + extraClass : '') + '">' +
     list.map(function(x) {
-      return '<a class="purchase-contact" href="' + escAttr(x.href) + '"' +
-        (x.kind === 'site' ? ' target="_blank" rel="noopener"' : '') +
-        ' onclick="event.stopPropagation()">' +
-        '<span class="purchase-contact-icon">' + x.icon + '</span>' + esc(x.text) + '</a>';
+      return '<button type="button" class="purchase-contact"' +
+        ' onclick="event.stopPropagation(); openContactActions(\'' + escAttr(x.kind) + '\', \'' + escAttr(x.text) + '\')">' +
+        '<span class="purchase-contact-icon">' + x.icon + '</span>' + esc(x.text) + '</button>';
     }).join('') +
   '</div>';
+}
+
+/* Что можно сделать с контактом. Основное действие — ссылка <a>, а не
+   кнопка: переход по tel:/mailto:/https должен происходить прямо по
+   нажатию, иначе браузер его блокирует (та же причина, что у кнопок
+   «Запросить ключ»). */
+async function openContactActions(kind, value) {
+  var meta = {
+    phone: { title: '📞 Телефон', action: 'Позвонить', href: 'tel:' + String(value).replace(/[^\d+]/g, ''), copied: '📋 Номер скопирован' },
+    email: { title: '✉️ Почта', action: 'Написать', href: 'mailto:' + value, copied: '📋 Почта скопирована' },
+    site: { title: '🌐 Сайт', action: 'Открыть', href: (/^[a-z][a-z0-9+.-]*:/i.test(value) ? value : 'https://' + value), copied: '📋 Адрес скопирован' }
+  }[kind];
+  if (!meta) return;
+
+  await showModal({
+    title: meta.title,
+    message: String(value),
+    withInput: false,
+    hideCancel: true,
+    okText: 'Закрыть',
+    footerHtml: '<div class="tool-bar" style="justify-content:center">' +
+      '<a class="tool-btn tool-btn-primary" href="' + escAttr(meta.href) + '"' +
+        (kind === 'site' ? ' target="_blank" rel="noopener"' : '') + '>' +
+        '<span class="tool-btn-icon">' + (kind === 'phone' ? '📞' : kind === 'email' ? '✉️' : '🌐') + '</span>' +
+        '<span class="tool-btn-label">' + esc(meta.action) + '</span></a>' +
+      '<span class="tool-btn copy-chip" data-copy-value="' + escAttr(String(value)) + '" data-copy-msg="' + escAttr(meta.copied) + '">' +
+        '<span class="tool-btn-icon">📋</span><span class="tool-btn-label">Скопировать</span></span>' +
+      '</div>'
+  });
 }
 
 /* Заполнение контактов — три коротких вопроса подряд, а не одна форма:
@@ -6542,19 +7073,29 @@ async function setPurchaseContacts(cat) {
   var c = purchaseCategoryById(cat);
   if (!c) return;
 
-  var phone = await customPrompt('Номер телефона (можно оставить пустым — тогда не показывается):', c.phone || '', '📞 Телефон — ' + c.label);
-  if (phone === null) return;
-  var email = await customPrompt('Электронная почта (можно оставить пустой):', c.email || '', '✉️ Почта — ' + c.label);
-  if (email === null) return;
-  var site = await customPrompt('Сайт (можно оставить пустым):', c.site || '', '🌐 Сайт — ' + c.label);
-  if (site === null) return;
+  // Все три поля в одном окне: контакты заводят разом, когда добавляют
+  // поставщика, и пошаговый опрос заставлял бы трижды подтверждать
+  // одно действие, а ради исправления опечатки — проходить его заново.
+  var res = await showModal({
+    title: '📇 Контакты — ' + c.label,
+    message: 'Заполните то, что известно. Пустое поле просто не будет показываться.',
+    withFields: [
+      { key: 'phone', label: '📞 Телефон', value: c.phone || '', placeholder: '+38 067 123 45 67', inputType: 'tel' },
+      { key: 'email', label: '✉️ Почта', value: c.email || '', placeholder: 'zakaz@postavshik.ua', inputType: 'email' },
+      { key: 'site', label: '🌐 Сайт', value: c.site || '', placeholder: 'postavshik.ua' }
+    ],
+    okText: '💾 Сохранить'
+  });
+  if (res === null) return;
 
-  c.phone = (phone || '').trim();
-  c.email = (email || '').trim();
-  c.site = (site || '').trim();
-  stampEdit(c);
+  c.phone = res.phone || '';
+  c.email = res.email || '';
+  c.site = res.site || '';
+  stampEdit(c, 'изменил контакты');
 
   savePurchaseData();
+  logActivity('изменил контакты поставщика', 'Закупка · ' + venueLabel(currentVenueId()), c.label +
+    ': ' + (purchaseContacts(c).map(function(x) { return x.icon + ' ' + x.text; }).join(', ') || 'очищены'));
   updatePurchaseTemplateControls();
   renderPurchaseHomeList();
   renderPurchaseDetailContacts();
@@ -7921,6 +8462,7 @@ function openDetail(id, autoplayVideo) {
       '<div class="tool-bar" style="margin-top:12px">' +
         (can('recipe.edit') ? '<button class="tool-btn tool-btn-primary" title="Редактировать рецепт" onclick="editFromDetail(\'' + r.id + '\')"><span class="tool-btn-icon">✏️</span><span class="tool-btn-label">Редактировать</span></button>' : '') +
         ((can('recipe.copy') && getVenues().length > 1) ? '<button class="tool-btn" title="Скопировать в другое заведение" onclick="copyRecipeToVenue(\'' + r.id + '\')"><span class="tool-btn-icon">📋</span><span class="tool-btn-label">В другое заведение</span></button>' : '') +
+        ((can('recipe.edit') && r.photo) ? '<button class="tool-btn" title="Удалить фото из карточки" onclick="removeRecipePhoto(\'' + r.id + '\')"><span class="tool-btn-icon">🖼</span><span class="tool-btn-label">Убрать фото</span></button>' : '') +
         (can('recipe.delete') ? '<button class="tool-btn tool-btn-danger" title="Удалить рецепт" onclick="deleteRecipe(\'' + r.id + '\')"><span class="tool-btn-icon">🗑</span><span class="tool-btn-label">Удалить</span></button>' : '') +
       '</div>' : '');
 
@@ -8045,6 +8587,31 @@ function editFromDetail(id) {
   }
 }
 
+/* Удаление фото из уже сохранённого рецепта — прямо из его карточки,
+   не открывая форму. Отдельный файл на GitHub при этом остаётся: он
+   ничего не весит для сайта и может пригодиться, если фото удалили по
+   ошибке, а ссылки на него в рецепте уже нет. */
+async function removeRecipePhoto(id) {
+  if (!can('recipe.edit')) { denyToast('recipe.edit'); return; }
+  var r = null;
+  for (var i = 0; i < recipes.length; i++) {
+    if (recipes[i].id === id) { r = recipes[i]; break; }
+  }
+  if (!r) { showToast('⚠️ Рецепт не найден'); return; }
+  if (!r.photo) { showToast('ℹ️ У этого рецепта нет фото'); return; }
+
+  var ok = await customConfirm('Удалить фото из рецепта «' + r.name + '»?\n\nСам рецепт останется, изменится только карточка.', '🗑 Удалить фото');
+  if (!ok) return;
+
+  r.photo = null;
+  stampEdit(r, 'удалил фото');
+  if (!saveAll()) return;
+  logActivity('удалил фото рецепта', sectionLabel(recipeSectionId(r)), r.name);
+  refreshAllSectionLists();
+  openDetail(id); // перерисовываем открытую карточку уже без фото
+  showToast('🗑 Фото удалено');
+}
+
 /* Копирование рецепта в другое заведение.
    Точки ведут меню независимо, но половина карт у сети общая, и
    набивать «Маргариту» заново в каждой новой пиццерии — лишняя работа.
@@ -8106,10 +8673,11 @@ async function copyRecipeToVenue(id) {
   var sizes = categorySizes(recipeCategoryById(catId));
   if (copy.size && sizes.length && sizes.indexOf(copy.size) === -1) copy.size = null;
   copy.status = 'active'; // в новой точке блюдо начинают вести как актуальное
-  stampEdit(copy);         // для нового заведения это новая запись — и автор её тот, кто скопировал
+  stampEdit(copy, 'скопировал из «' + venueLabel(fromVenue) + '»');
 
   recipes.push(copy);
   if (!saveAll()) return;
+  logActivity('скопировал рецепт в другое заведение', venueLabel(venueId) + ' · ' + sectionLabel(sectionId), r.name);
   refreshAllSectionLists();
   showToast('✅ Копия создана в «' + venueLabel(venueId) + '» → ' + sectionLabel(sectionId));
 }
@@ -8118,8 +8686,10 @@ async function deleteRecipe(id) {
   if (!can('recipe.delete')) { denyToast('recipe.delete'); return; }
   var ok = await customConfirm('Удалить этот рецепт?');
   if (!ok) return;
+  var doomed = recipes.filter(function(r) { return r.id === id; })[0];
   recipes = recipes.filter(function(r) { return r.id !== id; });
   saveAll();
+  if (doomed) logActivity('удалил рецепт', sectionLabel(recipeSectionId(doomed)), doomed.name);
   showToast('🗑 Рецепт удалён');
   goToDefaultSection();
 }
@@ -8608,6 +9178,7 @@ async function initApp() {
 
   applyAdminUI();
   loadRecipes();
+  loadActivityLocal();
   loadCustomSitePhotos();
   loadPurchaseData();
   syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
