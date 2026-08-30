@@ -3738,6 +3738,45 @@ async function editAdminRolePermissions() {
    становится личным разрешением, снятое из роли — личным запретом.
    Так «расширить» и «ограничить» делаются одним и тем же понятным
    действием, а не двумя отдельными списками. */
+/* Принудительное переименование участника.
+   Имя человек вписывает сам при первом входе, и там бывает «ккк»,
+   «айфон» или пусто. Для администратора список превращается в набор
+   загадок, поэтому имя можно поправить — оно и так нужно только ему.
+   Устройство после этого имя не перезапишет: с него оно берётся лишь
+   при первой активации ключа (см. requireAccessKey). */
+async function renameParticipant(id) {
+  if (!can('participant.roles')) { denyToast('participant.roles'); return; }
+  var p = participants.filter(function(x) { return x.id === id; })[0];
+  if (!p) { showToast('⚠️ Участник не найден'); return; }
+
+  var was = p.name || '';
+  var name = await showModal({
+    title: '✏️ Имя участника',
+    message: was
+      ? 'Как этот человек будет называться в списке. Он сам своё имя не увидит и менять его не сможет.'
+      : 'Человек ещё не вписал имя. Укажите, как его называть в списке.',
+    withInput: true,
+    inputValue: was,
+    placeholder: 'Имя и фамилия',
+    requireInput: true,
+    minInputLength: 2,
+    okText: '💾 Сохранить'
+  });
+  if (name === null) return;
+
+  name = name.trim().replace(/\s+/g, ' ');
+  if (name === was) return;
+
+  p.name = name;
+  saveParticipantsLocal();
+  renderParticipantsList();
+  showToast('⏳ Сохраняю...');
+  var ok = await syncParticipantsToGithub();
+  if (!ok) return;
+  logActivity('переименовал участника', 'Участники', (was || 'без имени') + ' → ' + name);
+  showToast('✅ Теперь это «' + name + '»');
+}
+
 async function editParticipantPermissions(id) {
   if (!isDeveloper()) { showToast('🔒 Личные права настраивает только разработчик (вход по GitHub-ключу)'); return; }
   var p = participants.filter(function(x) { return x.id === id; })[0];
@@ -3973,6 +4012,7 @@ function participantItemHtml(p, presenceAvailable) {
         '<br><span style="font-size:12px;color:var(--text-muted)">' + esc(p.id) + (p.fingerprint ? ' · отпечаток есть' : ' · без отпечатка (старая запись)') + (dateStr ? ' · добавлен ' + dateStr : '') + '</span>' +
       '</div>' +
       '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
+        '<button class="btn btn-ghost btn-sm" onclick="renameParticipant(\'' + escAttr(p.id) + '\')" title="Изменить имя в списке">✏️ Имя</button>' +
         '<button class="btn btn-primary btn-sm" onclick="editParticipantRoles(\'' + escAttr(p.id) + '\')" title="Выдать или снять роли — можно отметить сразу несколько">🎭 Роли</button>' +
         // Личные права — поверх роли. Кнопка только у разработчика: он
         // один решает, кому расширить или урезать возможности.
@@ -8124,13 +8164,17 @@ function purchaseReportHeaderTitle(kind) {
   return '📦 Закупка на неделю';
 }
 
+/* Сообщение поставщику: приветствие с его именем и сам заказ.
+   Служебной строки «📦 Закупка на неделю — Хорека (31.08.2026)» здесь
+   намеренно нет: на какой срок мы считали — наша внутренняя кухня, а
+   дата и так видна по времени сообщения. Имя поставщика при этом
+   осталось: сообщения рассылаются по очереди, и по нему сразу видно,
+   что письмо ушло тому, кому нужно. */
 function buildPurchaseReportText(cat) {
-  var today = new Date().toLocaleDateString('ru-RU');
   var data = buildPurchaseReportData(cat);
-  var greeting = 'Доброго времени!';
-  var header = purchaseCategoryIcon(cat) + ' ' + purchaseReportHeaderTitle(data.kind) + ' — ' + purchaseCategoryLabel(cat) + ' (' + today + ')';
-  if (!data.lines.length) return greeting + '\n\n' + header + '\n\nНет позиций.';
-  return greeting + '\n\n' + header + '\n\n' + data.lines.join('\n');
+  var greeting = 'Доброго времени! ' + purchaseCategoryLabel(cat);
+  if (!data.lines.length) return greeting + '\n\nНет позиций.';
+  return greeting + '\n\n' + data.lines.join('\n');
 }
 
 function fallbackCopyText(text, successMsg) {
@@ -8915,7 +8959,13 @@ function renderSendAllPurchaseStep() {
 
   var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
   if (titleEl) titleEl.textContent = '📤 Отправка ' + (sendAllPurchaseIndex + 1) + ' из ' + sendAllPurchaseQueue.length + ' — ' + (c.icon || '📦') + ' ' + c.label;
-  if (msgEl) msgEl.style.display = '';
+  if (msgEl) {
+    msgEl.style.display = '';
+    var forGroup = !!resolvePurchaseAppLink(c.link, ' ').shareUrl;
+    msgEl.textContent = forGroup
+      ? 'Это группа или канал — прямая ссылка туда текст не подставляет. Нажмите «Выбрать чат с текстом»: Telegram покажет список чатов с готовым сообщением. Либо «Открыть чат» и вставьте текст из буфера. Затем «Отправил(а) → Далее».'
+      : 'Нажмите «Открыть чат» — заказ подставится в поле сообщения сам, останется отправить. Если приложение подстановку не поддержит, текст уже лежит в буфере обмена: вставьте его (Ctrl+V или зажать → «Вставить»). Затем «Отправил(а) → Далее».';
+  }
   if (textEl) { textEl.style.display = ''; textEl.value = buildPurchaseReportText(c.id); }
   if (stepActions) stepActions.style.display = '';
   if (finishActions) finishActions.style.display = 'none';
@@ -8925,10 +8975,21 @@ function renderSendAllPurchaseStep() {
   // клика), чтобы переход происходил как обычный тап по гиперссылке —
   // см. подробное объяснение над sendAllPurchaseOpenAndCopy ниже.
   var copyBtn = $('send-purchase-copy-btn');
+  var shareBtn = $('send-purchase-share-btn');
+  // Текст кладём в ссылку заранее, вместе с адресом чата: подставить
+  // его в момент нажатия нельзя — переход должен идти по настоящему
+  // href, иначе телефон не откроет приложение напрямую.
+  var resolved = resolvePurchaseAppLink(c.link, buildPurchaseReportText(c.id));
   if (copyBtn) {
-    var resolved = resolvePurchaseAppLink(c.link, '');
     copyBtn.href = resolved.url || '#';
     copyBtn.target = isMobileDevice() ? '_self' : '_blank';
+  }
+  if (shareBtn) {
+    // Вторая кнопка нужна только там, где прямая ссылка текст не
+    // подставляет, — в группах и каналах.
+    shareBtn.style.display = resolved.shareUrl ? '' : 'none';
+    shareBtn.href = resolved.shareUrl || '#';
+    shareBtn.target = isMobileDevice() ? '_self' : '_blank';
   }
 
   overlay.classList.add('show');
@@ -8946,7 +9007,19 @@ function isMobileDevice() {
 }
 
 /* Разбирает сохранённую ссылку поставщика/цеха (c.link) и приводит её к
-   ссылке для прямого перехода в приложение — БЕЗ автоподстановки текста.
+   ссылке для перехода в чат С УЖЕ ВСТАВЛЕННЫМ текстом заказа.
+
+   ПОЧЕМУ ТАК, ХОТЯ РАНЬШЕ БЫЛО ИНАЧЕ. Подстановку убирали: ссылка с
+   ?text= — не прямая Universal Link, а промежуточная страница (t.me,
+   wa.me), поэтому телефон при каждом переходе спрашивает «открыть
+   приложение?». Но вставлять текст вручную в каждый из полутора
+   десятков чатов — работа куда более утомительная, чем одно
+   подтверждение. Так же устроен и запрос ключа у администратора, где
+   текст подставляется сам и это никого не смущает.
+
+   Текст при этом всё равно копируется в буфер (см.
+   sendAllPurchaseOpenAndCopy): если приложение подстановку
+   проигнорирует, останется просто вставить.
    Раньше для WhatsApp и личных чатов Telegram текст передавался прямо в
    ссылке (?text=...), но именно это и вызывало системное окно "Сайт
    пытается открыть другое приложение" при КАЖДОМ нажатии: ссылка с
@@ -8962,20 +9035,37 @@ function isMobileDevice() {
 function resolvePurchaseAppLink(rawLink, text) {
   var link = (rawLink || '').trim();
   if (!link) return { url: link, prefilled: false };
+  var body = encodeURIComponent(text || '');
 
   // WhatsApp: wa.me/<телефон> или (api.)whatsapp.com/send?phone=<телефон>
   var waMatch = link.match(/(?:wa\.me\/|whatsapp\.com\/send\?[^#]*phone=)(\d{6,15})/i);
   if (waMatch) {
-    return { url: 'https://wa.me/' + waMatch[1], prefilled: false };
+    return { url: 'https://wa.me/' + waMatch[1] + (body ? '?text=' + body : ''), prefilled: !!body };
   }
 
-  // Telegram: t.me/<username> — но НЕ инвайт-ссылка группы (t.me/+... или /joinchat/...).
+  // Telegram: t.me/<username> — личный чат или бот. Только им Telegram
+  // разрешает подставлять текст параметром ?text=.
   var tgMatch = link.match(/t(?:elegram)?\.me\/([a-zA-Z0-9_]{4,32})(?:[/?]|$)/i);
-  if (tgMatch && !/t(?:elegram)?\.me\/(\+|joinchat\/)/i.test(link)) {
-    return { url: 'https://t.me/' + tgMatch[1], prefilled: false };
+  if (tgMatch && !/t(?:elegram)?\.me\/(\+|joinchat\/|c\/)/i.test(link)) {
+    return { url: 'https://t.me/' + tgMatch[1] + (body ? '?text=' + body : ''), prefilled: !!body };
   }
 
-  // Viber: ссылка вида viber://chat?number=... или страница с номером в query
+  // Группа или канал Telegram (инвайт-ссылка t.me/+…, /joinchat/… или
+  // приватная t.me/c/…). Прямая ссылка туда текст не подставит, поэтому
+  // отдаём ещё и «поделиться»: Telegram откроет список чатов с уже
+  // готовым сообщением, останется выбрать нужный. Это на один выбор
+  // больше, но заказ не придётся набирать или вставлять руками.
+  if (/t(?:elegram)?\.me\/(\+|joinchat\/|c\/)/i.test(link)) {
+    return {
+      url: link,
+      prefilled: false,
+      shareUrl: body ? 'https://t.me/share/url?url=&text=' + body : '',
+      shareHint: 'группа или канал'
+    };
+  }
+
+  // Viber: ссылка вида viber://chat?number=... или страница с номером в query.
+  // Подстановку текста Viber не поддерживает — здесь только переход.
   var viberNumberMatch = link.match(/[?&]number=(%2B\d+|\+?\d+)/i);
   if (/viber/i.test(link) && viberNumberMatch) {
     var viberNumber = decodeURIComponent(viberNumberMatch[1]);
@@ -9010,7 +9100,7 @@ function sendAllPurchaseOpenAndCopy(event) {
   var resolved = resolvePurchaseAppLink(c.link, text);
 
   copyTextToClipboard(text, resolved.prefilled
-    ? '📋 Текст скопирован (на всякий случай — в чате он уже должен быть вставлен)'
+    ? '✅ Текст подставлен в чат — остаётся отправить'
     : '📋 Текст скопирован — вставьте его в открывшемся чате');
 
   if (!resolved.url) {
