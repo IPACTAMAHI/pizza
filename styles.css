@@ -1,10 +1,24 @@
   :root {
-    --bg: #0b0b0d;
-    --surface: #18171a;
-    --card: #1c1b1e;
+    /* Поверхности идут ступенями, а не полупрозрачным стеклом. Стекло с
+       размытием на фото-фоне давало грязный серый оттенок и «мыло» на
+       тексте — отсюда и ощущение дешевизны. Плотные ступени читаются
+       чётко и одинаково на любом фоне. */
+    --bg: #0c0c0e;
+    --surface-1: #141416;
+    --surface-2: #1a1a1d;
+    --surface-3: #212125;
+    --surface: var(--surface-2);
+    --card: var(--surface-2);
+
+    --line: rgba(255,255,255,.07);
+    --line-strong: rgba(255,255,255,.13);
+
     --accent: #e2564b;
+    --accent-soft: rgba(226,86,75,.14);
     --accent-2: #d9a54e;
-    --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 55%, #b23a30);
+    /* Градиент оставлен только для главной кнопки — раньше он был на
+       каждом чипе, кнопке и вкладке сразу, и акцент терял смысл. */
+    --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 60%, #cc4438);
     --text: #f8f6f2;
     /* Вторичный текст стал светлее: на прежнем #b9b3ab подписи под
        названиями рецептов читались с трудом, особенно на телефоне при
@@ -17,15 +31,23 @@
     --font-display: 'Fraunces', 'Georgia', serif;
     --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-    /* Тёмные, почти непрозрачные поверхности — читаемость важнее эффекта стекла */
-    --glass-bg: rgba(24, 23, 26, .92);
-    --glass-bg-strong: rgba(28, 27, 30, .98);
-    --glass-border: rgba(255, 255, 255, .1);
-    --glass-blur: 18px;
-    --radius-lg: 22px;
-    --radius-md: 16px;
-    --shadow-soft: 0 10px 30px rgba(0, 0, 0, .45);
-    --shadow-accent: 0 10px 26px rgba(226, 86, 75, .35);
+    /* Старые имена оставлены: на них завязана половина файла, и менять
+       их разом значило бы переписывать всё сразу. Значения новые. */
+    --glass-bg: var(--surface-2);
+    --glass-bg-strong: var(--surface-3);
+    --glass-border: var(--line);
+    --glass-blur: 0px;
+
+    /* Единая шкала скруглений вместо разнобоя 12/16/20/22. */
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 18px;
+    --radius-lg: var(--r-lg);
+    --radius-md: var(--r-md);
+
+    /* Тени мягче и ниже: раньше карточки «висели» над фоном на 30px. */
+    --shadow-soft: 0 6px 20px rgba(0,0,0,.35);
+    --shadow-accent: 0 6px 18px rgba(226,86,75,.28);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -80,7 +102,11 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 10px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.26); }
-  h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: .1px; }
+  /* Засечный шрифт оставлен только заголовку сайта в шапке. В интерфейсе
+     он давал разнобой: подписи внутри карточек и панелей должны быть той
+     же гарнитурой, что и остальной текст. */
+  h1, h2, h3, h4 { font-family: var(--font-body); font-weight: 700; letter-spacing: -.2px; }
+  .header h1 { font-family: var(--font-display); }
 
   /* ===== HEADER ===== */
   .header {
@@ -88,29 +114,31 @@
       linear-gradient(180deg, rgba(10,8,10,.35) 0%, rgba(10,8,10,.55) 55%, rgba(15,12,18,.88) 100%),
       url(images/site-header.jpg);
     background-size: cover;
-    background-position: center 30%;
-    min-height: 420px;
+    background-position: center 35%;
+    /* Было 420px — почти экран телефона уходил на картинку, и до первого
+       рецепта приходилось прокручивать. Стало компактной шапкой. */
+    min-height: 190px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 34px 20px 30px;
-    padding-top: calc(34px + env(safe-area-inset-top, 0px));
+    padding: 26px 20px 20px;
+    padding-top: calc(26px + env(safe-area-inset-top, 0px));
     text-align: center;
     position: relative;
     z-index: 100;
-    box-shadow: 0 4px 24px rgba(0,0,0,.22);
-    max-width: 900px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
   }
+  @media (min-width: 900px) { .header { min-height: 150px; } }
   .header h1 {
     font-family: var(--font-display);
-    font-size: 34px; margin-bottom: 6px; letter-spacing: .2px; font-weight: 700;
-    font-style: italic;
+    font-size: 27px; margin-bottom: 4px; letter-spacing: -.2px; font-weight: 700;
     color: #fff;
-    text-shadow: 0 2px 14px rgba(0,0,0,.75);
+    text-shadow: 0 2px 12px rgba(0,0,0,.6);
   }
+  @media (min-width: 900px) { .header h1 { font-size: 24px; } }
   .header p {
-    opacity: .9; font-size: 12px; letter-spacing: 4px; text-transform: uppercase;
+    opacity: .78; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
     font-weight: 600;
     color: #fff;
     text-shadow: 0 1px 6px rgba(0,0,0,.7);
@@ -125,13 +153,11 @@
   /* Кнопки в углах шапки — стиль "тёмный квадрат, иконка + подпись" как в макете */
   .header-corner-btn {
     position: absolute;
-    top: calc(14px + env(safe-area-inset-top, 0px));
-    width: 56px; height: 56px;
-    border-radius: var(--radius-md);
-    background: rgba(15,15,20,.4);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255,255,255,.12);
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    width: 44px; height: 44px;
+    border-radius: var(--r-sm);
+    background: rgba(12,12,14,.6);
+    border: 1px solid rgba(255,255,255,.16);
     color: #fff;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 3px;
@@ -163,13 +189,13 @@
      прыжки прекращаются. Отступ top берётся из --nav-h (высота
      .nav-tabs, вычисляется в JS, см. initStickySearchOffset в app.js). */
   .search-wrap {
-    position: sticky; top: var(--nav-h, 64px); z-index: 80;
-    margin: 0 -16px 14px; scroll-margin-top: 60px;
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    padding: 10px 16px 8px;
+    position: sticky; top: var(--nav-h, 56px); z-index: 80;
+    margin: 0 -16px 12px; scroll-margin-top: 60px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 16px;
   }
+  @media (min-width: 900px) { .search-wrap { margin: 0 -24px 14px; padding: 12px 24px; } }
   .search-wrap .search-icon {
     position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
     width: 18px; height: 18px;
@@ -205,10 +231,8 @@
   .chip {
     flex-shrink: 0;
     padding: 7px 13px;
-    border-radius: 20px;
-    background: rgba(255,255,255,.06);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    border-radius: 999px;
+    background: var(--surface-2);
     color: var(--text-muted);
     font-size: 13px;
     font-weight: 600;
@@ -220,9 +244,9 @@
     -webkit-tap-highlight-color: transparent;
     transition: transform .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
   }
-  .chip:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
-  .chip:active { transform: scale(.94); }
-  .chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; box-shadow: var(--shadow-accent); }
+  .chip:hover { color: var(--text); border-color: var(--line-strong); background: var(--surface-3); }
+  .chip:active { transform: scale(.96); }
+  .chip.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: none; }
 
   /* Панель управления внутри раздела (видна только админу): добавить
      рецепт и открыть список категорий ЭТОГО раздела. Раньше добавление
@@ -250,14 +274,14 @@
 
   /* Админ-панель */
   .admin-panel-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 16px;
-    margin-bottom: 14px;
-    box-shadow: var(--shadow-soft);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .admin-panel-card > .admin-panel-row > span:first-child {
+    font-size: 15px; font-weight: 700; letter-spacing: -.1px;
   }
   .admin-panel-row {
     display: flex; align-items: center; justify-content: space-between;
@@ -270,7 +294,7 @@
   @media (max-width: 480px) {
     .admin-panel-row > .btn { width: 100%; justify-content: center; }
   }
-  .admin-panel-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+  .admin-panel-hint { color: var(--text-faint); font-size: 12.5px; line-height: 1.6; margin-top: 8px; }
 
   /* Строка "поле ввода + кнопка" в карточках админ-панели (юзернейм
      Telegram, ссылка на группу и т.п.) — на телефоне становится
@@ -453,24 +477,35 @@
   .admin-login-hint:active { opacity: .8; }
 
   /* ===== NAV TABS ===== */
+  /* Навигация — горизонтальная лента вкладок. Раньше вкладки делили
+     ширину поровну (flex:1), поэтому на телефоне шесть разделов
+     сжимались в нечитаемые столбики по 50px. */
   .nav-tabs {
     display: flex;
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid var(--glass-border);
+    gap: 4px;
+    padding: 8px 10px;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--line);
     position: sticky; top: 0; z-index: 90;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  @media (min-width: 900px) {
+    .nav-tabs { padding: 8px 24px; justify-content: flex-start; }
   }
   .nav-tab {
-    flex: 1;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px;
-    padding: 12px 6px 10px;
-    text-align: center;
+    flex: 0 0 auto;
+    display: flex; flex-direction: row; align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: var(--r-sm);
+    white-space: nowrap;
     cursor: pointer;
     color: var(--text-muted);
-    transition: color .25s ease, transform .15s ease;
-    border-bottom: 3px solid transparent;
+    transition: color .15s ease, background .15s ease;
+    border-bottom: none;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
@@ -478,21 +513,21 @@
   }
   .nav-tab .nav-icon {
     line-height: 1; display: flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 12px;
-    transition: transform .25s ease, background .25s ease;
+    width: 20px; height: 20px; font-size: 16px;
   }
-  .nav-tab .nav-icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-tab .nav-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .nav-tab .nav-label {
-    font-size: 11px; line-height: 1; letter-spacing: .2px; font-weight: 600;
-    border-bottom: 2px solid transparent; padding-bottom: 3px;
-    transition: border-color .25s ease;
+    font-size: 14px; line-height: 1; letter-spacing: -.1px; font-weight: 600;
+    border-bottom: none; padding-bottom: 0;
   }
-  .nav-tab:hover { color: var(--text); }
-  .nav-tab:active { transform: scale(.94); }
-  .nav-tab[data-tab="admin"] { color: var(--accent); }
-  .nav-tab.active { color: var(--accent); }
-  .nav-tab.active .nav-icon { background: rgba(226,86,75,.13); transform: translateY(-1px); }
-  .nav-tab.active .nav-label { border-bottom-color: var(--accent); }
+  .nav-tab:hover { color: var(--text); background: rgba(255,255,255,.05); }
+  .nav-tab:active { transform: scale(.97); }
+  /* Активная вкладка — заливкой, а не подчёркиванием: подчёркивание в
+     прокручиваемой ленте теряется, а заливка видна с любого места. */
+  .nav-tab.active { color: #fff; background: var(--accent); }
+  .nav-tab.active .nav-icon { background: transparent; }
+  .nav-tab[data-tab="admin"] { color: var(--text-muted); }
+  .nav-tab[data-tab="admin"].active { color: #fff; }
 
   /* ===== CONTENT AREA ===== */
   .tab-content { display: none; padding: 16px; max-width: 820px; margin: 0 auto; }
@@ -514,11 +549,9 @@
 
   /* ===== CARD LIST ===== */
   .recipe-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
     padding: 10px 12px;
     margin-bottom: 8px;
     cursor: pointer;
@@ -530,11 +563,10 @@
     -webkit-tap-highlight-color: transparent;
     animation: cardIn .35s ease backwards;
   }
-  .recipe-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-soft); background: var(--glass-bg-strong); border-color: rgba(226,86,75,.28); }
-  .recipe-card:active { transform: translateY(-1px) scale(.99); }
-
-  /* Цветная полоска слева по типу рецепта — для быстрого сканирования списка */
-  .recipe-card { border-left: 3px solid transparent; }
+  /* Наведение — только подсветка рамки и фона. Подпрыгивание карточки
+     на 3px в многоколоночной сетке дёргало соседей. */
+  .recipe-card:hover { background: var(--surface-3); border-color: var(--line-strong); }
+  .recipe-card:active { transform: scale(.995); }
 
   @keyframes cardIn {
     from { opacity: 0; transform: translateY(8px); }
@@ -542,11 +574,10 @@
   }
 
   .card-thumb {
-    width: 64px; height: 64px; border-radius: 11px;
+    width: 64px; height: 64px; border-radius: var(--r-sm);
     object-fit: cover; flex-shrink: 0;
-    background: var(--surface);
-    box-shadow: 0 4px 14px rgba(0,0,0,.18);
-    border: 1px solid rgba(255,255,255,.08);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
   }
   .card-info { flex: 1; min-width: 0; }
   /* Название — основной ориентир в списке, поэтому крупнее и без
@@ -613,15 +644,16 @@
     display: block;
     font-size: 13px;
     color: var(--text-muted);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     font-weight: 600;
+    letter-spacing: -.05px;
   }
   input[type="text"], input[type="number"], input[type="search"], textarea, select {
     width: 100%;
-    padding: 12px 14px;
-    background: rgba(255,255,255,.035);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
+    padding: 11px 14px;
+    background: var(--surface-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
     color: var(--text);
     font-size: 16px; /* >=16px обязательно: иначе Safari iOS зумит страницу при фокусе */
     outline: none;
@@ -639,7 +671,9 @@
     -webkit-appearance: none;
     display: none;
   }
-  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(226,86,75,.16); }
+  input::placeholder, textarea::placeholder { color: var(--text-faint); }
+  input:hover, textarea:hover, select:hover { border-color: rgba(255,255,255,.2); }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   /* Без этого правила выпадающий список <option> отрисовывается системным
      (обычно белым) фоном, а цвет текста наследуется от select (светлый) —
      в итоге буквы читаются только на подсвеченном при наведении пункте.
@@ -664,11 +698,12 @@
 
   /* Buttons */
   .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 11px 18px;
+    border-radius: var(--r-sm);
+    font-size: 14.5px;
     font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
     border: none;
     /* Часть кнопок — это ссылки (<a class="btn">), например «Написать
@@ -683,20 +718,25 @@
     -webkit-appearance: none;
     appearance: none;
   }
-  .btn:active { transform: scale(.96); }
-  .btn-primary { background: var(--accent-grad); box-shadow: var(--shadow-accent); }
-  .btn-primary:hover { filter: brightness(1.08); }
-  .btn-success { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; box-shadow: 0 8px 22px rgba(46,204,113,.25); }
-  .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+  .btn:active { transform: scale(.97); }
+  /* Единственная кнопка с заливкой-акцентом — главное действие экрана.
+     Раньше градиент стоял и на второстепенных, и глаз не понимал, куда
+     нажимать в первую очередь. */
+  .btn-primary { background: var(--accent); box-shadow: none; }
+  .btn-primary:hover { background: #ec6355; }
+  /* Успех и опасность — плоской заливкой без градиента: два градиента
+     рядом на одной панели выглядели как набор наклеек. */
+  .btn-success { background: #2f9e63; color: #fff; box-shadow: none; }
+  .btn-success:hover { background: #35b070; }
+  .btn-danger { background: rgba(226,86,75,.16); color: #ff9d92; }
+  .btn-danger:hover { background: rgba(226,86,75,.26); color: #ffb3a8; }
   .btn-ghost {
-    background: rgba(255,255,255,.04);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid var(--glass-border);
+    background: var(--surface-3);
+    border: 1px solid var(--line);
     color: var(--text-muted);
   }
-  .btn-ghost:hover { background: rgba(255,255,255,.08); color: var(--text); }
-  .btn-sm { padding: 8px 16px; font-size: 13px; }
+  .btn-ghost:hover { background: #26262b; color: var(--text); border-color: var(--line-strong); }
+  .btn-sm { padding: 8px 14px; font-size: 13.5px; }
 
   /* Ingredients list in form */
   .ingredient-row {
@@ -708,10 +748,10 @@
 
   /* ===== ЗАКУПКА (калькулятор недельной закупки) ===== */
   .purchase-row {
-    background: var(--card);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 11px 12px;
     margin-bottom: 8px;
   }
   .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -831,6 +871,10 @@
 
   /* ===== DETAIL VIEW ===== */
   .detail-back { margin-bottom: 16px; }
+  /* Название рецепта — самый крупный текст на экране, ингредиенты и шаги
+     набраны с увеличенным межстрочным: их читают, стоя у плиты. */
+  #detail-body h2 { font-size: 24px; line-height: 1.25; margin-bottom: 6px; }
+  #detail-body h3 { font-size: 15px; letter-spacing: .02em; text-transform: uppercase; color: var(--text-muted); }
 
   /* Плавающая компактная кнопка "Назад" — дублирует обычную "← Назад"
      наверху рецепта, но остаётся доступной при прокрутке вниз. Не
@@ -847,12 +891,10 @@
     width: 42px; height: 42px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
     color: var(--text);
-    box-shadow: var(--shadow-soft);
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
     cursor: pointer;
     opacity: 0;
     transform: translateY(10px) scale(.9);
@@ -896,14 +938,11 @@
     color: var(--accent); text-decoration: none; font-size: 14px;
   }
   .qr-share-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
     padding: 20px; margin-top: 24px;
     text-align: center;
-    box-shadow: var(--shadow-soft);
   }
   .qr-share-card h3 { font-size: 16px; margin-bottom: 4px; }
   .qr-share-card p { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
@@ -1050,13 +1089,12 @@
     position: fixed; bottom: 30px; left: 50%;
     transform: translateX(-50%) translateY(8px);
     padding: 14px 28px;
-    background: rgba(39, 174, 96, .9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    color: #fff;
-    border-radius: var(--radius-md);
-    font-size: 15px;
-    box-shadow: var(--shadow-soft);
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
+    color: var(--text);
+    border-radius: var(--r-sm);
+    font-size: 14px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.5);
     opacity: 0; transition: opacity .3s ease, transform .3s ease;
     z-index: 999;
     pointer-events: none;
@@ -1092,15 +1130,13 @@
   }
   .modal-overlay.show { display: flex; }
   .modal-box {
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
+    background: var(--surface-2);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-lg);
     padding: 22px;
-    max-width: 380px;
+    max-width: 420px;
     width: 100%;
-    box-shadow: 0 10px 40px rgba(0,0,0,.28);
+    box-shadow: 0 24px 60px rgba(0,0,0,.55);
     animation: modalIn .2s ease;
   }
   @keyframes modalIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -1215,11 +1251,9 @@
     display: inline-flex; align-items: center; gap: 7px;
     margin: 10px auto 0;
     padding: 7px 14px;
-    border-radius: 20px;
-    background: rgba(15,15,20,.42);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px;
+    background: rgba(12,12,14,.66);
+    border: 1px solid rgba(255,255,255,.18);
     color: #fff;
     font-family: inherit;
     font-size: 13.5px; font-weight: 600;
@@ -1292,12 +1326,10 @@
      подписи прячутся на узких экранах, название остаётся в title. */
   .tool-bar {
     display: flex; flex-wrap: wrap; gap: 6px;
-    padding: 6px;
-    border-radius: 14px;
-    background: rgba(255,255,255,.04);
-    border: 1px solid var(--glass-border);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    padding: 5px;
+    border-radius: var(--r-md);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
   }
   .tool-btn {
     position: relative;
@@ -1321,8 +1353,8 @@
   .tool-btn:active { transform: scale(.94); }
   .tool-btn:disabled { opacity: .5; cursor: default; }
   .tool-btn-icon { font-size: 15px; line-height: 1; }
-  .tool-btn-primary { background: var(--accent-grad); color: #fff; box-shadow: var(--shadow-accent); }
-  .tool-btn-primary:hover { filter: brightness(1.08); background: var(--accent-grad); color: #fff; }
+  .tool-btn-primary { background: var(--accent); color: #fff; box-shadow: none; }
+  .tool-btn-primary:hover { background: #ec6355; color: #fff; }
   .tool-btn-danger { background: rgba(231,76,60,.16); color: #ff9b90; }
   .tool-btn-danger:hover { background: rgba(231,76,60,.28); color: #ffb3aa; }
 
@@ -1378,9 +1410,9 @@
   .activity-item {
     padding: 10px 12px;
     margin-bottom: 8px;
-    border-radius: 12px;
-    background: rgba(255,255,255,.04);
-    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
   }
   .activity-head {
     display: flex; align-items: baseline; gap: 8px;
@@ -1427,9 +1459,9 @@
     display: flex; align-items: center; gap: 9px;
     width: 100%;
     padding: 11px 13px;
-    border-radius: 12px;
-    background: rgba(255,255,255,.05);
-    border: 1px solid var(--glass-border);
+    border-radius: var(--r-sm);
+    background: var(--surface-3);
+    border: 1px solid var(--line);
     color: var(--text);
     font-family: inherit; font-size: 14px; font-weight: 700;
     text-align: left;
@@ -1580,8 +1612,8 @@
   .status-opt:hover { color: var(--text); border-color: rgba(255,255,255,.22); }
   .status-opt:active { transform: scale(.95); }
   .status-opt.is-current {
-    background: var(--accent-grad); color: #fff;
-    border-color: transparent; box-shadow: var(--shadow-accent);
+    background: var(--accent); color: #fff;
+    border-color: transparent; box-shadow: none;
   }
 
   /* Тот же переключатель внутри открытого рецепта */
