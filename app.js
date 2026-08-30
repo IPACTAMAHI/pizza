@@ -2131,17 +2131,22 @@ function ensureSectionContent(s) {
   if (!container) return;
   var sid = s.id;
   var html = '<div id="' + paneId + '" class="tab-content">' +
+    '<div class="section-controls">' +
     '<div class="search-wrap">' +
       '<svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' +
       '<input type="search" class="search-input" id="search-section-' + sid + '" placeholder="Поиск по названию рецепта..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderSectionList(\'' + sid + '\'); toggleSearchClear(\'search-section-' + sid + '\')">' +
       '<button type="button" class="search-clear" id="search-section-' + sid + '-clear" onclick="clearSearchInput(\'search-section-' + sid + '\')" title="Очистить" style="display:none">✕</button>' +
     '</div>' +
-    '<div class="chip-row" id="section-chips-' + sid + '"></div>' +
+    // Панель управления и фильтр актуальности стоят рядом: на широком
+    // экране они выстраиваются в одну строку с поиском (см. .section-controls),
+    // на телефоне переносятся друг под друга.
     '<div class="section-toolbar tool-bar admin-only">' +
       '<button type="button" class="tool-btn tool-btn-primary" data-perm="recipe.add" title="Добавить рецепт" onclick="openAddForm(\'' + sid + '\')"><span class="tool-btn-icon">➕</span><span class="tool-btn-label">Добавить рецепт</span></button>' +
       '<button type="button" class="tool-btn" data-perm="category.manage" title="Категории раздела" onclick="toggleSectionCategories(\'' + sid + '\')"><span class="tool-btn-icon">🏷️</span><span class="tool-btn-label">Категории</span></button>' +
     '</div>' +
     '<div class="chip-row status-filter-row admin-only" id="section-status-' + sid + '"></div>' +
+    '</div>' + // конец .section-controls
+    '<div class="chip-row" id="section-chips-' + sid + '"></div>' +
     '<div class="section-cats" id="section-cats-' + sid + '" style="display:none"></div>' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">' +
       '<span id="section-count-' + sid + '" style="font-size:14px;color:var(--text-muted)">Всего: 0</span>' +
@@ -2173,6 +2178,7 @@ function renderSectionNavTabs() {
   updateVenueSwitcher();
   updatePurchaseTabVisibility();
   applyPermissionVisibility(); // панели разделов создаются здесь, кнопки в них тоже по правам
+  updateMobileBar();
 
   // Открытый сейчас раздел стал недоступен (сняли роль, удалили
   // раздел) — уводим человека на первый доступный.
@@ -2194,6 +2200,30 @@ function renderSectionNavTabs() {
 /* Переключатель заведений в шапке. Кнопка показывается, только если
    переключать реально есть на что: у сотрудника одной точки она лишь
    мешала бы, а админ и разработчик видят все точки всегда. */
+/* Нижняя панель на телефоне. «Рецепты» возвращают в тот раздел, где
+   человек был до перехода в закупку или настройки, — а не в первый по
+   списку: у повара горячего цеха первым идёт чужой пицца-бар. */
+var lastSectionTab = '';
+
+function mobileGoSections() {
+  if (lastSectionTab && hasSectionAccess(lastSectionTab.slice('section:'.length))) {
+    switchTab(lastSectionTab);
+    return;
+  }
+  goToDefaultSection();
+}
+
+function updateMobileBar() {
+  var bar = $('mobile-bar');
+  if (!bar) return;
+  var active = (currentTab.indexOf('section:') === 0 || currentTab === 'detail' || currentTab === 'add')
+    ? 'sections'
+    : currentTab;
+  bar.querySelectorAll('.mobile-bar-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mobile === active);
+  });
+}
+
 function updateVenueSwitcher() {
   var btn = $('venue-switch-btn');
   if (!btn) return;
@@ -2841,10 +2871,20 @@ function firstCategoryIdForSection(sectionId) {
 
 /* Строка чипов раздела: «Все» плюс по чипу на каждую его категорию. */
 function categoryChipsHtml(sectionId, activeType) {
-  var html = '<span class="chip' + (!activeType ? ' active' : '') + '" data-type="" onclick="selectSectionChip(\'' + sectionId + '\', \'\')">Все</span>';
+  /* У каждой категории показываем, сколько в ней рецептов. Без счётчика
+     непонятно, есть ли там вообще что-то: человек нажимал «Заготовки» и
+     упирался в пустой список. Считаем по тем же правилам видимости, что
+     и сам список, — иначе цифра расходилась бы с содержимым. */
+  var visible = recipesForSection(sectionId).filter(function(r) {
+    return canSeeAllRecipeStatuses() || recipeStatus(r) === 'active';
+  });
+  var html = '<span class="chip' + (!activeType ? ' active' : '') + '" data-type="" onclick="selectSectionChip(\'' + sectionId + '\', \'\')">' +
+    'Все<span class="chip-count">' + visible.length + '</span></span>';
   categoriesForSection(sectionId).forEach(function(c) {
+    var n = visible.filter(function(r) { return r.type === c.id; }).length;
     html += '<span class="chip' + (activeType === c.id ? ' active' : '') + '" data-type="' + escAttr(c.id) + '"' +
-      ' onclick="selectSectionChip(\'' + sectionId + '\', \'' + escAttr(c.id) + '\')">' + esc((c.icon ? c.icon + ' ' : '') + c.label) + '</span>';
+      ' onclick="selectSectionChip(\'' + sectionId + '\', \'' + escAttr(c.id) + '\')">' +
+      esc((c.icon ? c.icon + ' ' : '') + c.label) + '<span class="chip-count">' + n + '</span></span>';
   });
   return html;
 }
@@ -5406,6 +5446,9 @@ let currentTab = '';
 
 function switchTab(name) {
   if (name === currentTab) return;
+  // Запоминаем последний открытый раздел — по нему кнопка «Рецепты»
+  // в нижней панели возвращает человека туда, где он работал.
+  if (currentTab.indexOf('section:') === 0) lastSectionTab = currentTab;
   // Создавать НОВЫЙ рецепт "с нуля" может только настоящий разработчик
   // (вход по GitHub-ключу). Обычный админ (права выданы через список
   // "Участники") может только редактировать уже существующие карточки —
@@ -5462,6 +5505,7 @@ function switchTab(name) {
     renderPurchaseTab();
     syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
   }
+  updateMobileBar();
 }
 
 /* ================================================================
@@ -6083,43 +6127,87 @@ function renderCards(containerEl, countEl, items, emptyText) {
   var html = '';
   for (var i = 0; i < items.length; i++) {
     var r = items[i];
-    // Подпись, эмодзи и цвет бейджа берутся из настроек категорий
-    // (siteConfig.categories), а не из зашитого в код словаря —
-    // поэтому переименование категории сразу видно на всех карточках.
-    // Рецепт со ссылкой на несуществующую категорию (такое возможно
-    // только у того, кто ещё не получил свежий site-config.json)
-    // показывается нейтрально, а не притворяется пиццей.
+    // Подпись, эмодзи и цвет берутся из настроек категорий
+    // (siteConfig.categories), а не из зашитого словаря — поэтому
+    // переименование категории сразу видно на всех карточках.
     var cat = recipeCategoryById(r.type);
     var catIcon = (cat && cat.icon) ? cat.icon : '🍽';
     var catName = cat ? cat.label : 'Без категории';
     var catColor = (cat && cat.color) ? cat.color : '#5a5a60';
     var delay = Math.min(i, 8) * 0.04;
-    // Неактуальные карточки видит только админ — приглушаем их, чтобы
-    // при беглом взгляде на список было ясно, что сейчас в работе.
     var st = recipeStatus(r);
     var stMeta = statusMeta(st);
-    html += '<div class="recipe-card ctype-' + escAttr(r.type || '') + (st !== 'active' ? ' recipe-card-inactive' : '') + '" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
-      (r.photo ? '<img class="card-thumb" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="">' :
-        '<div class="card-thumb" style="display:flex;align-items:center;justify-content:center;font-size:32px">' + esc(catIcon) + '</div>') +
+    var videos = getRecipeVideos(r);
+
+    /* Состав отдельной строкой под названием. Раньше ингредиенты нигде в
+       списке не показывались, и рецепты с похожими названиями («Пинса
+       Курица-Грибы» и «Пинса Курица») различались только открытием
+       каждого. Строка обрезается многоточием, чтобы карточки оставались
+       одной высоты. */
+    var composition = (r.ingredients && r.ingredients.length)
+      ? r.ingredients.slice(0, 6).map(function(x) { return String(x).split(/\s+—|\s+-\s/)[0].trim(); }).join(', ')
+      : '';
+
+    html += '<div class="recipe-card ctype-' + escAttr(r.type || '') + (st !== 'active' ? ' recipe-card-inactive' : '') +
+        '" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
+
+      // Обложка во всю ширину карточки. Без фото — плашка цвета
+      // категории со значком: так список выглядит ровно даже когда
+      // снимки есть не у всех рецептов.
+      '<div class="card-cover' + (r.photo ? '' : ' card-cover-empty') + '"' +
+        (r.photo ? '' : ' style="background:' + escAttr(catColor) + '22"') + '>' +
+        (r.photo
+          ? '<img class="card-thumb" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="" loading="lazy">'
+          : '<span class="card-cover-icon">' + esc(catIcon) + '</span>') +
+        (videos.length
+          ? '<button type="button" class="card-video-btn" title="Смотреть видео" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)">' +
+              '<svg viewBox="0 0 24 24"><path d="M8 6l10 6-10 6V6z"></path></svg></button>'
+          : '') +
+      '</div>' +
+
       '<div class="card-info">\n'
-      + '  <h3>' + esc(r.name) + '</h3>\n'
+      + '  <div class="card-title-row">' +
+          '<h3>' + esc(r.name) + '</h3>' +
+          (r.weight ? '<span class="card-weight">' + esc(formatWeight(r.weight)) + '</span>' : '') +
+        '</div>\n'
+      + (composition ? '  <p class="card-composition">' + esc(composition) + '</p>\n' : '')
       + '  <div class="card-meta">' +
+        '<span class="badge badge-status status-' + escAttr(st) + '">' + esc(stMeta.short) + '</span>' +
         '<span class="badge type-badge" style="background:' + escAttr(catColor) + '">' + esc(catName) + '</span>' +
-        (st !== 'active' ? '<span class="badge badge-status" style="background:' + escAttr(stMeta.color) + '">' + esc(stMeta.icon + ' ' + stMeta.short) + '</span>' : '') +
         (r.style ? '<span class="badge badge-style">' + esc(r.style) + '</span>' : '') +
-        (r.calories ? '<span class="badge badge-cal">🔥 ' + r.calories + ' ккал</span>' : '') +
-        (r.weight ? '<span class="badge badge-cal">⚖️ ' + formatWeight(r.weight) + '</span>' : '') +
-        (getRecipeVideos(r).length ? '<span class="badge badge-cal badge-video-active" onclick="event.stopPropagation(); openDetail(\'' + r.id + '\', true)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#fff" stroke-width="1.5"></circle><path d="M10 8l6 4-6 4V8z"></path></svg>Видео</span>' : '') +
+        (r.calories ? '<span class="badge badge-cal">' + r.calories + ' ккал</span>' : '') +
+        '<span class="card-actions">' +
+          '<button type="button" class="card-icon-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">' +
+            '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>' +
+          '</button>' +
+          // Меню карточки: переключатель актуальности убран под него.
+          // Три кнопки статуса на каждой из сорока карточек и делали из
+          // списка стену кнопок.
+          (canSeeAllRecipeStatuses()
+            ? '<button type="button" class="card-icon-btn" title="Действия" onclick="event.stopPropagation(); toggleCardMenu(this)">' +
+                '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle></svg>' +
+              '</button>'
+            : '') +
+        '</span>' +
       '</div>\n'
-    + recipeStatusSwitchHtml(r)
-    + '</div>'
-    + '<button class="card-share-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">'
-    +   '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>'
-    + '</button>'
-    + '<span class="card-chevron">›</span></div>';
+      + recipeStatusSwitchHtml(r)
+      + '</div>'
+    + '</div>';
   }
   containerEl.innerHTML = html;
 }
+
+/* Раскрывает меню карточки (сейчас в нём переключатель актуальности).
+   Открытое меню одно на список: два раскрытых блока в сетке смотрелись
+   бы как сбой вёрстки. */
+function toggleCardMenu(btn) {
+  var card = btn.closest('.recipe-card');
+  if (!card) return;
+  var open = card.classList.contains('menu-open');
+  document.querySelectorAll('.recipe-card.menu-open').forEach(function(el) { el.classList.remove('menu-open'); });
+  if (!open) card.classList.add('menu-open');
+}
+
 
 function applySearch(items, inputId) {
   var input = $(inputId);
@@ -6148,6 +6236,14 @@ function clearSearchInput(inputId) {
 /* ================================================================
    ВКЛАДКА "АДМИН-ПАНЕЛЬ"
    ================================================================ */
+/* Длинные пояснения в админ-панели свёрнуты до трёх строк. Нажатие
+   раскрывает — инструкцию читают один раз, а карточками пользуются
+   каждый день, и текст не должен занимать пол-экрана. */
+document.addEventListener('click', function(e) {
+  var hint = e.target.closest ? e.target.closest('.admin-panel-hint') : null;
+  if (hint) hint.classList.toggle('expanded');
+});
+
 function renderAdminPanel() {
   renderActivityLog();
   syncActivityFromGithub(); // в фоне: у коллег могли появиться новые записи
