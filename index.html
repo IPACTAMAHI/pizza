@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260828c">
+<link rel="stylesheet" href="styles.css?v=20260828e">
 </head>
 <body>
 
@@ -118,6 +118,25 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <span class="nav-label">Админ-панель / Настройки</span>
   </div>
 </div>
+<!-- Нижняя панель для телефона. Верхняя лента вкладок там остаётся,
+     но до «Закупки» и «Админ-панели» приходилось прокручивать её вбок,
+     а это самые частые переходы. Панель закреплена внизу, у большого
+     пальца, и на ПК не показывается (см. styles.css). -->
+<nav class="mobile-bar" id="mobile-bar" aria-label="Основная навигация">
+  <button type="button" class="mobile-bar-btn" data-mobile="sections" onclick="mobileGoSections()">
+    <svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"></path><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"></path></svg>
+    <span>Рецепты</span>
+  </button>
+  <button type="button" class="mobile-bar-btn purchase-access-only" data-mobile="purchase" onclick="switchTab('purchase')">
+    <svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 2-1.58l1.65-7.42H5.12"></path></svg>
+    <span>Закупка</span>
+  </button>
+  <button type="button" class="mobile-bar-btn admin-only" data-mobile="admin" onclick="switchTab('admin')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    <span>Настройки</span>
+  </button>
+</nav>
+
 <!-- Подсказка для гостей: как войти в режим администратора -->
 <div class="admin-login-hint guest-only" id="admin-login-hint" onclick="toggleAdmin()">
   🔒 Режим просмотра. Нажмите, чтобы войти и получить доступ к редактированию.
@@ -655,7 +674,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260828c"></script>
+<script src="app.js?v=20260828e"></script>
 
 
 
