@@ -76,14 +76,15 @@
   {
     "id": "S48L-D2B4",
     "fingerprint": "",
-    "name": "",
+    "name": "Outsider3000",
     "addedAt": 1788081594935,
     "blocked": false,
-    "claimed": false,
+    "claimed": true,
     "venue": "venue-main",
     "roles": [
       "tab:main"
     ],
-    "role": "viewer"
+    "role": "viewer",
+    "claimedAt": 1788081640183
   }
 ]
