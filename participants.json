@@ -41,7 +41,7 @@
     "blocked": false,
     "claimed": true,
     "roles": [
-      "admin"
+      "superadmin"
     ],
     "role": "admin",
     "claimedAt": 1787927074252
