@@ -72,5 +72,18 @@
     ],
     "role": "purchase",
     "claimedAt": 1787986293828
+  },
+  {
+    "id": "S48L-D2B4",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1788081594935,
+    "blocked": false,
+    "claimed": false,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
