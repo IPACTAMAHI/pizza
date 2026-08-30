@@ -294,7 +294,16 @@
   @media (max-width: 480px) {
     .admin-panel-row > .btn { width: 100%; justify-content: center; }
   }
-  .admin-panel-hint { color: var(--text-faint); font-size: 12.5px; line-height: 1.6; margin-top: 8px; }
+  /* Пояснения в админ-панели длинные, и раньше карточка «Заведения»
+     занимала пол-экрана текстом. Показываем три строки, остальное — по
+     нажатию: инструкция нужна один раз, а карточкой пользуются каждый день. */
+  .admin-panel-hint {
+    color: var(--text-faint); font-size: 12.5px; line-height: 1.6; margin-top: 8px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .admin-panel-hint.expanded { -webkit-line-clamp: unset; }
 
   /* Строка "поле ввода + кнопка" в карточках админ-панели (юзернейм
      Telegram, ссылка на группу и т.п.) — на телефоне становится
@@ -547,22 +556,81 @@
   .tab-content.active { display: block; animation: fadeIn .25s ease; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+  /* Список цехов и поставщиков на широком экране — в две колонки:
+     их бывает полтора десятка, и одной колонкой это длинная простыня. */
+  @media (min-width: 900px) {
+    #purchase-home-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
+    #purchase-home-list .purchase-home-card { margin-bottom: 0; }
+  }
+
+  /* ===== ПАНЕЛЬ УПРАВЛЕНИЯ РАЗДЕЛОМ =====
+     Поиск, фильтр актуальности и кнопки. На широком экране — одной
+     строкой: раньше это были три отдельных ряда, и до первого рецепта
+     оставалась треть экрана. */
+  .section-controls { margin-bottom: 12px; }
+  .section-controls .search-wrap { position: static; margin: 0 0 8px; padding: 0; border: none; background: transparent; }
+  .section-controls .section-toolbar { margin: 0 0 8px; }
+  .section-controls .status-filter-row { margin: 0 0 8px; }
+
+  @media (min-width: 900px) {
+    .section-controls {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px;
+    }
+    .section-controls .search-wrap { flex: 1; min-width: 240px; margin: 0; }
+    .section-controls .section-toolbar,
+    .section-controls .status-filter-row { margin: 0; flex-shrink: 0; }
+  }
+
+  /* Счётчик рецептов у категории. Приглушён и через точку — это
+     подпись к названию, а не отдельная величина. */
+  .chip-count { opacity: .6; margin-left: 5px; font-variant-numeric: tabular-nums; }
+  .chip-count::before { content: '· '; }
+
   /* ===== CARD LIST ===== */
+  /* Карточка: обложка сверху, под ней название, состав и метки.
+     Прежняя схема «миниатюра слева, всё остальное строкой справа» не
+     оставляла места ни для состава, ни для веса — они не помещались и
+     обрезались. */
   .recipe-card {
     background: var(--surface-2);
     border: 1px solid var(--line);
     border-radius: var(--r-md);
-    padding: 10px 12px;
+    padding: 0;
     margin-bottom: 8px;
+    overflow: hidden;
     cursor: pointer;
-    transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+    transition: background .15s ease, border-color .15s ease, transform .1s ease;
     display: flex;
-    gap: 12px;
-    align-items: center;
+    flex-direction: column;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     animation: cardIn .35s ease backwards;
   }
+
+  .card-cover {
+    position: relative;
+    height: 108px;
+    background: var(--surface-1);
+    display: flex; align-items: center; justify-content: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .card-cover .card-thumb { width: 100%; height: 100%; border: none; border-radius: 0; }
+  /* Без фото — значок категории на её же цвете, приглушённом до фона.
+     Список остаётся ровным, даже если снимки есть не у всех. */
+  .card-cover-icon { font-size: 34px; opacity: .55; }
+  .card-video-btn {
+    position: absolute; right: 8px; bottom: 8px;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    border: none;
+    background: rgba(10,10,12,.72);
+    color: #fff;
+    cursor: pointer;
+  }
+  .card-video-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  .card-video-btn:hover { background: var(--accent); }
   /* Наведение — только подсветка рамки и фона. Подпрыгивание карточки
      на 3px в многоколоночной сетке дёргало соседей. */
   .recipe-card:hover { background: var(--surface-3); border-color: var(--line-strong); }
@@ -573,13 +641,19 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .card-thumb {
-    width: 64px; height: 64px; border-radius: var(--r-sm);
-    object-fit: cover; flex-shrink: 0;
-    background: var(--surface-1);
-    border: 1px solid var(--line);
+  .card-thumb { object-fit: cover; }
+  .card-info { flex: 1; min-width: 0; padding: 11px 13px 12px; }
+  .card-title-row { display: flex; align-items: baseline; gap: 10px; }
+  .card-weight { margin-left: auto; flex-shrink: 0; font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  /* Состав — ради него и переделана карточка: рецепты с похожими
+     названиями иначе не различить, не открывая каждый. */
+  .card-composition {
+    margin: 4px 0 0;
+    font-size: 13px; line-height: 1.45;
+    color: var(--text-muted);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-  .card-info { flex: 1; min-width: 0; }
   /* Название — основной ориентир в списке, поэтому крупнее и без
      курсивной подачи: важнее скорость чтения, чем стиль. */
   .card-info h3 {
@@ -589,8 +663,32 @@
     margin-bottom: 3px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .card-chevron { flex-shrink: 0; color: var(--text-muted); font-size: 18px; padding-left: 4px; }
+  .card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .card-actions { display: flex; gap: 2px; margin-left: auto; flex-shrink: 0; }
+  .card-icon-btn {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; border: none;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .card-icon-btn:hover { background: rgba(255,255,255,.08); color: var(--text); }
+  .card-icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; }
+  .card-icon-btn svg circle { fill: currentColor; stroke: none; }
+
+  /* Бейдж актуальности: цвет несёт смысл, поэтому дублируется словом. */
+  .badge-status { font-weight: 700; }
+  .badge-status.status-active { background: rgba(47,158,99,.18); color: #6fd39b; }
+  .badge-status.status-off-menu { background: rgba(226,86,75,.16); color: #ff9d92; }
+  .badge-status.status-seasonal { background: rgba(90,140,220,.18); color: #9dc0f5; }
+
+  /* Переключатель актуальности спрятан в меню карточки (кнопка «⋮»):
+     три кнопки на каждой из сорока карточек превращали список в стену. */
+  .recipe-card .card-status-switch { display: none; }
+  .recipe-card.menu-open .card-status-switch { display: flex; }
+  .recipe-card.menu-open { border-color: var(--line-strong); }
   .card-share-btn {
     flex-shrink: 0;
     width: 30px; height: 30px;
@@ -875,6 +973,24 @@
      набраны с увеличенным межстрочным: их читают, стоя у плиты. */
   #detail-body h2 { font-size: 24px; line-height: 1.25; margin-bottom: 6px; }
   #detail-body h3 { font-size: 15px; letter-spacing: .02em; text-transform: uppercase; color: var(--text-muted); }
+
+  /* Характеристики рецепта — строками с разделителями, значение справа.
+     Раньше это была россыпь бейджей, и найти в ней нужную цифру (вес,
+     время) удавалось не с первого взгляда. */
+  .detail-meta {
+    display: flex; flex-direction: column; gap: 0;
+    margin: 14px 0 18px;
+  }
+  .detail-badge {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 2px;
+    border-top: 1px solid var(--line);
+    background: none;
+    font-size: 14.5px;
+    color: var(--text);
+  }
+  .detail-badge:last-child { border-bottom: 1px solid var(--line); }
+  .detail-badge-status { background: none; color: var(--accent); font-weight: 700; }
 
   /* Плавающая компактная кнопка "Назад" — дублирует обычную "← Назад"
      наверху рецепта, но остаётся доступной при прокрутке вниз. Не
@@ -1624,6 +1740,58 @@
   .detail-status-title { font-size: 13px; color: var(--text-muted); font-weight: 600; }
   .detail-status .card-status-switch { margin-top: 0; }
   .detail-status .status-opt { font-size: 12.5px; padding: 7px 13px; }
+
+  /* ===== НИЖНЯЯ ПАНЕЛЬ (только телефон) ===== */
+  .mobile-bar { display: none; }
+  @media (max-width: 640px) {
+    .mobile-bar {
+      display: flex;
+      position: fixed; left: 0; right: 0; bottom: 0;
+      z-index: 95;
+      background: var(--surface-1);
+      border-top: 1px solid var(--line);
+      padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    }
+    .mobile-bar-btn {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 7px 4px;
+      border: none; background: transparent;
+      color: var(--text-faint);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      cursor: pointer;
+      border-radius: var(--r-sm);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      transition: color .15s ease, background .15s ease;
+    }
+    .mobile-bar-btn svg { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .mobile-bar-btn.active { color: var(--accent); background: var(--accent-soft); }
+    .mobile-bar-btn:active { transform: scale(.95); }
+    /* Место под панель, иначе она перекрывала последний рецепт. */
+    body { padding-bottom: 68px; }
+    /* Плавающая кнопка «назад» поднимается над панелью. */
+    .detail-back-floating { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  }
+
+  /* ===== СПИСОК НА ТЕЛЕФОНЕ =====
+     Обложка во всю ширину хороша на мониторе, но на телефоне из-за неё
+     в экран помещалось два рецепта. Поэтому там карточка сворачивается
+     в строку: миниатюра слева, название и состав справа. */
+  @media (max-width: 640px) {
+    .recipe-card { flex-direction: row; align-items: stretch; }
+    .card-cover {
+      width: 76px; height: auto; min-height: 76px;
+      flex-shrink: 0;
+      border-bottom: none; border-right: 1px solid var(--line);
+    }
+    .card-cover-icon { font-size: 26px; }
+    .card-video-btn { right: 4px; bottom: 4px; width: 26px; height: 26px; }
+    .card-video-btn svg { width: 13px; height: 13px; }
+    .card-info { padding: 10px 12px; }
+    .card-composition { -webkit-line-clamp: 1; }
+    .card-meta { margin-top: 8px; }
+  }
 
   /* ===== RESPONSIVE ===== */
   @media (max-width: 500px) {
