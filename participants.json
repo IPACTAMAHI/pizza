@@ -82,10 +82,9 @@
     "claimed": true,
     "venue": "venue-main",
     "roles": [
-      "purchase",
       "tab:main"
     ],
-    "role": "purchase",
+    "role": "viewer",
     "claimedAt": 1788081640183
   }
 ]
