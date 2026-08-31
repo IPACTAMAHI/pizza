@@ -183,6 +183,16 @@
       "builtin": false,
       "workshop": "ws17878656176691145k",
       "venue": "vpmtc0x7kfezeh4"
+    },
+    {
+      "id": "sup17881825260537sy7j",
+      "label": "Варус",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "",
+      "venue": "venue-main",
+      "updatedAt": 1788182526054,
+      "updatedBy": "Разработчик N2R6-4GHG"
     }
   ],
   "data": {
@@ -775,7 +785,8 @@
         "unit": "кг",
         "norm": ""
       }
-    ]
+    ],
+    "sup17881825260537sy7j": []
   },
   "customUnits": [
     "ящик"
