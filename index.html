@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260828i">
+<link rel="stylesheet" href="styles.css?v=20260828j">
 </head>
 <body>
 
@@ -644,17 +644,17 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <div class="modal-overlay" id="send-purchase-overlay">
   <div class="modal-box" style="max-width:440px">
     <h3 id="send-purchase-title"></h3>
-    <p id="send-purchase-message">Нажмите «Открыть чат» — заказ подставится в поле сообщения сам, останется отправить. Если приложение подстановку не поддержит, текст уже лежит в буфере обмена: вставьте его (Ctrl+V или зажать → «Вставить»). Затем «Отправил(а) → Далее».</p>
+    <p id="send-purchase-message">Нажмите «Открыть чат» — заказ подставится в поле сообщения сам, его видно и можно поправить перед отправкой. Если подстановка не сработает, текст уже в буфере обмена: вставьте его. Затем «Отправил(а) → Далее».</p>
     <textarea class="send-purchase-text" id="send-purchase-text" readonly onclick="this.select()"></textarea>
     <div class="modal-actions" id="send-purchase-step-actions">
       <button class="btn btn-ghost btn-sm" onclick="cancelSendAllPurchase()">Отмена</button>
       <button class="btn btn-ghost btn-sm" id="send-purchase-skip-btn" onclick="sendAllPurchaseSkip()">Пропустить</button>
       <a class="btn btn-primary btn-sm" id="send-purchase-copy-btn" href="#" rel="noopener" onclick="sendAllPurchaseOpenAndCopy(event)">📨 Открыть чат</a>
-      <!-- Запасной путь для групп и каналов: прямая ссылка туда текст не
-           подставляет (Telegram разрешает это только для личных чатов и
-           ботов), а через «Поделиться» — подставляет, только чат нужно
-           выбрать из списка. Показывается лишь там, где нужен. -->
-      <a class="btn btn-ghost btn-sm" id="send-purchase-share-btn" href="#" rel="noopener" style="display:none" onclick="sendAllPurchaseOpenAndCopy(event)">📤 Выбрать чат с текстом</a>
+      <!-- Кнопки «Выбрать чат с текстом» здесь намеренно нет. Telegram на
+           том экране отправляет сообщение сразу по выбору чата, без поля
+           ввода: заказ нельзя ни просмотреть, ни поправить перед
+           отправкой. Для групп остаётся обычный путь — открыть чат и
+           вставить текст из буфера. -->
       <button class="btn btn-success btn-sm" id="send-purchase-next-btn" onclick="sendAllPurchaseNext()" disabled>Отправил(а) → Далее</button>
     </div>
     <!-- Финальный шаг рассылки — показывается вместо шага выше, когда все
@@ -679,7 +679,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260828i"></script>
+<script src="app.js?v=20260828j"></script>
 
 
 
