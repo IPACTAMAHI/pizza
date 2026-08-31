@@ -9059,7 +9059,11 @@ function resolvePurchaseAppLink(rawLink, text) {
     return {
       url: link,
       prefilled: false,
-      shareUrl: body ? 'https://t.me/share/url?url=&text=' + body : '',
+      // Текст кладём именно в url=, а не в text=. Параметр url у
+      // t.me/share обязателен: с пустым значением Telegram считает
+      // ссылку недействительной и вместо выбора чата открывает свой
+      // сайт telegram.org — что и происходило.
+      shareUrl: body ? 'https://t.me/share/url?url=' + body : '',
       shareHint: 'группа или канал'
     };
   }
