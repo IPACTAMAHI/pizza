@@ -193,6 +193,16 @@
       "venue": "venue-main",
       "updatedAt": 1788182526054,
       "updatedBy": "Разработчик N2R6-4GHG"
+    },
+    {
+      "id": "sup1788187583790ibdwm",
+      "label": "МХП",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "",
+      "venue": "venue-main",
+      "updatedAt": 1788187583790,
+      "updatedBy": "Разработчик N2R6-4GHG"
     }
   ],
   "data": {
@@ -805,7 +815,8 @@
         "unit": "кг",
         "norm": "5"
       }
-    ]
+    ],
+    "sup1788187583790ibdwm": []
   },
   "customUnits": [
     "ящик"
