@@ -8961,10 +8961,10 @@ function renderSendAllPurchaseStep() {
   if (titleEl) titleEl.textContent = '📤 Отправка ' + (sendAllPurchaseIndex + 1) + ' из ' + sendAllPurchaseQueue.length + ' — ' + (c.icon || '📦') + ' ' + c.label;
   if (msgEl) {
     msgEl.style.display = '';
-    var forGroup = !!resolvePurchaseAppLink(c.link, ' ').shareUrl;
-    msgEl.textContent = forGroup
-      ? 'Это группа или канал — прямая ссылка туда текст не подставляет. Нажмите «Выбрать чат с текстом»: Telegram покажет список чатов с готовым сообщением. Либо «Открыть чат» и вставьте текст из буфера. Затем «Отправил(а) → Далее».'
-      : 'Нажмите «Открыть чат» — заказ подставится в поле сообщения сам, останется отправить. Если приложение подстановку не поддержит, текст уже лежит в буфере обмена: вставьте его (Ctrl+V или зажать → «Вставить»). Затем «Отправил(а) → Далее».';
+    var needsPaste = !!resolvePurchaseAppLink(c.link, ' ').needsPaste;
+    msgEl.textContent = needsPaste
+      ? 'Это группа с приватной ссылкой — Telegram не даёт подставлять в неё текст. Нажмите «Открыть чат» и вставьте заказ из буфера (зажать поле ввода → «Вставить»): там его можно проверить и поправить перед отправкой. Затем «Отправил(а) → Далее». Подсказка: если сделать группу публичной и указать её адрес вида t.me/имя, заказ будет подставляться сам.'
+      : 'Нажмите «Открыть чат» — заказ подставится в поле сообщения сам, его видно и можно поправить перед отправкой. Если подстановка не сработает, текст уже в буфере обмена: вставьте его (Ctrl+V или зажать → «Вставить»). Затем «Отправил(а) → Далее».';
   }
   if (textEl) { textEl.style.display = ''; textEl.value = buildPurchaseReportText(c.id); }
   if (stepActions) stepActions.style.display = '';
@@ -8984,13 +8984,7 @@ function renderSendAllPurchaseStep() {
     copyBtn.href = resolved.url || '#';
     copyBtn.target = isMobileDevice() ? '_self' : '_blank';
   }
-  if (shareBtn) {
-    // Вторая кнопка нужна только там, где прямая ссылка текст не
-    // подставляет, — в группах и каналах.
-    shareBtn.style.display = resolved.shareUrl ? '' : 'none';
-    shareBtn.href = resolved.shareUrl || '#';
-    shareBtn.target = isMobileDevice() ? '_self' : '_blank';
-  }
+  if (shareBtn) shareBtn.style.display = 'none'; // кнопки больше нет в разметке, оставлено для старых вкладок
 
   overlay.classList.add('show');
 }
@@ -9051,21 +9045,17 @@ function resolvePurchaseAppLink(rawLink, text) {
   }
 
   // Группа или канал Telegram (инвайт-ссылка t.me/+…, /joinchat/… или
-  // приватная t.me/c/…). Прямая ссылка туда текст не подставит, поэтому
-  // отдаём ещё и «поделиться»: Telegram откроет список чатов с уже
-  // готовым сообщением, останется выбрать нужный. Это на один выбор
-  // больше, но заказ не придётся набирать или вставлять руками.
+  // приватная t.me/c/…). Текст туда не подставляется — Telegram
+  // разрешает это только личным чатам и ботам.
+  //
+  // Через «Поделиться» (t.me/share/url) заказ доставить можно, но
+  // Telegram на том экране отправляет сообщение сразу по выбору чата:
+  // ни увидеть его, ни поправить перед отправкой нельзя. Для закупки
+  // это не годится — заказ правят на ходу («пармезан не нужен, привезли
+  // вчера»). Поэтому здесь остаётся обычный путь: открыть чат и
+  // вставить из буфера, где текст виден в поле ввода и редактируется.
   if (/t(?:elegram)?\.me\/(\+|joinchat\/|c\/)/i.test(link)) {
-    return {
-      url: link,
-      prefilled: false,
-      // Текст кладём именно в url=, а не в text=. Параметр url у
-      // t.me/share обязателен: с пустым значением Telegram считает
-      // ссылку недействительной и вместо выбора чата открывает свой
-      // сайт telegram.org — что и происходило.
-      shareUrl: body ? 'https://t.me/share/url?url=' + body : '',
-      shareHint: 'группа или канал'
-    };
+    return { url: link, prefilled: false, needsPaste: true };
   }
 
   // Viber: ссылка вида viber://chat?number=... или страница с номером в query.
