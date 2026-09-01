@@ -9012,7 +9012,21 @@ function renderSendAllPurchaseStep() {
       msgEl.textContent = 'Нажмите «Открыть чат» — заказ уже будет вписан в поле сообщения, останется проверить и отправить. Затем «Отправил(а) → Далее».';
     }
   }
-  if (textEl) { textEl.style.display = ''; textEl.value = buildPurchaseReportText(c.id); }
+  if (textEl) {
+    textEl.style.display = '';
+    textEl.value = buildPurchaseReportText(c.id);
+    // Ссылка «Открыть чат» несёт текст внутри себя и готовится заранее,
+    // поэтому её надо переписывать на каждую правку — иначе в чат
+    // подставился бы заказ до редактирования.
+    textEl.oninput = function() {
+      // Элемент ищем здесь, а не берём из переменной снаружи: она
+      // объявлена ниже по коду и на момент создания обработчика пуста.
+      var linkBtn = $('send-purchase-copy-btn');
+      if (!linkBtn) return;
+      var fresh = resolvePurchaseAppLink(c.link, textEl.value.trim() || buildPurchaseReportText(c.id));
+      linkBtn.href = fresh.url || '#';
+    };
+  }
   if (stepActions) stepActions.style.display = '';
   if (finishActions) finishActions.style.display = 'none';
   if (nextBtn) nextBtn.disabled = true; // сначала нужно нажать "Скопировать и открыть чат"
@@ -9263,10 +9277,33 @@ async function setTelegramBotToken() {
   }
 }
 
+/* Что именно отправляем. Ровно то, что человек видит в окне: поле
+   редактируемое, и правки в заказ вносят постоянно. Раньше бот
+   пересобирал текст заново и отправлял «как посчитано», молча теряя
+   всё, что подправили руками. */
+function currentSendText(c) {
+  var textEl = $('send-purchase-text');
+  var shown = textEl ? textEl.value.trim() : '';
+  return shown || buildPurchaseReportText(c.id);
+}
+
 /* Отправка заказа ботом. По решению «одним нажатием»: подтверждения
    нет, сообщение уходит сразу и мастер переходит к следующему. */
 async function sendPurchaseViaBot(cat) {
-  var c = purchaseCategoryById(cat || currentPurchaseCategory);
+  /* Кого именно отправляем. Раньше здесь при пустом аргументе брался
+     currentPurchaseCategory — поставщик, ОТКРЫТЫЙ НА ЭКРАНЕ. Но мастер
+     рассылки идёт по своей очереди и currentPurchaseCategory не меняет,
+     поэтому всем пятнадцати поставщикам уходил один и тот же заказ —
+     тот, чью карточку человек открывал последней.
+     Поэтому пока мастер открыт, адресата берём строго из очереди. */
+  var c = null;
+  if (cat) {
+    c = purchaseCategoryById(cat);
+  } else if (sendAllPurchaseIndex < sendAllPurchaseQueue.length) {
+    c = sendAllPurchaseQueue[sendAllPurchaseIndex];
+  } else {
+    c = purchaseCategoryById(currentPurchaseCategory);
+  }
   if (!c) return;
   var token = getTelegramBotToken();
   var target = purchaseChatTarget(c);
@@ -9280,7 +9317,7 @@ async function sendPurchaseViaBot(cat) {
     var res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: target, text: buildPurchaseReportText(c.id) })
+      body: JSON.stringify({ chat_id: target, text: currentSendText(c) })
     });
     var data = await res.json();
     if (!data || !data.ok) {
@@ -9303,7 +9340,7 @@ async function sendPurchaseViaBot(cat) {
 function sendAllPurchaseOpenAndCopy(event) {
   var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
   if (!c) return;
-  var text = buildPurchaseReportText(c.id);
+  var text = currentSendText(c);
   var resolved = resolvePurchaseAppLink(c.link, text);
 
   copyTextToClipboard(text, resolved.prefilled
