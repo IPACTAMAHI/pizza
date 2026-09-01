@@ -36,10 +36,9 @@
       "phone": "",
       "email": "",
       "site": "",
-      "updatedAt": 1788295576136,
+      "updatedAt": 1788038457672,
       "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата",
-      "chatId": "-1004492131511"
+      "updatedWhat": "изменил контакты"
     },
     {
       "id": "sup17876716788179g8x0",
@@ -50,7 +49,11 @@
         "__general__"
       ],
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
+      "chatId": "-1004492131511",
+      "updatedAt": 1788295732263,
+      "updatedBy": "Разработчик",
+      "updatedWhat": "указал идентификатор чата"
     },
     {
       "id": "sup1787671820039hquzl",
@@ -61,11 +64,7 @@
         "__general__"
       ],
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedAt": 1788295611681,
-      "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     },
     {
       "id": "sup1787671874229dqp9c",
@@ -87,11 +86,7 @@
         "__general__"
       ],
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedAt": 1788295618310,
-      "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     },
     {
       "id": "sup1787671985818hw5g8",
@@ -113,11 +108,7 @@
         "__general__"
       ],
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedAt": 1788295634904,
-      "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     },
     {
       "id": "sup1787672144988vzact",
@@ -139,11 +130,7 @@
         "__general__"
       ],
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedAt": 1788295649532,
-      "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     },
     {
       "id": "sup17876723783847w4ii",
@@ -154,11 +141,7 @@
         "__general__"
       ],
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedAt": 1788295597939,
-      "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     },
     {
       "id": "sup1787672413898669de",
@@ -188,11 +171,7 @@
       "icon": "🚚",
       "builtin": false,
       "workshop": "hot",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedAt": 1788295676406,
-      "updatedBy": "Разработчик",
-      "updatedWhat": "указал идентификатор чата"
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     },
     {
       "id": "ws17878656176691145k",
@@ -227,11 +206,9 @@
       "builtin": false,
       "workshop": "",
       "venue": "venue-main",
-      "updatedAt": 1788295687073,
-      "updatedBy": "Разработчик",
-      "link": "https://t.me/+4iLhhgTHrVkyZGUy",
-      "chatId": "-1004492131511",
-      "updatedWhat": "указал идентификатор чата"
+      "updatedAt": 1788187583790,
+      "updatedBy": "Разработчик N2R6-4GHG",
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     }
   ],
   "data": {
