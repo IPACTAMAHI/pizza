@@ -19,9 +19,10 @@
       "phone": "",
       "email": "",
       "site": "",
-      "updatedAt": 1788124159770,
+      "updatedAt": 1788296678116,
       "updatedBy": "Разработчик",
-      "updatedWhat": "изменил контакты"
+      "updatedWhat": "указал идентификатор чата",
+      "chatId": "-1004492131511"
     },
     {
       "id": "sup1787670377069itgby",
