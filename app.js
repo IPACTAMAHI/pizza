@@ -6661,6 +6661,20 @@ function updatePurchaseTemplateControls() {
     contactsBtn.style.display = canManage ? '' : 'none';
     setToolBtn(contactsBtn, '📇', 'Контакты', purchaseContacts(c).length > 0);
   }
+  var botBtn = $('purchase-bot-btn');
+  if (botBtn) {
+    botBtn.style.display = canManage ? '' : 'none';
+    setToolBtn(botBtn, '🤖', 'Бот', !!getTelegramBotToken());
+  }
+  var chatIdBtn = $('purchase-chatid-btn');
+  if (chatIdBtn) {
+    // Идентификатор нужен только там, где короткого имени нет: у
+    // приватных групп. Для остальных кнопка лишняя.
+    var needsId = canManage && c && !resolvePurchaseAppLink(c.link || '', ' ').prefilled &&
+      !/t(?:elegram)?\.me\/[a-zA-Z0-9_]{4,32}(?:[/?]|$)/i.test((c.link || '').replace(/t\.me\/\+/i, 't.me/+'));
+    chatIdBtn.style.display = needsId ? '' : 'none';
+    setToolBtn(chatIdBtn, '🆔', 'ID чата', !!(c && c.chatId));
+  }
 }
 
 /* Ручное сохранение шаблона в GitHub сразу, минуя обычную задержку
@@ -8962,9 +8976,16 @@ function renderSendAllPurchaseStep() {
   if (msgEl) {
     msgEl.style.display = '';
     var needsPaste = !!resolvePurchaseAppLink(c.link, ' ').needsPaste;
-    msgEl.textContent = needsPaste
-      ? 'Это группа с приватной ссылкой — Telegram не даёт подставлять в неё текст. Нажмите «Открыть чат» и вставьте заказ из буфера (зажать поле ввода → «Вставить»): там его можно проверить и поправить перед отправкой. Затем «Отправил(а) → Далее». Подсказка: если сделать группу публичной и указать её адрес вида t.me/имя, заказ будет подставляться сам.'
-      : 'Нажмите «Открыть чат» — заказ подставится в поле сообщения сам, его видно и можно поправить перед отправкой. Если подстановка не сработает, текст уже в буфере обмена: вставьте его (Ctrl+V или зажать → «Вставить»). Затем «Отправил(а) → Далее».';
+    // Три случая: работает бот, приватная группа без бота, обычный чат.
+    // Раньше здесь стоял return — он выходил бы из всей функции и шаг
+    // остался бы без текста заказа и кнопок.
+    if (canSendViaBot(c)) {
+      msgEl.textContent = 'Нажмите «Отправить ботом» — заказ уйдёт в группу сразу, открывать Telegram не нужно. Мастер сам перейдёт к следующему поставщику.';
+    } else if (needsPaste) {
+      msgEl.textContent = 'У этого поставщика ссылка на группу — в неё Telegram текст не подставляет. Нажмите «Открыть чат» и вставьте заказ из буфера. Чтобы отправлять в группу одним нажатием, настройте бота: кнопка «🤖 Бот» в режиме редактирования шаблона. Затем «Отправил(а) → Далее».';
+    } else {
+      msgEl.textContent = 'Нажмите «Открыть чат» — заказ уже будет вписан в поле сообщения, останется проверить и отправить. Затем «Отправил(а) → Далее».';
+    }
   }
   if (textEl) { textEl.style.display = ''; textEl.value = buildPurchaseReportText(c.id); }
   if (stepActions) stepActions.style.display = '';
@@ -8985,6 +9006,16 @@ function renderSendAllPurchaseStep() {
     copyBtn.target = isMobileDevice() ? '_self' : '_blank';
   }
   if (shareBtn) shareBtn.style.display = 'none'; // кнопки больше нет в разметке, оставлено для старых вкладок
+
+  var botBtn = $('send-purchase-bot-btn');
+  if (botBtn) {
+    var viaBot = canSendViaBot(c);
+    botBtn.style.display = viaBot ? '' : 'none';
+    botBtn.disabled = false;
+    // Когда работает бот, открывать чат вручную не нужно — оставляем
+    // эту кнопку запасной, но главной делаем отправку.
+    if (copyBtn) copyBtn.className = viaBot ? 'btn btn-ghost btn-sm' : 'btn btn-primary btn-sm';
+  }
 
   overlay.classList.add('show');
 }
@@ -9037,8 +9068,14 @@ function resolvePurchaseAppLink(rawLink, text) {
     return { url: 'https://wa.me/' + waMatch[1] + (body ? '?text=' + body : ''), prefilled: !!body };
   }
 
-  // Telegram: t.me/<username> — личный чат или бот. Только им Telegram
-  // разрешает подставлять текст параметром ?text=.
+  /* Telegram: t.me/<имя> — адресный чат (личный, публичная группа или
+     канал с коротким именем). Сюда текст ПОДСТАВЛЯЕТСЯ параметром
+     ?text= — это проверено на живом устройстве: ровно так работает
+     кнопка «Запросить ключ у администратора», где сообщение приходит в
+     чат уже вписанным.
+
+     Не работает подстановка только с приглашениями t.me/+… — там чат
+     заранее неизвестен (см. ветку ниже). */
   var tgMatch = link.match(/t(?:elegram)?\.me\/([a-zA-Z0-9_]{4,32})(?:[/?]|$)/i);
   if (tgMatch && !/t(?:elegram)?\.me\/(\+|joinchat\/|c\/)/i.test(link)) {
     return { url: 'https://t.me/' + tgMatch[1] + (body ? '?text=' + body : ''), prefilled: !!body };
@@ -9087,6 +9124,157 @@ function resolvePurchaseAppLink(rawLink, text) {
    window.location / window.open — просто копируем текст и разблокируем
    кнопку "Далее"; переход по ссылке браузер делает сам, обрабатывая тот
    же самый клик, которым была нажата эта кнопка. */
+/* ================================================================
+   ОТПРАВКА ЗАКАЗА БОТОМ (только группы)
+   ================================================================
+   В личный чат Telegram текст подставляется прямо в поле ввода — там
+   бот не нужен. А вот в группу подставить нельзя ни при каком виде
+   ссылки: это проверено на живом устройстве и на публичной группе тоже.
+   Поэтому для групп заказ отправляет бот — одним нажатием, не открывая
+   Telegram вовсе.
+
+   ТОКЕН НЕ ХРАНИТСЯ В ФАЙЛАХ САЙТА. Он лежит только в браузере того,
+   кто рассылает закупку, — как GitHub-ключ разработчика. Положи мы его
+   в site-config.json, он оказался бы виден любому, кто откроет сайт, и
+   писать в вашу группу от имени бота смог бы кто угодно.
+   ================================================================ */
+const TG_BOT_TOKEN_KEY = 'r20_tg_bot_token';
+
+function getTelegramBotToken() {
+  try { return localStorage.getItem(TG_BOT_TOKEN_KEY) || ''; } catch (e) { return ''; }
+}
+
+/* Куда бот отправит сообщение. Для группы с коротким именем адресом
+   служит само имя (@routezakup). Для приватной группы имени нет —
+   тогда нужен числовой идентификатор, его вписывают в карточке. */
+function purchaseChatTarget(c) {
+  if (!c) return '';
+  if (c.chatId) return String(c.chatId).trim();
+  var link = (c.link || '').trim();
+  var m = link.match(/t(?:elegram)?\.me\/([a-zA-Z0-9_]{4,32})(?:[/?]|$)/i);
+  if (m && !/t(?:elegram)?\.me\/(\+|joinchat\/|c\/)/i.test(link)) return '@' + m[1];
+  return '';
+}
+
+/* Бот применим к любому телеграм-адресу, для которого мы знаем, куда
+   писать. Отличить группу от личного чата по ссылке нельзя — t.me/имя
+   выглядит одинаково у обоих, — поэтому решение оставляем человеку:
+   кнопка «Открыть чат» никуда не делась и стоит рядом.
+   WhatsApp и Viber сюда не попадают: там свои приложения, и текст в них
+   подставляется своими средствами. */
+function canSendViaBot(c) {
+  if (!getTelegramBotToken()) return false;
+  if (!purchaseChatTarget(c)) return false;
+  var link = ((c && c.link) || '').trim();
+  return /t(?:elegram)?\.me\//i.test(link) || !!(c && c.chatId);
+}
+
+/* Идентификатор чата для приватной группы. У неё нет короткого имени,
+   поэтому бот адресует её числом вида -1004492131511. Число не секретное
+   и хранится в шаблоне закупки рядом со ссылкой. */
+async function setPurchaseChatId(cat) {
+  cat = cat || currentPurchaseCategory;
+  if (!can('purchase.template')) { denyToast('purchase.template'); return; }
+  var c = purchaseCategoryById(cat);
+  if (!c) return;
+
+  var val = await showModal({
+    title: '🆔 Идентификатор чата — ' + c.label,
+    message: 'Нужен только приватным группам, у которых нет адреса вида t.me/имя. Узнать его можно так: добавьте бота в группу, напишите там любое сообщение и откройте в браузере api.telegram.org/bot<ТОКЕН>/getUpdates — там будет "chat":{"id":-100…}. Скопируйте число вместе с минусом.',
+    withInput: true,
+    inputValue: c.chatId || '',
+    placeholder: '-1001234567890',
+    okText: '💾 Сохранить'
+  });
+  if (val === null) return;
+
+  c.chatId = (val || '').trim();
+  stampEdit(c, 'указал идентификатор чата');
+  savePurchaseData();
+  schedulePurchaseSync();
+  updatePurchaseTemplateControls();
+  showToast(c.chatId ? '✅ Идентификатор сохранён' : '✅ Идентификатор убран');
+}
+
+async function setTelegramBotToken() {
+  if (!can('purchase.template')) { denyToast('purchase.template'); return; }
+  var current = getTelegramBotToken();
+  var token = await showModal({
+    title: '🤖 Токен бота для отправки в группы',
+    message: current
+      ? 'Токен хранится только в этом браузере и в файлы сайта не попадает. Очистите поле, чтобы отключить отправку ботом.'
+      : 'Создайте бота у @BotFather, добавьте его в группу администратором и вставьте сюда его токен. Он хранится только в этом браузере и в файлы сайта не попадает — значит и посторонним не достанется.',
+    withInput: true,
+    inputValue: current,
+    placeholder: '1234567890:AA...',
+    okText: '💾 Сохранить'
+  });
+  if (token === null) return;
+  token = (token || '').trim();
+
+  if (!token) {
+    try { localStorage.removeItem(TG_BOT_TOKEN_KEY); } catch (e) {}
+    showToast('🤖 Отправка ботом отключена');
+    updatePurchaseTemplateControls();
+    return;
+  }
+
+  // Проверяем токен сразу: ошибиться в длинной строке легко, и лучше
+  // узнать об этом здесь, чем посреди рассылки.
+  showToast('⏳ Проверяю токен...');
+  try {
+    var res = await fetch('https://api.telegram.org/bot' + token + '/getMe');
+    var data = await res.json();
+    if (!data || !data.ok) {
+      showToast('⚠️ Телеграм не принял токен: ' + ((data && data.description) || 'неизвестная ошибка'));
+      return;
+    }
+    try { localStorage.setItem(TG_BOT_TOKEN_KEY, token); } catch (e) {}
+    showToast('✅ Бот подключён: @' + (data.result && data.result.username));
+    updatePurchaseTemplateControls();
+    renderPurchaseHomeList();
+  } catch (e) {
+    showToast('⚠️ Не удалось связаться с Телеграм: ' + e.message);
+  }
+}
+
+/* Отправка заказа ботом. По решению «одним нажатием»: подтверждения
+   нет, сообщение уходит сразу и мастер переходит к следующему. */
+async function sendPurchaseViaBot(cat) {
+  var c = purchaseCategoryById(cat || currentPurchaseCategory);
+  if (!c) return;
+  var token = getTelegramBotToken();
+  var target = purchaseChatTarget(c);
+  if (!token || !target) { showToast('⚠️ Бот не настроен для этого поставщика'); return; }
+
+  var btn = $('send-purchase-bot-btn');
+  if (btn) btn.disabled = true;
+  showToast('⏳ Отправляю ботом...');
+
+  try {
+    var res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: target, text: buildPurchaseReportText(c.id) })
+    });
+    var data = await res.json();
+    if (!data || !data.ok) {
+      // Частые ответы: chat not found (бот не в группе или имя другое),
+      // not enough rights (бот не админ). Показываем как есть — по
+      // тексту ошибки понятно, что чинить.
+      showToast('⚠️ Не отправлено: ' + ((data && data.description) || 'ошибка Телеграм'));
+      if (btn) btn.disabled = false;
+      return;
+    }
+    logActivity('отправил заказ поставщику', 'Закупка · ' + venueLabel(currentVenueId()), c.label + ' (ботом)');
+    showToast('✅ Заказ отправлен в «' + c.label + '»');
+    sendAllPurchaseNext(); // сразу к следующему — так и договаривались
+  } catch (e) {
+    showToast('⚠️ Не удалось связаться с Телеграм: ' + e.message);
+    if (btn) btn.disabled = false;
+  }
+}
+
 function sendAllPurchaseOpenAndCopy(event) {
   var c = sendAllPurchaseQueue[sendAllPurchaseIndex];
   if (!c) return;
@@ -9095,7 +9283,7 @@ function sendAllPurchaseOpenAndCopy(event) {
 
   copyTextToClipboard(text, resolved.prefilled
     ? '✅ Текст подставлен в чат — остаётся отправить'
-    : '📋 Текст скопирован — вставьте его в открывшемся чате');
+    : '📋 Заказ скопирован — вставьте его в чате (зажать поле ввода → «Вставить»)');
 
   if (!resolved.url) {
     if (event) event.preventDefault(); // ссылки нет — переходить некуда
