@@ -8211,9 +8211,12 @@ function purchaseReportHeaderTitle(kind) {
    что письмо ушло тому, кому нужно. */
 function buildPurchaseReportText(cat) {
   var data = buildPurchaseReportData(cat);
-  var greeting = 'Доброго времени! ' + purchaseCategoryLabel(cat);
-  if (!data.lines.length) return greeting + '\n\nНет позиций.';
-  return greeting + '\n\n' + data.lines.join('\n');
+  // Имя поставщика — отдельной строкой под приветствием, а не в одну
+  // строку с ним: так это читается как обращение, а не как «доброго
+  // времени, компания такая-то».
+  var head = 'Доброго времени!\n' + purchaseCategoryLabel(cat);
+  if (!data.lines.length) return head + '\n\nНет позиций.';
+  return head + '\n\n' + data.lines.join('\n');
 }
 
 function fallbackCopyText(text, successMsg) {
