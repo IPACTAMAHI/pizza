@@ -6969,7 +6969,7 @@ function renderPurchaseHomeList() {
     html += '<button type="button" class="btn btn-primary btn-sm" onclick="startSendAllPurchase()" style="width:100%;margin-bottom:18px">📤 Отправить всё поставщикам (' + sendableCount + ')</button>';
   }
 
-  html += '<div class="purchase-home-group-title">🏭 Заведения</div>';
+  html += '<div class="purchase-home-group-title">🏭 Цеха</div>';
   html += workshops.length ? workshops.map(cardHtml).join('') : '<p class="purchase-home-empty">Пока нет ни одного цеха.</p>';
   html += '<button type="button" class="btn btn-ghost btn-sm developer-only" onclick="addPurchaseWorkshop()" style="width:100%;margin:6px 0 20px">🏭 Добавить цех</button>';
 
