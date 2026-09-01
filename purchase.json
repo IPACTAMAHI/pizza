@@ -4,7 +4,11 @@
       "id": "hot",
       "label": "Римские пекарни",
       "icon": "🔥",
-      "builtin": true
+      "builtin": true,
+      "chatId": "-1004492131511",
+      "updatedAt": 1788296772329,
+      "updatedBy": "Разработчик",
+      "updatedWhat": "указал идентификатор чата"
     },
     {
       "id": "sup1787670070254dxeg2",
