@@ -557,10 +557,21 @@
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   /* Список цехов и поставщиков на широком экране — в две колонки:
-     их бывает полтора десятка, и одной колонкой это длинная простыня. */
+     их бывает полтора десятка, и одной колонкой это длинная простыня.
+
+     ВАЖНО про раскладку. В этом же контейнере лежат заголовки групп
+     («🏭 Цеха», «🚚 Поставщики») и кнопка «Отправить всё» — они не
+     карточки. Пока сетка применялась ко всему подряд, каждый такой
+     элемент занимал ячейку и сдвигал карточки: стоило появиться кнопке
+     отправки, как первый поставщик уезжал во вторую колонку.
+     Поэтому заголовки и кнопка растянуты на всю ширину строки. */
   @media (min-width: 900px) {
     #purchase-home-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
     #purchase-home-list .purchase-home-card { margin-bottom: 0; }
+    #purchase-home-list > .purchase-home-group-title,
+    #purchase-home-list > button,
+    #purchase-home-list > p,
+    #purchase-home-list > .purchase-home-empty { grid-column: 1 / -1; }
   }
 
   /* ===== ПАНЕЛЬ УПРАВЛЕНИЯ РАЗДЕЛОМ =====
