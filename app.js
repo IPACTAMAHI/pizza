@@ -3159,6 +3159,22 @@ function defaultPurchaseCategories() {
   ];
 }
 
+/* Объединяет серверный список цехов и поставщиков с локальным: если
+   местная запись помечена более поздним изменением (stampEdit), она
+   побеждает. Сравниваем по времени правки, а не «локальное всегда
+   главнее» — иначе изменения коллег никогда бы не доезжали. */
+function mergeFresherCategories(fromServer, local) {
+  var byId = {};
+  (fromServer || []).forEach(function(c) { byId[c.id] = c; });
+  (local || []).forEach(function(mine) {
+    var theirs = byId[mine.id];
+    if (!theirs) return; // у сервера такой записи нет — не воскрешаем удалённое
+    if ((mine.updatedAt || 0) > (theirs.updatedAt || 0)) byId[mine.id] = mine;
+  });
+  // Порядок берём серверный: он общий для всех.
+  return (fromServer || []).map(function(c) { return byId[c.id] || c; });
+}
+
 async function syncPurchaseFromGithub() {
   // Пока админ активно редактирует шаблон (режим включён кнопкой
   // "✏️ Редактировать шаблон"), фоновое обновление с GitHub НЕ должно
@@ -3188,6 +3204,13 @@ async function syncPurchaseFromGithub() {
       incomingCategories = defaultPurchaseCategories();
       incomingData = { pizza: Array.isArray(data.pizza) ? data.pizza : [], hot: Array.isArray(data.hot) ? data.hot : [] };
     }
+    // Свежие локальные правки не отдаём на съедение отстающей копии.
+    // Копия на GitHub Pages обновляется до минуты, и без этого только
+    // что сохранённый идентификатор чата (или контакты, или ссылка)
+    // исчезал при первом же обновлении страницы: приходил файл, где
+    // правки ещё нет, и подменял собой список целиком.
+    incomingCategories = mergeFresherCategories(incomingCategories, purchaseCategories);
+
     // Если категорий не осталось вообще (например, удалили все цеха и
     // всех поставщиков) — подстраховка, чтобы не остаться без единой
     // категории; конкретные же удалённые цеха/поставщики НЕ
@@ -6668,11 +6691,11 @@ function updatePurchaseTemplateControls() {
   }
   var chatIdBtn = $('purchase-chatid-btn');
   if (chatIdBtn) {
-    // Идентификатор нужен только там, где короткого имени нет: у
-    // приватных групп. Для остальных кнопка лишняя.
-    var needsId = canManage && c && !resolvePurchaseAppLink(c.link || '', ' ').prefilled &&
-      !/t(?:elegram)?\.me\/[a-zA-Z0-9_]{4,32}(?:[/?]|$)/i.test((c.link || '').replace(/t\.me\/\+/i, 't.me/+'));
-    chatIdBtn.style.display = needsId ? '' : 'none';
+    // Кнопка доступна всегда: идентификатор полезен и группе с коротким
+    // именем — число не меняется, даже если имя переименуют или группу
+    // снова сделают приватной. Прежнее условие пыталось угадать «нужен
+    // или нет» по виду ссылки и у половины поставщиков кнопку прятало.
+    chatIdBtn.style.display = canManage ? '' : 'none';
     setToolBtn(chatIdBtn, '🆔', 'ID чата', !!(c && c.chatId));
   }
 }
@@ -7133,6 +7156,7 @@ function renamePurchaseCategory(cat) {
     val = (val || '').trim();
     if (!val) { showToast('⚠️ Название не может быть пустым'); return; }
     c.label = val;
+    stampEdit(c, 'переименовал');
     savePurchaseData();
     renderPurchaseHomeList();
     var titleEl = $('purchase-detail-title');
@@ -7284,6 +7308,7 @@ function setPurchaseContactLink(cat) {
     val = (val || '').trim();
     if (val && !/^[a-z][a-z0-9+.-]*:/i.test(val)) val = 'https://' + val; // без схемы — считаем обычной https-ссылкой
     c.link = val;
+    stampEdit(c, 'изменил ссылку для отправки'); // без отметки правку затрёт отстающая копия
     savePurchaseData();
     updatePurchaseTemplateControls();
     renderPurchaseHomeList();
