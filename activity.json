@@ -1,5 +1,15 @@
 [
   {
+    "id": "pmtkjcphnp5jp5",
+    "at": 1788380126987,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "what": "подключил бота для отправки заказов",
+    "where": "Настройки",
+    "details": "@route20zakup_bot"
+  },
+  {
     "id": "pmtkjcgsfpbvby",
     "at": 1788380115711,
     "who": "Разработчик",
