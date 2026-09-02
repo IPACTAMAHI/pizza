@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260828r">
+<link rel="stylesheet" href="styles.css?v=20260828u">
 </head>
 <body>
 
@@ -657,6 +657,10 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
       <!-- Отправка ботом. Кнопка появляется только у групп и только
            если на этом устройстве задан токен бота (он нигде больше не
            хранится). Заказ уходит сразу, без открытия Telegram. -->
+      <!-- Настроить бота можно прямо отсюда: тому, кто рассылает заказы,
+           не нужен режим редактирования шаблона, и права менять нормы
+           ради этого выдавать не приходится. -->
+      <button type="button" class="btn btn-ghost btn-sm" id="send-purchase-bot-setup-btn" style="display:none" onclick="setTelegramBotToken()">🤖 Настроить бота</button>
       <button type="button" class="btn btn-success btn-sm" id="send-purchase-bot-btn" style="display:none" onclick="sendPurchaseViaBot()">🤖 Отправить ботом</button>
       <a class="btn btn-primary btn-sm" id="send-purchase-copy-btn" href="#" rel="noopener" onclick="sendAllPurchaseOpenAndCopy(event)">📨 Открыть чат</a>
       <!-- Кнопки «Выбрать чат с текстом» здесь намеренно нет. Telegram на
@@ -688,7 +692,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260828r"></script>
+<script src="app.js?v=20260828u"></script>
 
 
 
