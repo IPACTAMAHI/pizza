@@ -6212,13 +6212,13 @@ function renderCards(containerEl, countEl, items, emptyText) {
       : '';
 
     html += '<div class="recipe-card ctype-' + escAttr(r.type || '') + (st !== 'active' ? ' recipe-card-inactive' : '') +
-        '" style="animation-delay:' + delay + 's" onclick="openDetail(\'' + r.id + '\')">' +
+        '" style="animation-delay:' + delay + 's;--card-accent:' + escAttr(catColor) + '" onclick="openDetail(\'' + r.id + '\')">' +
 
       // Обложка во всю ширину карточки. Без фото — плашка цвета
       // категории со значком: так список выглядит ровно даже когда
       // снимки есть не у всех рецептов.
       '<div class="card-cover' + (r.photo ? '' : ' card-cover-empty') + '"' +
-        (r.photo ? '' : ' style="background:' + escAttr(catColor) + '22"') + '>' +
+        (r.photo ? '' : ' style="background:' + escAttr(catColor) + '26"') + '>' +
         (r.photo
           ? '<img class="card-thumb" src="' + escAttr(resolvePhotoSrc(r.photo)) + '" alt="" loading="lazy">'
           : '<span class="card-cover-icon">' + esc(catIcon) + '</span>') +
@@ -6235,7 +6235,7 @@ function renderCards(containerEl, countEl, items, emptyText) {
         '</div>\n'
       + (composition ? '  <p class="card-composition">' + esc(composition) + '</p>\n' : '')
       + '  <div class="card-meta">' +
-        '<span class="badge badge-status status-' + escAttr(st) + '">' + esc(stMeta.short) + '</span>' +
+        '<span class="badge badge-status status-' + escAttr(st) + '" title="' + escAttr(stMeta.label) + '">' + esc(stMeta.short) + '</span>' +
         '<span class="badge type-badge" style="background:' + escAttr(catColor) + '">' + esc(catName) + '</span>' +
         (r.style ? '<span class="badge badge-style">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">' + r.calories + ' ккал</span>' : '') +
@@ -9049,6 +9049,11 @@ function renderSendAllPurchaseStep() {
   }
   if (shareBtn) shareBtn.style.display = 'none'; // кнопки больше нет в разметке, оставлено для старых вкладок
 
+  // Кнопка настройки бота — прямо здесь. Тому, кто рассылает заказы,
+  // незачем идти в режим редактирования шаблона (он ему и не открыт).
+  var setupBtn = $('send-purchase-bot-setup-btn');
+  if (setupBtn) setupBtn.style.display = (!getTelegramBotToken() && hasPurchaseAccess()) ? '' : 'none';
+
   var botBtn = $('send-purchase-bot-btn');
   if (botBtn) {
     var viaBot = canSendViaBot(c);
@@ -9182,8 +9187,26 @@ function resolvePurchaseAppLink(rawLink, text) {
    ================================================================ */
 const TG_BOT_TOKEN_KEY = 'r20_tg_bot_token';
 
+/* Токен ищем сначала в настройках сайта, потом в браузере.
+   Общий в настройках — чтобы не вводить его на каждом телефоне: закупку
+   рассылают с разных устройств, и требовать ввода на каждом оказалось
+   неудобно. Плата за это честная: site-config.json публичный, и тот,
+   кто его откроет, сможет писать в группу от имени бота (читать
+   переписку — нет). Локальное значение осталось и имеет приоритет: им
+   можно переопределить общий токен на одном устройстве. */
 function getTelegramBotToken() {
-  try { return localStorage.getItem(TG_BOT_TOKEN_KEY) || ''; } catch (e) { return ''; }
+  var local = '';
+  try { local = localStorage.getItem(TG_BOT_TOKEN_KEY) || ''; } catch (e) {}
+  if (local) return local;
+  return (siteConfig && siteConfig.telegramBotToken) || '';
+}
+
+/* Может ли этот человек сохранить токен для всех. Публикация настроек
+   идёт через GitHub, значит нужен ключ — он есть у администратора и
+   разработчика. У остальных токен ляжет только в их браузер. */
+function canShareBotToken() {
+  var cfg = getGithubConfig();
+  return !!(cfg && cfg.owner && cfg.repo && cfg.token);
 }
 
 /* Куда бот отправит сообщение. Для группы с коротким именем адресом
@@ -9239,13 +9262,19 @@ async function setPurchaseChatId(cat) {
 }
 
 async function setTelegramBotToken() {
-  if (!can('purchase.template')) { denyToast('purchase.template'); return; }
+  /* Достаточно доступа к закупке. Раньше требовалось право менять
+     шаблон — то есть чтобы человек с ролью «Закупка» мог отправлять
+     заказы ботом, ему пришлось бы открыть и правку норм. Это лишнее:
+     токен не меняет ничего в данных сайта, он лежит только в браузере
+     этого человека и позволяет ему нажать «отправить». */
+  if (!hasPurchaseAccess()) { showToast('🔒 Настройка бота доступна тем, у кого открыта закупка'); return; }
   var current = getTelegramBotToken();
+  var shared = canShareBotToken();
   var token = await showModal({
     title: '🤖 Токен бота для отправки в группы',
-    message: current
-      ? 'Токен хранится только в этом браузере и в файлы сайта не попадает. Очистите поле, чтобы отключить отправку ботом.'
-      : 'Создайте бота у @BotFather, добавьте его в группу администратором и вставьте сюда его токен. Он хранится только в этом браузере и в файлы сайта не попадает — значит и посторонним не достанется.',
+    message: shared
+      ? 'Токен сохранится в настройках сайта и заработает на всех устройствах — вводить его на каждом телефоне не нужно.\n\nВажно: файл настроек открыт всем, кто знает адрес сайта. Тот, кто его прочтёт, сможет отправлять сообщения в вашу группу от имени бота (читать переписку — нет). Если это нежелательно, заведите отдельного бота только для заказов.\n\nОчистите поле, чтобы отключить отправку ботом.'
+      : 'Токен сохранится только в этом браузере. Возьмите его у администратора.\n\nОчистите поле, чтобы отключить отправку ботом.',
     withInput: true,
     inputValue: current,
     placeholder: '1234567890:AA...',
@@ -9256,6 +9285,11 @@ async function setTelegramBotToken() {
 
   if (!token) {
     try { localStorage.removeItem(TG_BOT_TOKEN_KEY); } catch (e) {}
+    if (shared && siteConfig.telegramBotToken) {
+      siteConfig.telegramBotToken = '';
+      saveSiteConfigLocal();
+      await syncSiteConfigToGithub();
+    }
     showToast('🤖 Отправка ботом отключена');
     updatePurchaseTemplateControls();
     return;
@@ -9271,10 +9305,33 @@ async function setTelegramBotToken() {
       showToast('⚠️ Телеграм не принял токен: ' + ((data && data.description) || 'неизвестная ошибка'));
       return;
     }
-    try { localStorage.setItem(TG_BOT_TOKEN_KEY, token); } catch (e) {}
-    showToast('✅ Бот подключён: @' + (data.result && data.result.username));
+    if (shared) {
+      // Кладём в общие настройки — тогда бот заработает у всех сразу.
+      // Локальную копию при этом чистим, иначе она перекрывала бы общий
+      // токен и смена ключа не доходила бы до этого устройства.
+      siteConfig.telegramBotToken = token;
+      try { localStorage.removeItem(TG_BOT_TOKEN_KEY); } catch (e) {}
+      saveSiteConfigLocal();
+      var published = await syncSiteConfigToGithub();
+      if (!published) {
+        // Опубликовать не вышло — оставляем хотя бы на этом устройстве,
+        // чтобы рассылка не встала.
+        try { localStorage.setItem(TG_BOT_TOKEN_KEY, token); } catch (e) {}
+        showToast('⚠️ Бот работает только на этом устройстве: настройки не опубликовались');
+      } else {
+        logActivity('подключил бота для отправки заказов', 'Настройки', '@' + (data.result && data.result.username));
+      }
+    } else {
+      try { localStorage.setItem(TG_BOT_TOKEN_KEY, token); } catch (e) {}
+    }
+    showToast('✅ Бот подключён: @' + (data.result && data.result.username) + (shared ? ' — на всех устройствах' : ' — на этом устройстве'));
     updatePurchaseTemplateControls();
     renderPurchaseHomeList();
+    // Если окно рассылки открыто — перерисовываем шаг, чтобы кнопка
+    // отправки появилась сразу, без выхода и повторного запуска.
+    if (sendAllPurchaseQueue.length && sendAllPurchaseIndex < sendAllPurchaseQueue.length) {
+      renderSendAllPurchaseStep();
+    }
   } catch (e) {
     showToast('⚠️ Не удалось связаться с Телеграм: ' + e.message);
   }
