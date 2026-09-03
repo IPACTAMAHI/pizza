@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260828u">
+<link rel="stylesheet" href="styles.css?v=20260829e">
 </head>
 <body>
 
@@ -100,7 +100,18 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 </div>
 
 <!-- NAV TABS -->
-<div class="nav-tabs">
+<!-- Кнопка выбора раздела. Вкладки лентой требовали горизонтальной
+     прокрутки: разделов бывает шесть и больше, и нужный уезжал за край
+     экрана. Список открывается на месте и показывает всё сразу. -->
+<div class="nav-picker">
+  <button type="button" class="nav-picker-btn" id="nav-picker-btn" onclick="toggleNavPicker()" aria-haspopup="listbox" aria-expanded="false">
+    <span class="nav-picker-icon" id="nav-picker-icon">🍕</span>
+    <span class="nav-picker-label" id="nav-picker-label">Раздел</span>
+    <span class="nav-picker-caret">▾</span>
+  </button>
+</div>
+
+<div class="nav-tabs" id="nav-tabs">
   <!-- Разделы («Пицца бар», «Горячий цех», «Кондитер» …) целиком
        собирает JS — renderSectionNavTabs в app.js. Раньше здесь стояли
        две жёстко зашитые вкладки: «Добавить рецепт» и «Категории».
@@ -273,6 +284,13 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
+  <!-- Группа настроек. Свёрнута по умолчанию: заходят сюда редко,
+       а четырнадцать карточек подряд превращали панель в стену. -->
+  <div class="admin-group" id="admin-group-files">
+    <button type="button" class="admin-group-head" onclick="toggleAdminGroup('admin-group-files')" aria-expanded="false">
+      <span>🛠 Файлы, фото и синхронизация</span><span class="admin-group-caret">▾</span>
+    </button>
+    <div class="admin-group-body">
   <div class="admin-panel-card" data-perm="site.export">
     <div class="admin-panel-row">
       <span>Резервная копия рецептов</span>
@@ -312,6 +330,9 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
       <input type="file" accept="image/*" id="bg-photo-input" style="display:none" onchange="changeSitePhoto(this,'background')">
     </div>
     <p class="admin-panel-hint">Фон под категориями и рецептами. Требует настроенной синхронизации с GitHub — иначе новое фото увидите только вы.</p>
+  </div>
+
+    </div>
   </div>
 
   <div class="admin-panel-card developer-only">
@@ -359,6 +380,13 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     <div id="sections-admin-list" style="margin-top:10px"></div>
   </div>
 
+  <!-- Группа настроек. Свёрнута по умолчанию: заходят сюда редко,
+       а четырнадцать карточек подряд превращали панель в стену. -->
+  <div class="admin-group" id="admin-group-telegram">
+    <button type="button" class="admin-group-head" onclick="toggleAdminGroup('admin-group-telegram')" aria-expanded="false">
+      <span>✉️ Telegram для заявок</span><span class="admin-group-caret">▾</span>
+    </button>
+    <div class="admin-group-body">
   <div class="admin-panel-card" data-perm="site.settings">
     <div class="admin-panel-row">
       <span>📤 Telegram для приёма кодов</span>
@@ -390,6 +418,9 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
+    </div>
+  </div>
+
   <div class="admin-panel-card" data-perm="participant.block">
     <div class="admin-panel-row">
       <span>🟢 Онлайн — все посетители сайта</span>
@@ -409,10 +440,15 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
   <!-- Журнал действий. Виден всем, у кого открыта админ-панель:
        вопрос «кто поменял норму» возникает у любого из них, а не
        только у владельца сайта. -->
-  <div class="admin-panel-card admin-only">
-    <div class="admin-panel-row">
+  <div class="admin-panel-card admin-only" id="activity-card">
+    <!-- История свёрнута по умолчанию: заглядывают в неё редко, а места
+         занимала больше всех карточек панели. -->
+    <button type="button" class="admin-panel-row admin-panel-toggle" onclick="toggleActivityLog()" aria-expanded="false">
       <span>🧾 История изменений</span>
-    </div>
+      <span class="admin-panel-toggle-count" id="activity-count"></span>
+      <span class="admin-panel-toggle-caret">▾</span>
+    </button>
+    <div class="admin-panel-collapsible" id="activity-body">
     <p class="admin-panel-hint">
       Кто и что менял: рецепты, недельные нормы, цеха и поставщиков, роли и права.
       Нажмите на имя, чтобы оставить только его действия. История одного человека также
@@ -420,6 +456,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </p>
     <div id="activity-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="activity-log-list" style="margin-top:10px"></div>
+    </div>
   </div>
 
   <!-- Права роли «Администратор». Настраивает только разработчик:
@@ -501,16 +538,20 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
   </div>
   <h2 style="margin-bottom:18px" id="form-title">➕ Новый рецепт</h2>
 
-  <div class="form-group">
-    <label>Тип</label>
-    <!-- Пункты списка заполняет JS (renderTypeSelect в app.js) по тому же
-         списку категорий, что и чипы выше. -->
-    <select id="f-type" onchange="onTypeChange()"></select>
-  </div>
+  <!-- Тип и название — в один ряд на широком экране: два коротких поля
+       подряд по всей ширине оставляли половину экрана пустой. -->
+  <div class="form-row-2">
+    <div class="form-group">
+      <label>Тип</label>
+      <!-- Пункты списка заполняет JS (renderTypeSelect в app.js) по тому же
+           списку категорий, что и чипы выше. -->
+      <select id="f-type" onchange="onTypeChange()"></select>
+    </div>
 
-  <div class="form-group">
-    <label>Название *</label>
-    <input type="text" id="f-name" placeholder="Название блюда">
+    <div class="form-group">
+      <label>Название *</label>
+      <input type="text" id="f-name" placeholder="Название блюда">
+    </div>
   </div>
 
   <div class="form-group">
@@ -522,7 +563,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <div class="form-row-2">
     <div class="form-group">
       <label>Время готовки (мин)</label>
       <input type="number" id="f-time" min="0" placeholder="30">
@@ -537,7 +578,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+  <div class="form-row-2">
     <div class="form-group">
       <label>Калорийность (ккал на порцию)</label>
       <input type="number" id="f-calories" min="0" placeholder="280">
@@ -550,12 +591,13 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
   </div>
 
   <div class="form-group">
-    <label>Категория / стиль (необязательно)</label>
+    <label>Категория / стиль</label>
     <input type="text" id="f-style" placeholder="Например: Острая, Классика, Постная">
   </div>
 
   <div class="form-group">
-    <label>Видео — ссылки с YouTube, Instagram, VK, Facebook, TikTok, Google Диска и т.д. (необязательно, можно несколько)</label>
+    <label>Видео</label>
+    <p class="form-hint">Ссылки с YouTube, Instagram, VK, Facebook, TikTok, Google Диска и других — можно несколько.</p>
     <div id="videos-list"></div>
     <button type="button" class="btn btn-ghost btn-sm" onclick="addVideoRow()">+ Добавить видео</button>
   </div>
@@ -692,7 +734,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260828u"></script>
+<script src="app.js?v=20260829e"></script>
 
 
 
