@@ -225,16 +225,13 @@
   .search-clear:active { transform: translateY(-50%) scale(.9); }
 
   /* Чипы категорий (вкладка "Категории") */
-  /* Категории идут одной строкой с прокруткой: три ряда чипов съедали
-     треть экрана до того, как начинался сам список. */
+  /* Категории раскладываются в несколько рядов, без прокрутки вбок.
+     Горизонтальная лента прятала половину категорий за краем экрана, а
+     их редко больше восьми — все помещаются в два ряда. */
   .chip-row {
     display: flex; gap: 6px;
-    overflow-x: auto; overflow-y: hidden;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
+    flex-wrap: wrap;
   }
-  .chip-row::-webkit-scrollbar { display: none; }
   .chip {
     flex-shrink: 0;
     padding: 7px 13px;
@@ -412,9 +409,9 @@
   .purchase-send-progress-banner-actions { display: flex; gap: 8px; margin-top: 10px; }
   .purchase-home-card-actions { display: flex; gap: 4px; flex-shrink: 0; }
   .purchase-home-icon-btn {
-    width: 36px; height: 36px; border-radius: 9px; border: none;
-    background: rgba(255,255,255,.06); color: var(--text-muted);
-    font-size: 15px; cursor: pointer;
+    width: 32px; height: 32px; border-radius: 8px; border: none;
+    background: transparent; color: var(--text-faint);
+    font-size: 14px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     transition: transform .15s ease, background .15s ease;
@@ -493,29 +490,64 @@
   .admin-login-hint:active { opacity: .8; }
 
   /* ===== NAV TABS ===== */
-  /* Навигация — горизонтальная лента вкладок. Раньше вкладки делили
-     ширину поровну (flex:1), поэтому на телефоне шесть разделов
-     сжимались в нечитаемые столбики по 50px. */
-  .nav-tabs {
-    display: flex;
-    gap: 4px;
-    padding: 8px 10px;
+  /* ===== ВЫБОР РАЗДЕЛА =====
+     Кнопка с названием текущего раздела, под ней — выпадающий список.
+     Лента с прокруткой не годилась: при шести разделах нужный уезжал за
+     край и найти его можно было только вслепую листая. */
+  .nav-picker {
+    position: sticky; top: 0; z-index: 91;
     background: var(--surface-1);
     border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; z-index: 90;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    padding: 8px 12px;
   }
-  .nav-tabs::-webkit-scrollbar { display: none; }
+  @media (min-width: 900px) { .nav-picker { padding: 8px 24px; } }
+
+  .nav-picker-btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    min-width: 200px; max-width: 100%;
+    padding: 9px 13px;
+    border-radius: var(--r-sm);
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
+    color: var(--text);
+    font-family: inherit; font-size: 14.5px; font-weight: 650;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s ease;
+  }
+  .nav-picker-btn:hover { background: #24272d; }
+  .nav-picker-icon { font-size: 17px; line-height: 1; }
+  .nav-picker-label { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav-picker-caret { color: var(--text-faint); font-size: 11px; transition: transform .18s ease; }
+  .nav-tabs.open ~ * .nav-picker-caret { transform: rotate(180deg); }
+
+  /* Сам список. Скрыт, пока не нажали кнопку; открывается панелью
+     поверх содержимого, а не раздвигает его. */
+  .nav-tabs {
+    display: none;
+    position: sticky; top: 52px; z-index: 90;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    margin: 0 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    box-shadow: 0 18px 44px rgba(0,0,0,.55);
+    max-height: 62vh;
+    overflow-y: auto;
+  }
+  .nav-tabs.open { display: flex; animation: pickerIn .16s ease; }
+  @keyframes pickerIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
   @media (min-width: 900px) {
-    .nav-tabs { padding: 8px 24px; justify-content: flex-start; }
+    .nav-tabs { margin: 0 24px; max-width: 340px; }
   }
   .nav-tab {
     flex: 0 0 auto;
-    display: flex; flex-direction: row; align-items: center; justify-content: center;
-    gap: 8px;
-    padding: 9px 14px;
+    display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
     border-radius: var(--r-sm);
     white-space: nowrap;
     cursor: pointer;
@@ -562,6 +594,39 @@
   }
   .tab-content.active { display: block; animation: fadeIn .25s ease; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ===== СТРОКА ПОСТАВЩИКА =====
+     Была карточка в несколько строк: название, цех, статус ссылки,
+     отметка правки, контакты — всё столбиком, по 120 пикселей высоты на
+     каждого из пятнадцати. Стало плотной строкой: значок, название с
+     подписью, признаки и кнопки в одну линию. */
+  .purchase-home-card {
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 11px;
+    border-radius: var(--r-sm);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    margin-bottom: 6px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .purchase-home-card:hover { background: var(--surface-3); border-color: var(--line-strong); }
+  .purchase-home-card-text { flex: 1; min-width: 0; }
+  .purchase-home-card-text strong {
+    display: block;
+    font-size: 14.5px; font-weight: 650; letter-spacing: -.1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Служебные подписи — одной приглушённой строкой под названием.
+     Раньше каждая занимала свою строку и растягивала карточку. */
+  .purchase-home-card-sub,
+  .purchase-home-card-link-badge,
+  .purchase-home-card .edit-stamp-inline {
+    display: inline; margin: 0;
+    font-size: 12px; color: var(--text-faint);
+  }
+  .purchase-home-card-link-badge { color: #5cbd88; }
+  .purchase-home-card .purchase-contacts { margin-top: 5px; }
+  .purchase-home-card .purchase-contact { padding: 3px 8px; font-size: 11.5px; }
 
   /* Список цехов и поставщиков на широком экране — в две колонки:
      их бывает полтора десятка, и одной колонкой это длинная простыня.
@@ -789,15 +854,26 @@
   .badge-style { background: rgba(217,165,78,.2); color: #ecd4a0; }
 
   /* ===== FORMS ===== */
-  .form-group { margin-bottom: 14px; }
+  .form-group { margin-bottom: 13px; }
+  /* Подписи полей — мелкой капителью, как в закупке: единый язык у всех
+     форм сайта, и подпись не спорит с самим значением. */
   .form-group label {
     display: block;
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    font-weight: 600;
-    letter-spacing: -.05px;
+    font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 5px;
+    font-weight: 700;
   }
+
+  /* Парные поля формы. На телефоне идут друг под другом, на широком
+     экране — в один ряд: два коротких поля во всю ширину оставляли
+     половину экрана пустой. */
+  .form-row-2 { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+  @media (min-width: 620px) { .form-row-2 { grid-template-columns: 1fr 1fr; } }
+
+  /* Пояснение под подписью поля — обычным текстом, а не в самой подписи:
+     подпись должна оставаться коротким ярлыком. */
+  .form-hint { margin: -2px 0 6px; font-size: 12px; line-height: 1.5; color: var(--text-faint); }
   input[type="text"], input[type="number"], input[type="search"], textarea, select {
     width: 100%;
     padding: 11px 14px;
@@ -890,8 +966,15 @@
 
   /* Ingredients list in form */
   .ingredient-row {
-    display: flex; gap: 8px; align-items: center;
-    margin-bottom: 8px;
+    display: flex; gap: 6px; align-items: center;
+    margin-bottom: 6px;
+  }
+  /* Кнопка удаления строки — приглушённая: их в форме десяток, и
+     красные плашки в столбик выглядели как список ошибок. */
+  .ingredient-row .btn-danger, .ingredient-row .ingr-remove {
+    flex-shrink: 0;
+    width: 34px; height: 34px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
   }
   .ingredient-row input { flex: 1; }
   .ingredient-row button { flex-shrink: 0; }
@@ -920,6 +1003,17 @@
   }
   /* «Докупить» — итог всей строки, он должен читаться первым. */
   .purchase-result { font-size: 14.5px; font-weight: 700; }
+  /* Нужное к заказу — акцентом, «хватает» — спокойным зелёным. Перед
+     отправкой взгляд должен цепляться именно за то, что надо купить. */
+  .purchase-result-need { color: #ff8d80; }
+  .purchase-result-ok { color: #5cbd88; font-weight: 600; }
+
+  /* Название позиции крупнее полей: по нему ищут строку глазами. */
+  .purchase-row-readonly-name { font-size: 14.5px; font-weight: 650; letter-spacing: -.1px; }
+  .purchase-row-meta { display: block; margin-top: 2px; font-size: 12px; color: var(--text-faint); font-weight: 400; }
+  /* Раскладка полей описана ниже, в блоке .purchase-row-fields —
+     повторять её здесь нельзя: правила ниже по файлу всё равно
+     побеждают, и дубль только сбивает с толку. */
   .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .purchase-row-top .purchase-name { flex: 1; }
   .purchase-remove {
@@ -930,12 +1024,16 @@
   }
   .purchase-remove:active { transform: scale(.92); }
   .purchase-row-fields {
-    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px;
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px;
+    margin-top: 8px;
   }
   .purchase-field-reorder input { border-color: rgba(217,165,78,.5); }
   .purchase-reorder-group { display: flex; gap: 4px; align-items: center; }
   .purchase-field { display: flex; flex-direction: column; gap: 3px; flex: 0 0 auto; }
-  .purchase-field span { font-size: 11px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+  .purchase-field span {
+    font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--text-faint); font-weight: 600; white-space: nowrap;
+  }
   .purchase-field select, .purchase-field input {
     padding: 8px 8px; font-size: 14px;
   }
@@ -946,9 +1044,13 @@
      field-sizing: content — нативный аналог для браузеров, которые его
      поддерживают, на случай если JS почему-то не отработал. */
   .purchase-field input[type="number"] {
-    width: 4ch; min-width: 40px; max-width: 100%;
+    width: 4ch; min-width: 44px; max-width: 100%;
     field-sizing: content;
-    text-align: left;
+    /* Числа по правому краю и моноширинным: остаток и норму сравнивают
+       взглядом, и разряды должны стоять друг под другом. */
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
   /* Стрелки-степпер у числовых полей занимают ~20px внутри поля, но
      ширина считается в JS (autosizePurchaseInput) только по длине текста
@@ -1381,7 +1483,30 @@
     background: var(--surface); border: 1px solid rgba(255,255,255,.14);
     border-radius: 10px; color: var(--text); margin-bottom: 4px;
   }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 16px; }
+  /* Заголовок и текст окна. Раньше и то и другое было одного размера и
+     цвета, из-за чего окно читалось как сплошной абзац. */
+  #app-modal-title { font-size: 17px; font-weight: 700; letter-spacing: -.2px; margin-bottom: 6px; }
+  #app-modal-message {
+    font-size: 13.5px; line-height: 1.55; color: var(--text-muted);
+    white-space: pre-line; /* переносы строк в сообщениях остаются переносами */
+    margin-bottom: 2px;
+  }
+  /* Длинные объяснения (про бота, про отзыв ключа) прокручиваются
+     внутри окна, а кнопки остаются на виду. */
+  .modal-box { display: flex; flex-direction: column; max-height: 88vh; }
+  #app-modal-message, .modal-fields, #app-modal-checklist { overflow-y: auto; }
+
+  .modal-actions {
+    display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  /* Подтверждение — справа и акцентом, отмена — рядом и приглушённой.
+     На телефоне кнопки растягиваются на всю ширину: попасть пальцем в
+     узкую кнопку у края экрана неудобно. */
+  @media (max-width: 480px) {
+    .modal-actions { flex-direction: column-reverse; }
+    .modal-actions .btn { width: 100%; }
+  }
 
   /* Подвал модалки (footerHtml в showModal) — второстепенное действие
      под основными кнопками, отделённое линией. Сюда попадает, например,
@@ -1608,6 +1733,79 @@
   }
   .photo-remove-btn:hover { background: rgba(231,76,60,.85); }
   .photo-remove-btn:active { transform: scale(.9); }
+
+  /* Группа карточек в админ-панели. Их четырнадцать, и подряд они
+     читались как стена; редкие настройки убраны под заголовок. */
+  .admin-group { margin-bottom: 12px; }
+  .admin-group-head {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    letter-spacing: -.1px;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  .admin-group-head:hover { background: var(--surface-3); }
+  .admin-group-caret { margin-left: auto; color: var(--text-faint); font-size: 12px; transition: transform .18s ease; }
+  .admin-group.open .admin-group-caret { transform: rotate(180deg); }
+  .admin-group-body { display: none; padding-top: 10px; }
+  .admin-group.open .admin-group-body { display: block; }
+
+  /* Сворачиваемая карточка админ-панели. */
+  .admin-panel-toggle {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    background: none; border: none; padding: 0;
+    color: var(--text);
+    font-family: inherit; font-size: 15px; font-weight: 700;
+    letter-spacing: -.1px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .admin-panel-toggle-count {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    color: var(--text-muted);
+    font-size: 12px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .admin-panel-toggle-caret { color: var(--text-faint); font-size: 12px; transition: transform .18s ease; }
+  .admin-panel-card.open .admin-panel-toggle-caret { transform: rotate(180deg); }
+  .admin-panel-collapsible { display: none; }
+  .admin-panel-card.open .admin-panel-collapsible { display: block; }
+
+  /* Значки действий проявляются при наведении, а на телефоне видны
+     всегда: на компьютере ряд кнопок у каждой из пятнадцати строк
+     создавал визуальный шум, а пальцем по невидимому не попасть. */
+  @media (hover: hover) {
+    .purchase-home-card .purchase-home-icon-btn { opacity: 0; transition: opacity .15s ease; }
+    .purchase-home-card:hover .purchase-home-icon-btn { opacity: 1; }
+  }
+  .purchase-home-icon-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
+
+  /* Подсказка-инструкция над списком позиций: нужна первые пару раз,
+     дальше только занимает верх экрана. Свёрнута до одной строки,
+     раскрывается нажатием. */
+  .ingr-calc-hint {
+    font-size: 12.5px; line-height: 1.5;
+    color: var(--text-faint);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    cursor: pointer;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .ingr-calc-hint.expanded { -webkit-line-clamp: unset; }
 
   /* ===== ЖУРНАЛ ДЕЙСТВИЙ ===== */
   .activity-item {
