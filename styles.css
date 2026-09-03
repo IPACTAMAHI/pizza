@@ -139,7 +139,10 @@
   @media (min-width: 900px) { .header { min-height: 96px; } }
   .header h1 {
     font-family: var(--font-display);
-    font-size: 22px; margin-bottom: 2px; letter-spacing: -.2px; font-weight: 700;
+    font-size: 22px;
+    margin-bottom: 2px;
+    letter-spacing: -.2px;
+    font-weight: 700;
     color: #fff;
     text-shadow: 0 2px 12px rgba(0,0,0,.6);
   }
@@ -260,7 +263,7 @@
     display: flex; gap: 8px; flex-wrap: wrap;
     margin: 12px 0 4px;
   }
-  .section-toolbar.tool-bar { gap: 6px; }
+  .section-toolbar.tool-bar { gap: 6px; width: fit-content; max-width: 100%; }
 
   /* Раскрывающийся список категорий раздела — тут они и создаются. */
   .section-cats {
@@ -371,16 +374,6 @@
     margin: 18px 0 8px;
   }
   .purchase-home-group-title:first-child { margin-top: 0; }
-  .purchase-home-card {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface);
-    border: 1.5px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 6px 6px 6px 14px;
-    margin-bottom: 8px;
-    transition: border-color .15s ease;
-  }
-  .purchase-home-card:hover { border-color: rgba(255,255,255,.25); }
   .purchase-home-card-main {
     flex: 1; min-width: 0;
     display: flex; align-items: center; gap: 10px;
@@ -388,10 +381,7 @@
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
   .purchase-home-card-icon { font-size: 20px; flex-shrink: 0; }
-  .purchase-home-card-text { min-width: 0; }
-  .purchase-home-card-text strong { display: block; font-size: 15px; }
   .purchase-home-card-meta { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-  .purchase-home-card-link-badge { font-size: 12px; color: var(--success); font-weight: 500; }
 
   /* Баннер незавершённой рассылки ("📤 Отправить всё") — появляется на
      главной странице "Закупки", если сайт был случайно закрыт посреди
@@ -416,7 +406,6 @@
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     transition: transform .15s ease, background .15s ease;
   }
-  .purchase-home-icon-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
   .purchase-home-icon-btn:active { transform: scale(.92); }
   .purchase-home-icon-btn-danger { color: #e2564b; background: rgba(226,86,75,.14); }
   .purchase-home-icon-btn-danger:hover { background: rgba(226,86,75,.22); }
@@ -444,13 +433,6 @@
 
   /* Цветные бейджи типа/категории на карточках */
   .type-badge { color: #fff; font-weight: 600; }
-  .type-pizza { background: #b23a45; }
-  .type-pinsa { background: #8a6033; }
-  .type-dough { background: #5b6b85; }
-  .type-sauce { background: #3d7a5c; }
-  .type-prep { background: #7c5aa3; }
-  .type-focaccia { background: #a3821f; }
-  .type-burger { background: #94502a; }
 
   /* Подвал */
   .app-footer {
@@ -592,7 +574,6 @@
     .tab-content { max-width: 1480px; }
     .cards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
-  .tab-content.active { display: block; animation: fadeIn .25s ease; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   /* ===== СТРОКА ПОСТАВЩИКА =====
@@ -609,12 +590,22 @@
     margin-bottom: 6px;
     transition: background .15s ease, border-color .15s ease;
   }
-  .purchase-home-card:hover { background: var(--surface-3); border-color: var(--line-strong); }
-  .purchase-home-card-text { flex: 1; min-width: 0; }
+  .purchase-home-card:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-3);
+  }
+  .purchase-home-card-text {
+    min-width: 0;
+    flex: 1;
+  }
   .purchase-home-card-text strong {
     display: block;
-    font-size: 14.5px; font-weight: 650; letter-spacing: -.1px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 14.5px;
+    font-weight: 650;
+    letter-spacing: -.1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   /* Служебные подписи — одной приглушённой строкой под названием.
      Раньше каждая занимала свою строку и растягивала карточку. */
@@ -624,7 +615,11 @@
     display: inline; margin: 0;
     font-size: 12px; color: var(--text-faint);
   }
-  .purchase-home-card-link-badge { color: #5cbd88; }
+  .purchase-home-card-link-badge {
+    font-size: 12px;
+    color: #5cbd88;
+    font-weight: 500;
+  }
   .purchase-home-card .purchase-contacts { margin-top: 5px; }
   .purchase-home-card .purchase-contact { padding: 3px 8px; font-size: 11.5px; }
 
@@ -806,24 +801,6 @@
   .recipe-card .card-status-switch { display: none; }
   .recipe-card.menu-open .card-status-switch { display: flex; }
   .recipe-card.menu-open { border-color: var(--line-strong); }
-  .card-share-btn {
-    flex-shrink: 0;
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(255,255,255,.05);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .card-share-btn svg {
-    width: 16px; height: 16px;
-    stroke: var(--text-muted); fill: none;
-    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
-  }
-  .card-share-btn:hover { background: rgba(226,86,75,.16); }
-  .card-share-btn:hover svg { stroke: var(--accent); }
   .badge {
     font-size: 11.5px; padding: 3px 9px;
     border-radius: 20px; background: rgba(255,255,255,.1);
@@ -831,24 +808,6 @@
     font-weight: 600;
   }
   .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
-  .badge-video-active {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--accent) !important;
-    color: #fff !important;
-    font-weight: 700;
-    font-size: 13px !important;
-    padding: 9px 16px !important;
-    min-height: 40px;
-    border-radius: 22px;
-    cursor: pointer;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    transition: transform .1s, background .15s;
-    box-shadow: 0 3px 10px rgba(226,86,75,.32);
-  }
-  .badge-video-active svg { width: 16px; height: 16px; fill: #fff; flex-shrink: 0; }
-  .badge-video-active:hover { background: #d9645a !important; }
-  .badge-video-active:active { transform: scale(0.95); }
 
   /* Бейдж категории/стиля рецепта — единый нейтральный цвет на всех карточках */
   .badge-style { background: rgba(217,165,78,.2); color: #ecd4a0; }
@@ -992,11 +951,6 @@
      колонкой, иначе расхождение приходится вычитать в уме. */
   .purchase-row input[type="number"],
   .purchase-result,
-  .purchase-total-value {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
   .purchase-field > span {
     font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
     color: var(--text-faint); font-weight: 600;
@@ -1006,7 +960,6 @@
   /* Нужное к заказу — акцентом, «хватает» — спокойным зелёным. Перед
      отправкой взгляд должен цепляться именно за то, что надо купить. */
   .purchase-result-need { color: #ff8d80; }
-  .purchase-result-ok { color: #5cbd88; font-weight: 600; }
 
   /* Название позиции крупнее полей: по нему ищут строку глазами. */
   .purchase-row-readonly-name { font-size: 14.5px; font-weight: 650; letter-spacing: -.1px; }
@@ -1076,8 +1029,14 @@
     display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,.05); color: var(--text-muted);
   }
-  .purchase-result-need { background: rgba(217,165,78,.16); color: var(--warning); }
-  .purchase-result-ok { background: rgba(63,181,121,.14); color: var(--success); }
+  /* Нужное к заказу — акцентом, «хватает» — спокойным зелёным: перед
+     отправкой взгляд должен цепляться за то, что надо купить. */
+  .purchase-result-need { background: rgba(226,86,75,.14); color: #ff8d80; }
+  .purchase-result-ok {
+    color: #5cbd88;
+    font-weight: 600;
+    background: rgba(92,189,136,.12);
+  }
   /* Кратковременная подсветка только что добавленной строки — чтобы
      после нажатия "+ Добавить ингредиент" было явно видно, что строка
      появилась (особенно когда она пустая и визуально мало отличается
@@ -1166,17 +1125,7 @@
     display: flex; flex-direction: column; gap: 0;
     margin: 14px 0 18px;
   }
-  .detail-badge {
-    display: flex; align-items: center; gap: 10px;
-    padding: 11px 2px;
-    border-top: 1px solid var(--line);
-    background: none;
-    font-size: 14.5px;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-  }
   .detail-badge:last-child { border-bottom: 1px solid var(--line); }
-  .detail-badge-status { background: none; color: var(--accent); font-weight: 700; }
 
   /* Плавающая компактная кнопка "Назад" — дублирует обычную "← Назад"
      наверху рецепта, но остаётся доступной при прокрутке вниз. Не
@@ -1266,10 +1215,17 @@
     margin-bottom: 22px;
   }
   .detail-badge {
-    padding: 7px 14px; border-radius: 20px;
-    background: var(--card); font-size: 12.5px;
-    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--card);
+    font-size: 12.5px;
     color: var(--text);
+    font-variant-numeric: tabular-nums;
+    border-radius: 20px;
+    font-weight: 600;
     border: 1px solid var(--glass-border);
   }
 
@@ -1462,23 +1418,6 @@
      в группу" в многошаговом сценарии отправки заявки — сейчас этот
      шаг убран (см. requireTelegramSend), класс оставлен неиспользуемым
      на случай, если понадобится похожая плашка где-то ещё. */
-  .group-join-warning {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin-top: 14px;
-    padding: 12px 14px;
-    border-radius: var(--radius-md);
-    background: rgba(217, 165, 78, .14);
-    border: 1.5px solid var(--warning);
-    color: var(--warning);
-    font-size: 13px;
-    line-height: 1.45;
-    text-align: left;
-    animation: pulseWarn 1.8s ease-in-out infinite;
-  }
-  .group-join-warning .gjw-icon { font-size: 18px; line-height: 1.3; flex: none; }
-  .group-join-warning strong { color: #fff; }
   @keyframes pulseWarn {
     0%, 100% { box-shadow: 0 0 0 0 rgba(217, 165, 78, .38); }
     50% { box-shadow: 0 0 0 7px rgba(217, 165, 78, 0); }
@@ -1708,8 +1647,7 @@
     background: var(--success, #2ecc71);
   }
 
-  /* Панель раздела уже имеет свои отступы — не задваиваем рамку. */
-  .section-toolbar.tool-bar { width: fit-content; max-width: 100%; }
+  /* Ширина панели раздела задана выше, вместе с отступом между кнопками. */
 
   /* Неактивная кнопка подтверждения — пока обязательное поле пустое.
      Видно, что нажимать пока нечего, и понятно, что дело в поле. */
@@ -1801,7 +1739,10 @@
     .purchase-home-card .purchase-home-icon-btn { opacity: 0; transition: opacity .15s ease; }
     .purchase-home-card:hover .purchase-home-icon-btn { opacity: 1; }
   }
-  .purchase-home-icon-btn:hover { background: rgba(255,255,255,.1); color: var(--text); }
+  .purchase-home-icon-btn:hover {
+    background: rgba(255,255,255,.1);
+    color: var(--text);
+  }
 
   /* Подсказка-инструкция над списком позиций: нужна первые пару раз,
      дальше только занимает верх экрана. Свёрнута до одной строки,
@@ -1983,7 +1924,10 @@
      Появление и переходы делаем короткими: интерфейсом пользуются на
      кухне, между делом, и медленная анимация там раздражает. */
   .recipe-card { animation-duration: .28s; }
-  .tab-content.active { animation: fadeIn .2s ease; }
+  .tab-content.active {
+    display: block;
+    animation: fadeIn .2s ease;
+  }
   .chip, .status-opt, .tool-btn, .nav-tab { transition-duration: .15s; }
   /* Уважаем системную настройку «меньше движения». */
   @media (prefers-reduced-motion: reduce) {
@@ -1999,7 +1943,11 @@
   .recipe-card-inactive .card-thumb { filter: grayscale(.65); }
 
   .badge-status { color: #fff; font-weight: 700; }
-  .detail-badge-status { background: rgba(255,255,255,.1); }
+  .detail-badge-status {
+    background: rgba(255,255,255,.1);
+    color: var(--accent);
+    font-weight: 700;
+  }
 
   /* Переключатель статуса. Кнопки узкие и в один ряд — их жмут с
      телефона прямо в списке, не открывая рецепт. */

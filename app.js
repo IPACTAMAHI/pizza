@@ -6885,10 +6885,6 @@ function purchaseCategoryLabel(cat) {
   return c ? c.label : cat;
 }
 
-function purchaseCategoryIcon(cat) {
-  var c = purchaseCategoryById(cat);
-  return (c && c.icon) || '📦';
-}
 
 /* Список встроенных цехов (Пицца бар / Горячий цех, и любые другие,
    которые появятся в будущем) — варианты, к которым можно привязать
@@ -8311,11 +8307,6 @@ function buildPurchaseReportLines(cat) {
   return buildPurchaseReportData(cat).lines;
 }
 
-function purchaseReportHeaderTitle(kind) {
-  if (kind === 'reorder') return '🔁 Дозаказ';
-  if (kind === 'both') return '📦 Закупка на неделю + 🔁 дозаказ';
-  return '📦 Закупка на неделю';
-}
 
 /* Сообщение поставщику: приветствие с его именем и сам заказ.
    Служебной строки «📦 Закупка на неделю — Хорека (31.08.2026)» здесь
@@ -8430,37 +8421,7 @@ function copyPurchaseReorder(cat) {
   copyTextToClipboard(text, '🔁 Дозаказ скопирован в буфер обмена');
 }
 
-function downloadPurchaseReorderText(cat) {
-  cat = cat || currentPurchaseCategory;
-  var text = buildPurchaseReorderReportText(cat);
-  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'Дозаказ - ' + purchaseCategoryLabel(cat) + '.txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-}
 
-function downloadPurchaseReorderExcel(cat) {
-  cat = cat || currentPurchaseCategory;
-  if (typeof XLSX === 'undefined') {
-    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
-    return;
-  }
-  var rows = purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim(); });
-  var data = [['Ингредиент', 'Ед. дозаказа', 'Дозаказ']];
-  rows.forEach(function(row) {
-    data.push([row.name.trim(), row.reorderUnit || 'кг', parseFloat(String(row.reorder).replace(',', '.'))]);
-  });
-  var ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 10 }];
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(purchaseCategoryLabel(cat), {}));
-  XLSX.writeFile(wb, 'Дозаказ - ' + purchaseCategoryLabel(cat) + '.xlsx');
-}
 
 function buildAllPurchaseReorderReportText() {
   var today = new Date().toLocaleDateString('ru-RU');
@@ -8480,94 +8441,10 @@ function copyAllPurchaseReorder() {
   copyTextToClipboard(text, '🔁 Дозаказ по цеху и его поставщикам скопирован');
 }
 
-function downloadAllPurchaseReorderText() {
-  var text = buildAllPurchaseReorderReportText();
-  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'Дозаказ - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-}
 
-function downloadAllPurchaseReorderExcel() {
-  if (typeof XLSX === 'undefined') {
-    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
-    return;
-  }
-  var wb = XLSX.utils.book_new();
-  var usedNames = {};
-  var any = false;
-  purchaseCategoriesForWorkshop(currentPurchaseCategory).forEach(function(c) {
-    var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim() && String(r.reorder == null ? '' : r.reorder).trim(); });
-    if (!rows.length) return;
-    any = true;
-    var data = [['Ингредиент', 'Ед. дозаказа', 'Дозаказ']];
-    rows.forEach(function(row) {
-      data.push([row.name.trim(), row.reorderUnit || 'кг', parseFloat(String(row.reorder).replace(',', '.'))]);
-    });
-    var ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
-  });
-  if (!any) {
-    showToast('⚠️ Нет ни одной позиции с указанным дозаказом ни у цеха, ни у его поставщиков');
-    return;
-  }
-  XLSX.writeFile(wb, 'Дозаказ - все поставщики.xlsx');
-}
 
-function downloadPurchaseText(cat) {
-  cat = cat || currentPurchaseCategory;
-  var text = buildPurchaseReportText(cat);
-  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'Закупка - ' + purchaseCategoryLabel(cat) + '.txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-}
 
-function downloadPurchaseExcel(cat) {
-  cat = cat || currentPurchaseCategory;
-  if (typeof XLSX === 'undefined') {
-    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
-    return;
-  }
-  var rows = purchaseRowsFor(cat).filter(function(r) { return (r.name || '').trim(); });
-  var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить', 'Дозаказ']];
-  rows.forEach(function(row) {
-    var toBuy = computeToBuy(row);
-    var reorderCell = (row.reorder === '' || row.reorder == null) ? '' : (String(row.reorder).trim() + ' ' + (row.reorderUnit || 'кг'));
-    data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, reorderCell]);
-  });
-  var ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
-  var wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(purchaseCategoryLabel(cat), {}));
-  XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(cat) + '.xlsx');
-}
 
-/* Название листа Excel не может содержать : \ / ? * [ ], быть пустым,
-   длиннее 31 символа или повторяться в одной книге — приводим к
-   допустимому виду и, если совпало с уже занятым, добавляем "(2)", "(3)"... */
-function sanitizeSheetName(name, used) {
-  var base = String(name || 'Лист').replace(/[:\\\/\?\*\[\]]/g, ' ').trim().substring(0, 31) || 'Лист';
-  var s = base, i = 1;
-  while (used[s]) {
-    i++;
-    var suffix = ' (' + i + ')';
-    s = base.substring(0, 31 - suffix.length) + suffix;
-  }
-  used[s] = true;
-  return s;
-}
 
 /* ================================================================
    ОБЩИЙ ОТЧЁТ ПО ЦЕХУ И ЕГО ПОСТАВЩИКАМ
@@ -8599,47 +8476,7 @@ function copyAllPurchaseResults() {
   copyTextToClipboard(text, '📋 Общий список по цеху и его поставщикам скопирован');
 }
 
-function downloadAllPurchaseText() {
-  var text = buildAllPurchaseReportText();
-  var blob = new Blob(['\uFEFF' + text], { type: 'text/plain;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-}
 
-function downloadAllPurchaseExcel() {
-  if (typeof XLSX === 'undefined') {
-    showToast('⚠️ Модуль Excel ещё загружается, попробуйте через секунду');
-    return;
-  }
-  var wb = XLSX.utils.book_new();
-  var usedNames = {};
-  var any = false;
-  purchaseCategoriesForWorkshop(currentPurchaseCategory).forEach(function(c) {
-    var rows = purchaseRowsFor(c.id).filter(function(r) { return (r.name || '').trim(); });
-    if (!rows.length) return;
-    any = true;
-    var data = [['Ингредиент', 'Ед.', 'Норма (неделя)', 'Остаток', 'Докупить', 'Дозаказ']];
-    rows.forEach(function(row) {
-      var toBuy = computeToBuy(row);
-      var reorderCell = (row.reorder === '' || row.reorder == null) ? '' : (String(row.reorder).trim() + ' ' + (row.reorderUnit || 'кг'));
-      data.push([row.name.trim(), row.unit, row.norm === '' ? '' : parseFloat(String(row.norm).replace(',', '.')), row.residual === '' ? '' : parseFloat(String(row.residual).replace(',', '.')), toBuy === null ? '' : toBuy, reorderCell]);
-    });
-    var ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 30 }, { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(c.label, usedNames));
-  });
-  if (!any) {
-    showToast('⚠️ Нет ни одной позиции ни у цеха, ни у его поставщиков');
-    return;
-  }
-  XLSX.writeFile(wb, 'Закупка - ' + purchaseCategoryLabel(currentPurchaseCategory) + ' (цех и поставщики).xlsx');
-}
 
 /* ================================================================
    DETAIL VIEW
