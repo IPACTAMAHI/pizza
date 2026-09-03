@@ -1311,25 +1311,37 @@
     color: var(--text-muted); font-size: 13.5px;
     padding: 6px 0; border-bottom: none;
   }
-  .ingr-name { flex: 1; min-width: 0; word-break: break-word; }
+  /* Имени отдаём всю оставшуюся ширину. word-break: break-word рвал
+     слова посреди буквы («Моцаре / лла») — переносим по словам, а рвём
+     только то, что не влезает целиком. */
+  .ingr-name { flex: 1; min-width: 0; overflow-wrap: break-word; word-break: normal; }
   .ingr-suffix { color: var(--text-muted); font-size: 12.5px; }
   .ingr-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .ingr-input {
-    width: 74px; padding: 7px 8px; border-radius: 10px;
-    border: 1px solid var(--glass-border); background: var(--card);
+    width: 64px; flex-shrink: 0;
+    padding: 7px 8px; border-radius: 9px;
+    border: 1px solid var(--line-strong); background: var(--surface-1);
     color: var(--text); font-size: 14.5px; text-align: right;
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
     -moz-appearance: textfield;
   }
   .ingr-input:focus { outline: none; border-color: var(--accent); }
   .ingr-input::-webkit-outer-spin-button,
   .ingr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  .ingr-unit, .ingr-unit-static {
-    font-size: 13.5px; color: var(--text-muted); min-width: 30px;
+  .ingr-unit-static {
+    font-size: 13.5px; color: var(--text-muted);
+    min-width: 26px; flex-shrink: 0;
   }
+  /* Единица измерения — это <select>, а общее правило форм растягивает
+     любой select на всю ширину. Из-за этого колонка «г» занимала
+     пол-строки пустотой, а названию не оставалось места и оно рвалось
+     переносом. Ширину задаём по содержимому. */
   .ingr-unit {
-    background: var(--card); color: var(--text);
-    border: 1px solid var(--glass-border); border-radius: 8px;
-    padding: 6px 4px;
+    width: auto; min-width: 56px; max-width: 74px; flex-shrink: 0;
+    background: var(--surface-1); color: var(--text);
+    border: 1px solid var(--line-strong); border-radius: 8px;
+    padding: 7px 6px;
+    font-size: 13.5px;
   }
   .ingr-calc-reset { margin-top: 14px; }
   .steps-list { padding-left: 0; counter-reset: step; }
@@ -1802,10 +1814,14 @@
     border-radius: var(--r-sm);
     padding: 9px 12px;
     cursor: pointer;
-    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
-    overflow: hidden;
+    /* Одна строка целиком с многоточием. Через -webkit-line-clamp вторая
+       строка обрезалась посреди буквы и выглядела как сбой вёрстки. */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .ingr-calc-hint.expanded { -webkit-line-clamp: unset; }
+  .ingr-calc-hint.expanded { white-space: normal; overflow: visible; }
+  /* Плавающая кнопка «назад» стоит поверх содержимого, поэтому снизу
+     нужен запас — иначе она накрывала последние строки шагов. */
+  #tab-detail { padding-bottom: 76px; }
 
   /* ===== ЖУРНАЛ ДЕЙСТВИЙ ===== */
   .activity-item {
@@ -2086,8 +2102,7 @@
     /* На маленьком экране в карточке остаются только значки статуса —
        три подписи туда не помещаются и ломают вёрстку карточки. */
     .recipe-card .status-opt-label { display: none; }
-    .recipe-card .status-opt { padding: 5px 9px; font-size: 13px; }
-
+    .recipe-card .status-opt { padding: 5px 9px; font-size: 13px; }
     /* То же самое с панелью инструментов: значки остаются, подписи
        уходят — кроме главной кнопки, по которой должно быть сразу
        понятно, что вообще делает эта панель. */
