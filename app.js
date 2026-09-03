@@ -2179,6 +2179,7 @@ function renderSectionNavTabs() {
   updatePurchaseTabVisibility();
   applyPermissionVisibility(); // панели разделов создаются здесь, кнопки в них тоже по правам
   updateMobileBar();
+  updateNavPicker();
 
   // Открытый сейчас раздел стал недоступен (сняли роль, удалили
   // раздел) — уводим человека на первый доступный.
@@ -2212,6 +2213,56 @@ function mobileGoSections() {
   }
   goToDefaultSection();
 }
+
+/* ================================================================
+   ВЫБОР РАЗДЕЛА СПИСКОМ
+   ================================================================
+   Разделы были лентой вкладок с горизонтальной прокруткой. При шести
+   разделах нужный уезжал за край, и чтобы его найти, приходилось
+   листать вслепую. Теперь это кнопка с текущим разделом: нажал —
+   открылся список целиком, выбрал — закрылся.
+
+   Сами вкладки из разметки никуда не делись: список и есть они,
+   просто показывается по нажатию. Поэтому вся логика доступа,
+   подсветки и переключения осталась прежней. */
+function toggleNavPicker(force) {
+  var tabs = $('nav-tabs');
+  var btn = $('nav-picker-btn');
+  if (!tabs) return;
+  var open = (typeof force === 'boolean') ? force : !tabs.classList.contains('open');
+  tabs.classList.toggle('open', open);
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/* Подпись на кнопке — название открытого раздела. Человек должен
+   видеть, где находится, не открывая список. */
+function updateNavPicker() {
+  var labelEl = $('nav-picker-label');
+  var iconEl = $('nav-picker-icon');
+  if (!labelEl) return;
+
+  var label = 'Раздел', icon = '📁';
+  if (currentTab === 'purchase') { label = 'Закупка'; icon = '🛒'; }
+  else if (currentTab === 'admin') { label = 'Админ-панель'; icon = '⚙️'; }
+  else {
+    var id = (currentTab.indexOf('section:') === 0) ? currentTab.slice('section:'.length) : '';
+    var s = id ? sectionById(id) : null;
+    if (s) { label = s.label; icon = s.icon || '📁'; }
+  }
+  labelEl.textContent = label;
+  if (iconEl) iconEl.textContent = icon;
+}
+
+/* Список закрывается при выборе и при нажатии мимо — иначе он
+   перекрывал бы содержимое раздела, в который только что перешли. */
+document.addEventListener('click', function(e) {
+  var tabs = $('nav-tabs');
+  if (!tabs || !tabs.classList.contains('open')) return;
+  var insideBtn = e.target.closest && e.target.closest('.nav-picker-btn');
+  if (insideBtn) return;
+  var insideTabs = e.target.closest && e.target.closest('.nav-tabs');
+  if (!insideTabs || e.target.closest('.nav-tab')) toggleNavPicker(false);
+});
 
 function updateMobileBar() {
   var bar = $('mobile-bar');
@@ -4557,6 +4608,18 @@ function formatActivityTime(at) {
 var activityFilterWho = '';
 
 function renderActivityLog() {
+  // Число записей показываем и в свёрнутом виде — чтобы было понятно,
+  // есть ли там вообще что смотреть.
+  var countEl = $('activity-count');
+  if (countEl) countEl.textContent = activityLog.length ? String(activityLog.length) : '';
+
+  var card = $('activity-card');
+  if (card && !card.classList.contains('open')) {
+    var wasOpen = false;
+    try { wasOpen = localStorage.getItem('r20_activity_open') === '1'; } catch (e) {}
+    if (wasOpen) card.classList.add('open'); // человек оставлял её открытой — уважаем
+  }
+
   var holder = $('activity-log-list');
   if (!holder) return;
 
@@ -4591,6 +4654,45 @@ function renderActivityLog() {
     '</div>';
   }).join('') +
   (list.length > 60 ? '<p class="admin-panel-hint">Показаны последние 60 из ' + list.length + '.</p>' : '');
+}
+
+/* История сворачивается и разворачивается. По умолчанию свёрнута:
+   заглядывают в неё редко — когда нужно понять, кто что поменял, — а
+   места в панели занимала больше всех остальных карточек вместе. */
+/* Сворачиваемая группа карточек в админ-панели. Выбор запоминается на
+   устройстве: кто-то держит настройки GitHub открытыми постоянно, а
+   кому-то они не нужны месяцами. */
+function toggleAdminGroup(id) {
+  var group = $(id);
+  if (!group) return;
+  var open = !group.classList.contains('open');
+  group.classList.toggle('open', open);
+  var head = group.querySelector('.admin-group-head');
+  if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  try { localStorage.setItem('r20_group_' + id, open ? '1' : '0'); } catch (e) {}
+}
+
+/* Восстанавливает раскрытые группы при отрисовке панели. */
+function restoreAdminGroups() {
+  document.querySelectorAll('.admin-group').forEach(function(g) {
+    var open = false;
+    try { open = localStorage.getItem('r20_group_' + g.id) === '1'; } catch (e) {}
+    g.classList.toggle('open', open);
+    var head = g.querySelector('.admin-group-head');
+    if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+}
+
+function toggleActivityLog() {
+  var body = $('activity-body');
+  var card = $('activity-card');
+  if (!body || !card) return;
+  var open = !card.classList.contains('open');
+  card.classList.toggle('open', open);
+  var btn = card.querySelector('.admin-panel-toggle');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  try { localStorage.setItem('r20_activity_open', open ? '1' : '0'); } catch (e) {}
+  if (open) renderActivityLog();
 }
 
 function setActivityFilter(who) {
@@ -5569,6 +5671,7 @@ function switchTab(name) {
     syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
   }
   updateMobileBar();
+  updateNavPicker();
 }
 
 /* ================================================================
@@ -6303,11 +6406,13 @@ function clearSearchInput(inputId) {
    раскрывает — инструкцию читают один раз, а карточками пользуются
    каждый день, и текст не должен занимать пол-экрана. */
 document.addEventListener('click', function(e) {
-  var hint = e.target.closest ? e.target.closest('.admin-panel-hint') : null;
+  if (!e.target.closest) return;
+  var hint = e.target.closest('.admin-panel-hint') || e.target.closest('.ingr-calc-hint');
   if (hint) hint.classList.toggle('expanded');
 });
 
 function renderAdminPanel() {
+  restoreAdminGroups();
   renderActivityLog();
   syncActivityFromGithub(); // в фоне: у коллег могли появиться новые записи
   renderAdminPermsSummary();
@@ -6894,15 +6999,24 @@ function renderPurchaseHomeList() {
     var workshopMark = '';
     if (!c.builtin && c.workshop) {
       var w = purchaseCategoryById(c.workshop);
-      if (w) workshopMark = '<div class="purchase-home-card-meta">' + esc(w.icon || '📦') + ' ' + esc(w.label) + '</div>';
+      if (w) workshopMark = '<span class="purchase-home-card-meta">' + esc(w.icon || '📦') + ' ' + esc(w.label) + '</span>';
     }
-    var linkMark = c.link ? '<div class="purchase-home-card-link-badge">🔗 ссылка для отправки настроена</div>' : '';
+    // Служебные пометки собираем в одну строку под названием: цех,
+    // готовность ссылки и кто правил. Раньше каждая занимала
+    // собственную строку, и на пятнадцати поставщиках список
+    // растягивался на три экрана.
+    var linkMark = c.link ? '<span class="purchase-home-card-link-badge">🔗 отправка настроена</span>' : '';
     var contactsMark = purchaseContactsHtml(c); // пусто, если ничего не заполнено
-    var stampMark = formatEditStamp(c) ? '<div class="edit-stamp-inline">✏️ ' + esc(formatEditStamp(c)) + '</div>' : '';
+    var stampMark = formatEditStamp(c) ? '<span class="edit-stamp-inline">✏️ ' + esc(formatEditStamp(c)) + '</span>' : '';
+    var subParts = [];
+    if (workshopMark) subParts.push(workshopMark);
+    if (linkMark) subParts.push(linkMark);
+    if (stampMark) subParts.push(stampMark);
+    var subLine = subParts.length ? '<div class="purchase-home-card-sub">' + subParts.join(' · ') + '</div>' : '';
     return '<div class="purchase-home-card">' +
       '<div class="purchase-home-card-main" onclick="showPurchaseDetail(\'' + c.id + '\')">' +
         '<span class="purchase-home-card-icon">' + esc(c.icon || '📦') + '</span>' +
-        '<div class="purchase-home-card-text"><strong>' + esc(c.label) + '</strong>' + workshopMark + linkMark + stampMark + contactsMark + '</div>' +
+        '<div class="purchase-home-card-text"><strong>' + esc(c.label) + '</strong>' + subLine + contactsMark + '</div>' +
       '</div>' +
       '<div class="purchase-home-card-actions developer-only">' +
         '<button type="button" class="purchase-home-icon-btn" title="Редактировать" onclick="event.stopPropagation(); enterPurchaseEditFor(\'' + c.id + '\')">✏️</button>' +
