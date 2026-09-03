@@ -86,5 +86,14 @@
     ],
     "role": "viewer",
     "claimedAt": 1788081640183
+  },
+  {
+    "id": "9914-4FF4",
+    "fingerprint": "",
+    "name": "тестер",
+    "addedAt": 1788468243516,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
