@@ -111,7 +111,8 @@
      он давал разнобой: подписи внутри карточек и панелей должны быть той
      же гарнитурой, что и остальной текст. */
   h1, h2, h3, h4 { font-family: var(--font-body); font-weight: 700; letter-spacing: -.2px; }
-  .header h1 { font-family: var(--font-display); }
+  /* Засечный шрифт остаётся только у заголовка сайта — задан в блоке
+     .header h1 ниже, вместе с его размером. */
 
   /* ===== HEADER ===== */
   .header {
@@ -671,6 +672,7 @@
      красива, но на экран влезало четыре рецепта из сорока двух — а
      список открывают, чтобы быстро найти нужный, а не любоваться. */
   .recipe-card {
+    animation-duration: .28s;
     background: var(--surface-2);
     border: 1px solid var(--line);
     border-radius: var(--r-sm);
@@ -867,6 +869,7 @@
 
   /* Photo upload */
   .photo-upload {
+    position: relative; /* якорь для кнопки удаления фото */
     width: 100%; height: 160px;
     background: var(--surface);
     border: 2px dashed rgba(255,255,255,.18);
@@ -955,18 +958,9 @@
     font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
     color: var(--text-faint); font-weight: 600;
   }
-  /* «Докупить» — итог всей строки, он должен читаться первым. */
-  .purchase-result { font-size: 14.5px; font-weight: 700; }
-  /* Нужное к заказу — акцентом, «хватает» — спокойным зелёным. Перед
-     отправкой взгляд должен цепляться именно за то, что надо купить. */
-  .purchase-result-need { color: #ff8d80; }
-
-  /* Название позиции крупнее полей: по нему ищут строку глазами. */
-  .purchase-row-readonly-name { font-size: 14.5px; font-weight: 650; letter-spacing: -.1px; }
-  .purchase-row-meta { display: block; margin-top: 2px; font-size: 12px; color: var(--text-faint); font-weight: 400; }
-  /* Раскладка полей описана ниже, в блоке .purchase-row-fields —
-     повторять её здесь нельзя: правила ниже по файлу всё равно
-     побеждают, и дубль только сбивает с толку. */
+  /* Стили итога «Докупить» и названия позиции — ниже по файлу, рядом с
+     остальной разметкой строки закупки. Держим их в одном месте: пока
+     они были и здесь, и там, работала только нижняя половина. */
   .purchase-row-top { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   .purchase-row-top .purchase-name { flex: 1; }
   .purchase-remove {
@@ -997,6 +991,7 @@
      field-sizing: content — нативный аналог для браузеров, которые его
      поддерживают, на случай если JS почему-то не отработал. */
   .purchase-field input[type="number"] {
+    -moz-appearance: textfield;
     width: 4ch; min-width: 44px; max-width: 100%;
     field-sizing: content;
     /* Числа по правому краю и моноширинным: остаток и норму сравнивают
@@ -1017,14 +1012,12 @@
     -webkit-appearance: none;
     margin: 0;
   }
-  .purchase-field input[type="number"] {
-    -moz-appearance: textfield;
-  }
   .purchase-field select {
     width: auto; min-width: 56px;
   }
+  /* Итог строки — то, ради чего её и читают, поэтому крупнее полей. */
   .purchase-result {
-    padding: 8px 10px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    padding: 8px 10px; border-radius: 10px; font-weight: 700; font-size: 14.5px;
     text-align: center; min-height: 34px; min-width: 64px; white-space: nowrap;
     display: flex; align-items: center; justify-content: center;
     background: rgba(255,255,255,.05); color: var(--text-muted);
@@ -1053,7 +1046,7 @@
      та же карточка .purchase-row, только имя/ед./норма — просто текст
      (шаблон правится в разделе поставщика выше), редактируется только
      остаток. Список сплошной, без разбивки по поставщику. */
-  .purchase-row-readonly-name { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+  .purchase-row-readonly-name { font-weight: 650; font-size: 14.5px; letter-spacing: -.1px; margin-bottom: 8px; }
   .purchase-row-readonly-name .purchase-row-meta { font-weight: 500; font-size: 12px; color: var(--text-muted); margin-left: 6px; }
 
   /* Кнопка "ОК" в результатах поиска на главной "Закупка" (см.
@@ -1124,6 +1117,17 @@
   .detail-meta {
     display: flex; flex-direction: column; gap: 0;
     margin: 14px 0 18px;
+  }
+  /* Характеристика — строкой: название слева, значение справа. Прежние
+     «таблетки» глаз не сканировал: нужную цифру приходилось искать. */
+  .detail-badge {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 2px;
+    border-top: 1px solid var(--line);
+    background: none;
+    font-size: 14.5px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
   }
   .detail-badge:last-child { border-bottom: 1px solid var(--line); }
 
@@ -1210,33 +1214,20 @@
   }
   .btn-telegram svg { width: 16px; height: 16px; fill: #fff; }
   .detail-title { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 29px; margin-bottom: 10px; }
-  .detail-meta {
-    display: flex; gap: 8px; flex-wrap: wrap;
-    margin-bottom: 22px;
-  }
-  .detail-badge {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 14px;
-    border-top: 1px solid var(--line);
-    background: var(--card);
-    font-size: 12.5px;
-    color: var(--text);
-    font-variant-numeric: tabular-nums;
-    border-radius: 20px;
-    font-weight: 600;
-    border: 1px solid var(--glass-border);
-  }
+  /* Вид характеристик задан выше, в блоке .detail-meta / .detail-badge:
+     строками с разделителями, значение справа. Прежний вариант с
+     «таблетками» убран — он стоял ниже и перекрывал новый. */
 
   .section-title {
-    font-family: var(--font-display); font-weight: 600;
-    font-size: 20px; margin: 26px 0 14px;
-    padding-bottom: 8px; display: flex; align-items: center; gap: 8px;
-    border-bottom: 2px solid rgba(226,86,75,.3);
+    font-weight: 700;
+    font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 24px 0 10px;
+    padding-bottom: 0; display: flex; align-items: center; gap: 8px;
+    border-bottom: none;
   }
   .section-title::before {
-    content: '';
+    content: none;
     width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent-grad);
     flex-shrink: 0;
@@ -1244,15 +1235,11 @@
   }
 
   .ingredients-list li,
-  .steps-list li {
-    margin-bottom: 8px; font-size: 15px;
-  }
+  /* Отступы и размер шагов заданы ниже, в блоке .steps-list li. */
 
   /* ===== ИНГРЕДИЕНТЫ-КАЛЬКУЛЯТОР ===== */
-  .ingr-calc-hint {
-    font-size: 12.5px; color: var(--text-muted);
-    margin-bottom: 10px; line-height: 1.4;
-  }
+  /* Вид подсказки задан ниже: одна строка с многоточием, раскрывается
+     нажатием. */
   .ingr-row {
     display: flex; align-items: center; justify-content: space-between;
     gap: 10px; padding: 10px 10px;
@@ -1305,6 +1292,9 @@
   .steps-list { padding-left: 0; counter-reset: step; }
   .steps-list li {
     counter-increment: step;
+    cursor: pointer; -webkit-user-select: none; user-select: none;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    transition: opacity .2s ease;
     position: relative;
     padding: 10px 0 10px 40px;
     margin-bottom: 0;
@@ -1332,7 +1322,7 @@
   }
   /* Соединительная линия между шагами убрана: с разделителями строк она
      стала лишним украшением и мешала при коротких шагах в одну строку. */
-  .steps-list li { cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: opacity .2s ease; }
+  /* Поведение шага (нажатие, выделение) задано в основном блоке выше. */
   .steps-list li.step-done { opacity: .5; text-decoration: line-through; text-decoration-color: var(--text-muted); }
   .steps-list li.step-done::before { content: '✓'; background: rgba(92,189,136,.18); color: #5cbd88; box-shadow: none; }
 
@@ -1405,6 +1395,7 @@
   }
   .modal-overlay.show { display: flex; }
   .modal-box {
+    display: flex; flex-direction: column; max-height: 88vh;
     background: var(--surface-2);
     border: 1px solid var(--line-strong);
     border-radius: var(--r-lg);
@@ -1446,7 +1437,7 @@
   }
   /* Длинные объяснения (про бота, про отзыв ключа) прокручиваются
      внутри окна, а кнопки остаются на виду. */
-  .modal-box { display: flex; flex-direction: column; max-height: 88vh; }
+  /* Раскладка окна задана в основном блоке .modal-box. */
   #app-modal-message, .modal-fields, #app-modal-checklist { overflow-y: auto; }
 
   .modal-actions {
@@ -1664,7 +1655,6 @@
   .venue-badge { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
 
   /* Кнопка удаления фото — поверх снимка в форме рецепта. */
-  .photo-upload { position: relative; }
   .photo-remove-btn {
     position: absolute; top: 8px; right: 8px;
     width: 34px; height: 34px;
@@ -1925,7 +1915,7 @@
   /* ===== ПЛАВНОСТЬ =====
      Появление и переходы делаем короткими: интерфейсом пользуются на
      кухне, между делом, и медленная анимация там раздражает. */
-  .recipe-card { animation-duration: .28s; }
+  /* Длительность появления карточки задана в самом блоке .recipe-card. */
   .tab-content.active {
     display: block;
     animation: fadeIn .2s ease;
@@ -1944,7 +1934,7 @@
   .recipe-card-inactive:hover { opacity: .85; }
   .recipe-card-inactive .card-thumb { filter: grayscale(.65); }
 
-  .badge-status { color: #fff; font-weight: 700; }
+  /* Цвета статусов заданы в блоке .badge-status выше. */
   .detail-badge-status {
     background: rgba(255,255,255,.1);
     color: var(--accent);
@@ -2046,9 +2036,6 @@
 
   /* ===== RESPONSIVE ===== */
   @media (max-width: 500px) {
-    .header h1 { font-size: 22px; }
-    .card-thumb { width: 70px; height: 70px; }
-    .nav-tab { padding: 10px 4px; font-size: 13px; }
     /* На маленьком экране в карточке остаются только значки статуса —
        три подписи туда не помещаются и ломают вёрстку карточки. */
     .recipe-card .status-opt-label { display: none; }
