@@ -7562,7 +7562,7 @@ async function handlePurchaseImportFile(file) {
   });
 
   if (!added) {
-    showToast('ℹ️ Все позиции из файла уже есть в списке (пропущено: ' + skipped + ') — новых не добавлено');
+    showToast('✅ Прайс сверен: все ' + skipped + ' позиций уже есть в списке, новых нет');
     return;
   }
 
@@ -7571,7 +7571,11 @@ async function handlePurchaseImportFile(file) {
   renderPurchaseList();
   updatePurchaseTemplateControls();
   schedulePurchaseSync();
-  showToast('📥 Добавлено новых позиций: ' + added + (skipped ? ' (уже было в списке: ' + skipped + ')' : '') + ' — впишите норму на неделю');
+  /* Сообщение читают на бегу, поэтому главное — сколько добавилось —
+     идёт первым, а «сверено» объясняет, почему из трёхсот строк файла
+     добавилось десять: остальные уже стояли в шаблоне. Раньше это было
+     в скобках и терялось, из-за чего загрузка выглядела сломанной. */
+  showToast('📥 Новых позиций: ' + added + (skipped ? ' · сверено с прайсом: ' + (added + skipped) : '') + ' — впишите норму на неделю');
 }
 
 function purchaseImportExt(file) {
