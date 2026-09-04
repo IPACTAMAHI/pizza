@@ -263,6 +263,16 @@
       "link": "https://t.me/+4iLhhgTHrVkyZGUy",
       "chatId": "-1004492131511",
       "updatedWhat": "указал идентификатор чата"
+    },
+    {
+      "id": "sup1788521830121el9n8",
+      "label": "Доставка вкусного",
+      "icon": "🚚",
+      "builtin": false,
+      "workshop": "hot",
+      "venue": "venue-main",
+      "updatedAt": 1788521830121,
+      "updatedBy": "Разработчик"
     }
   ],
   "data": {
@@ -883,7 +893,8 @@
         "unit": "кг",
         "norm": "20"
       }
-    ]
+    ],
+    "sup1788521830121el9n8": []
   },
   "customUnits": [
     "ящик"
