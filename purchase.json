@@ -271,10 +271,11 @@
       "builtin": false,
       "workshop": "hot",
       "venue": "venue-main",
-      "updatedAt": 1788524072585,
+      "updatedAt": 1788524712146,
       "updatedBy": "Разработчик",
       "chatId": "-1004492131511",
-      "updatedWhat": "указал идентификатор чата"
+      "updatedWhat": "изменил ссылку для отправки",
+      "link": "https://t.me/+4iLhhgTHrVkyZGUy"
     }
   ],
   "data": {
