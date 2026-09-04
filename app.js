@@ -7607,20 +7607,123 @@ function parsePurchaseSpreadsheet(file) {
    если заголовок не распознан (или его вовсе нет) — считаем, что
    название в колонке A, ед. измерения — в колонке B, и это уже данные,
    а не шапка таблицы. */
+/* Ищет строку заголовков среди первых строк файла. Раньше заголовком
+   считалась строго первая строка — но у выгрузок из товароучётных
+   программ сверху идут название прайса, дата и пустые строки, а сами
+   заголовки оказываются пятыми или десятыми. */
+/* Сколько осмысленных значений в колонке ниже заданной строки. Нужно,
+   чтобы отличить настоящую колонку названий от похожей, но пустой. */
+function purchaseColumnFill(rows, col, fromRow) {
+  var n = 0;
+  for (var i = fromRow; i < rows.length; i++) {
+    var v = String((rows[i] || [])[col] == null ? '' : rows[i][col]).trim();
+    if (v.length >= 3 && /[а-яёa-z]/i.test(v)) n++;
+  }
+  return n;
+}
+
+function findPurchaseHeaderRow(rows) {
+  var limit = Math.min(rows.length, 15);
+  var best = null;
+  for (var i = 0; i < limit; i++) {
+    var cells = rows[i].map(function(c) { return String(c || '').toLowerCase().trim(); });
+    for (var col = 0; col < cells.length; col++) {
+      if (!/назв|наимен|товар|позици|продукт|ингредиент|номенклатур|name/.test(cells[col])) continue;
+      // Подходящее слово может стоять и в пустой служебной колонке —
+      // в присланном прайсе «Номенклатура» встречается дважды, и левая
+      // колонка при этом пустая. Берём ту, под которой реально есть
+      // данные, иначе распознавалось восемь строк из трёхсот.
+      var fill = purchaseColumnFill(rows, col, i + 1);
+      if (!best || fill > best.fill) {
+        var unitIdx = cells.findIndex(function(h) { return /^ед\b|единиц|ед\.?\s*изм|упаковк|unit/.test(h); });
+        best = { row: i, nameCol: col, unitCol: unitIdx === col ? -1 : unitIdx, fill: fill };
+      }
+    }
+  }
+  /* Заголовок найден — используем его, даже если данных под ним мало.
+     Раньше при малом количестве строк мы возвращали null и колонка
+     угадывалась по данным, из-за чего сама строка заголовков попадала
+     в список товаров. Если под заголовком пусто — значит позиций нет,
+     и это честный ответ. */
+  return best;
+}
+
+/* Если заголовков нет вовсе, колонку с названиями определяем по самим
+   данным: берём ту, где больше всего осмысленного текста. В прайсе,
+   который прислали, первые четыре колонки пустые, а названия лежат в
+   пятой — при жёсткой «первой колонке» из 330 строк подхватывались
+   только десять заголовков разделов. */
+function guessPurchaseNameColumn(rows) {
+  var score = [];
+  rows.forEach(function(row) {
+    row.forEach(function(cell, idx) {
+      var v = String(cell == null ? '' : cell).trim();
+      // считаем только текст: числа и коды в колонке названий не бывают
+      if (v.length >= 3 && /[а-яёa-z]/i.test(v) && !/^\d+([.,]\d+)?$/.test(v)) {
+        score[idx] = (score[idx] || 0) + 1;
+      }
+    });
+  });
+  var best = 0, bestScore = -1;
+  score.forEach(function(n, idx) { if (n > bestScore) { bestScore = n; best = idx; } });
+  return best;
+}
+
+/* Разбирает ячейку вида «Абрикос, , кг» или «Мука в/с, 25 кг, меш» —
+   выгрузки часто склеивают название, характеристику и упаковку через
+   запятую. Возвращает чистое название и единицу, если она нашлась. */
+function splitPurchaseCell(text) {
+  var parts = String(text || '').split(',').map(function(p) { return p.trim(); }).filter(Boolean);
+  if (parts.length < 2) return { name: String(text || '').trim(), unit: '' };
+  var last = parts[parts.length - 1];
+  var unit = mapPurchaseUnit(last);
+  if (unit) parts.pop();
+  return { name: parts.join(', '), unit: unit || '' };
+}
+
 function rowsToPurchasePairs(rows) {
   rows = (rows || []).filter(function(r) { return r && r.some(function(c) { return String(c || '').trim() !== ''; }); });
   if (!rows.length) return [];
-  var header = rows[0].map(function(c) { return String(c || '').toLowerCase().trim(); });
-  var foundName = header.findIndex(function(h) { return /назв|наимен|товар|позици|продукт|ингредиент|name/.test(h); });
-  var foundUnit = header.findIndex(function(h) { return /^ед\b|единиц|ед\.?\s*изм|unit/.test(h); });
-  var nameCol = 0, unitCol = 1, startRow = 0;
-  if (foundName !== -1) { nameCol = foundName; unitCol = foundUnit !== -1 ? foundUnit : 1; startRow = 1; }
+
+  var head = findPurchaseHeaderRow(rows);
+  var nameCol, unitCol, startRow;
+  if (head) {
+    nameCol = head.nameCol;
+    unitCol = head.unitCol !== -1 ? head.unitCol : -1;
+    startRow = head.row + 1;
+  } else {
+    nameCol = guessPurchaseNameColumn(rows);
+    unitCol = -1;
+    startRow = 0;
+  }
+
   var pairs = [];
+  var seen = {};
   for (var i = startRow; i < rows.length; i++) {
     var row = rows[i];
-    var name = String(row[nameCol] == null ? '' : row[nameCol]).trim();
-    if (!name) continue;
-    var unit = mapPurchaseUnit(unitCol < row.length ? row[unitCol] : '') || guessUnitFromText(name);
+    var raw = String(row[nameCol] == null ? '' : row[nameCol]).trim();
+    if (!raw) continue;
+
+    // Заголовок раздела прайса («А. Фрукты,Овощи,Ягода», «ИТОГО») —
+    // это не товар. Отличаем по тому, что строка заполнена только в
+    // своей колонке и не содержит единицы измерения.
+    var filled = row.filter(function(c) { return String(c || '').trim() !== ''; }).length;
+    var looksLikeSection = /^[A-ZА-ЯЁ]\.\s/.test(raw) || /^(итого|всего|раздел|группа)\b/i.test(raw);
+    if (looksLikeSection && filled <= 1) continue;
+
+    var split = splitPurchaseCell(raw);
+    var name = split.name;
+    if (!name || name.length < 2) continue;
+
+    var unit = (unitCol !== -1 ? mapPurchaseUnit(row[unitCol]) : '') ||
+      split.unit || guessUnitFromText(raw);
+
+    // Один и тот же товар в прайсе встречается дважды (разные фасовки) —
+    // в шаблон закупки он должен попасть один раз.
+    var key = name.toLowerCase();
+    if (seen[key]) continue;
+    seen[key] = true;
+
     pairs.push({ name: name, unit: unit || 'кг' });
   }
   return pairs;

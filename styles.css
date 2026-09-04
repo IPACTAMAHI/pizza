@@ -1273,7 +1273,7 @@
   .ingr-name { flex: 1; min-width: 0; overflow-wrap: break-word; word-break: normal; }
   .ingr-suffix { color: var(--text-muted); font-size: 12.5px; }
   .ingr-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .ingr-input {
+  .ingr-row .ingr-input {
     width: 64px; flex-shrink: 0;
     padding: 7px 8px; border-radius: 9px;
     border: 1px solid var(--line-strong); background: var(--surface-1);
@@ -1281,9 +1281,11 @@
     font-family: var(--font-mono); font-variant-numeric: tabular-nums;
     -moz-appearance: textfield;
   }
-  .ingr-input:focus { outline: none; border-color: var(--accent); }
-  .ingr-input::-webkit-outer-spin-button,
-  .ingr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .ingr-row .ingr-input:focus { outline: none; border-color: var(--accent); }
+  /* Тот же селектор, что и у остальных правил поля — чтобы при правке
+     не искать его в двух написаниях. */
+  .ingr-row .ingr-input::-webkit-outer-spin-button,
+  .ingr-row .ingr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .ingr-unit-static {
     font-size: 13.5px; color: var(--text-muted);
     min-width: 26px; flex-shrink: 0;
@@ -1292,7 +1294,7 @@
      любой select на всю ширину. Из-за этого колонка «г» занимала
      пол-строки пустотой, а названию не оставалось места и оно рвалось
      переносом. Ширину задаём по содержимому. */
-  .ingr-unit {
+  .ingr-row .ingr-unit {
     width: auto; min-width: 56px; max-width: 74px; flex-shrink: 0;
     background: var(--surface-1); color: var(--text);
     border: 1px solid var(--line-strong); border-radius: 8px;
