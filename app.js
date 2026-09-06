@@ -2146,7 +2146,14 @@ function ensureSectionContent(s) {
     '</div>' +
     '<div class="chip-row status-filter-row admin-only" id="section-status-' + sid + '"></div>' +
     '</div>' + // конец .section-controls
-    '<div class="chip-row" id="section-chips-' + sid + '"></div>' +
+    '<div class="chips-line">' +
+      '<div class="chip-row" id="section-chips-' + sid + '"></div>' +
+      // Переключатель вида. Карточки с фото красивы, но у части рецептов
+      // снимков нет, и тогда список строками полезнее: он плотнее и
+      // ничего не обещает картинкой, которой нет.
+      '<button type="button" class="view-toggle fav-filter" id="fav-filter-' + sid + '" onclick="toggleFavoritesFilter(\'' + sid + '\')" title="Только избранные">★</button>' +
+      '<button type="button" class="view-toggle" id="view-toggle-' + sid + '" onclick="toggleCardsView()" title="Вид списка">▦</button>' +
+    '</div>' +
     '<div class="section-cats" id="section-cats-' + sid + '" style="display:none"></div>' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">' +
       '<span id="section-count-' + sid + '" style="font-size:14px;color:var(--text-muted)">Всего: 0</span>' +
@@ -2194,6 +2201,11 @@ function renderSectionNavTabs() {
     return '<div class="nav-tab' + (currentTab === tabName ? ' active' : '') + '" data-tab="' + escAttr(tabName) + '" onclick="switchTab(\'' + tabName + '\')">' +
       '<span class="nav-icon" style="font-size:19px;line-height:1">' + esc(s.icon || '📁') + '</span>' +
       '<span class="nav-label">' + esc(s.label) + '</span>' +
+      // Сколько рецептов в разделе — видно, не заходя внутрь. Считаем по
+      // тем же правилам видимости, что и сам список.
+      '<span class="nav-count">' + recipesForSection(s.id).filter(function(r) {
+        return canSeeAllRecipeStatuses() || recipeStatus(r) === 'active';
+      }).length + '</span>' +
     '</div>';
   }).join('');
 }
@@ -2333,6 +2345,10 @@ function renderSectionList(sectionId) {
   } else {
     var st = sectionStatusFilters[sectionId] || 'all';
     if (st !== 'all') items = items.filter(function(r) { return recipeStatus(r) === st; });
+  }
+
+  if (favoritesOnly[sectionId]) {
+    items = items.filter(function(r) { return isFavorite(r.id); });
   }
 
   var filter = sectionFilters[sectionId] || '';
@@ -2990,6 +3006,7 @@ function refreshAllSectionLists() {
     renderSectionCategoriesAdmin(s.id);
   });
   renderStatusFilterRows(); // состав фильтра не меняется, но подсветка выбранного — да
+  applyCardsView();
 }
 
 /* Выпадающий список «Тип» в форме рецепта — только категории того
@@ -4662,6 +4679,35 @@ function renderActivityLog() {
 /* Сворачиваемая группа карточек в админ-панели. Выбор запоминается на
    устройстве: кто-то держит настройки GitHub открытыми постоянно, а
    кому-то они не нужны месяцами. */
+/* ================================================================
+   ТЕМА ОФОРМЛЕНИЯ
+   ================================================================
+   Светлая — по умолчанию: на кухне днём светлый экран читается лучше,
+   и в него верстался новый вид. Тёмная осталась целиком, переключается
+   кнопкой в шапке; выбор хранится на устройстве, потому что это дело
+   вкуса и освещения конкретного места, а не общая настройка сети. */
+const THEME_KEY = 'r20_theme';
+
+function currentTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'light'; } catch (e) { return 'light'; }
+}
+
+function applyTheme(name) {
+  var theme = (name === 'dark') ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  var btn = $('theme-toggle-btn');
+  if (btn) {
+    btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+    btn.title = theme === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+  }
+}
+
+function toggleTheme() {
+  var next = currentTheme() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  applyTheme(next);
+}
+
 function toggleAdminGroup(id) {
   var group = $(id);
   if (!group) return;
@@ -5611,6 +5657,12 @@ let currentTab = '';
 
 function switchTab(name) {
   if (name === currentTab) return;
+  // Уходя с рецепта, разбираем двухколоночный вид — иначе список
+  // раздела остался бы висеть рядом с закупкой или админ-панелью.
+  if (currentTab === 'detail') {
+    document.body.classList.remove('has-detail');
+    document.querySelectorAll('.split-left').forEach(function(c) { c.classList.remove('split-left'); });
+  }
   // Запоминаем последний открытый раздел — по нему кнопка «Рецепты»
   // в нижней панели возвращает человека туда, где он работал.
   if (currentTab.indexOf('section:') === 0) lastSectionTab = currentTab;
@@ -6340,9 +6392,15 @@ function renderCards(containerEl, countEl, items, emptyText) {
       + '  <div class="card-meta">' +
         '<span class="badge badge-status status-' + escAttr(st) + '" title="' + escAttr(stMeta.label) + '">' + esc(stMeta.short) + '</span>' +
         '<span class="badge type-badge" style="background:' + escAttr(catColor) + '">' + esc(catName) + '</span>' +
+        (r.time ? '<span class="badge badge-time">⏱ ' + esc(String(r.time)) + ' мин</span>' : '') +
         (r.style ? '<span class="badge badge-style">' + esc(r.style) + '</span>' : '') +
         (r.calories ? '<span class="badge badge-cal">' + r.calories + ' ккал</span>' : '') +
         '<span class="card-actions">' +
+          '<button type="button" class="card-icon-btn card-fav-btn' + (isFavorite(r.id) ? ' is-fav' : '') + '"' +
+            ' title="' + (isFavorite(r.id) ? 'Убрать из избранного' : 'В избранное') + '"' +
+            ' onclick="event.stopPropagation(); toggleFavorite(\'' + r.id + '\')">' +
+            '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.7 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"></path></svg>' +
+          '</button>' +
           '<button type="button" class="card-icon-btn" title="Поделиться ссылкой" onclick="event.stopPropagation(); shareRecipeLink(\'' + r.id + '\')">' +
             '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>' +
           '</button>' +
@@ -6366,6 +6424,87 @@ function renderCards(containerEl, countEl, items, emptyText) {
 /* Раскрывает меню карточки (сейчас в нём переключатель актуальности).
    Открытое меню одно на список: два раскрытых блока в сетке смотрелись
    бы как сбой вёрстки. */
+/* ================================================================
+   ИЗБРАННОЕ
+   ================================================================
+   Отметка хранится на устройстве, а не в общих данных: у повара
+   горячего цеха и у кондитера свои «часто нужные» рецепты, и общий
+   список избранного был бы мусором для обоих. По той же причине
+   отметка не публикуется на GitHub — она ничья, кроме владельца
+   телефона.
+   ================================================================ */
+const FAVORITES_KEY = 'r20_favorites';
+
+function favoriteIds() {
+  try {
+    var raw = localStorage.getItem(FAVORITES_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+function isFavorite(id) {
+  return favoriteIds().indexOf(id) !== -1;
+}
+
+function toggleFavorite(id) {
+  var list = favoriteIds();
+  var i = list.indexOf(id);
+  if (i === -1) list.push(id); else list.splice(i, 1);
+  try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(list)); } catch (e) {}
+
+  var r = recipes.filter(function(x) { return x.id === id; })[0];
+  showToast(i === -1
+    ? '⭐ «' + (r ? r.name : 'Рецепт') + '» в избранном'
+    : '☆ Убрано из избранного');
+
+  refreshAllSectionLists();
+  if (currentTab === 'detail') openDetail(id);
+}
+
+/* Показывать ли сейчас только избранное. Хранится по разделам, как и
+   остальные фильтры, — в каждом цехе свой набор нужного. */
+var favoritesOnly = {};
+
+function toggleFavoritesFilter(sectionId) {
+  favoritesOnly[sectionId] = !favoritesOnly[sectionId];
+  renderSectionList(sectionId);
+  var btn = $('fav-filter-' + sectionId);
+  if (btn) btn.classList.toggle('active', !!favoritesOnly[sectionId]);
+}
+
+/* ================================================================
+   ВИД СПИСКА: КАРТОЧКИ ИЛИ СТРОКИ
+   ================================================================
+   Карточки с крупным фото — то, ради чего список открывают глазами.
+   Но снимок есть не у каждого рецепта, и в сетке такие карточки
+   выглядят пустыми плашками. Поэтому вид переключается и запоминается
+   на устройстве: кому нужна витрина — витрина, кому быстро найти —
+   плотные строки. */
+const CARDS_VIEW_KEY = 'r20_cards_view';
+
+function cardsView() {
+  try { return localStorage.getItem(CARDS_VIEW_KEY) === 'list' ? 'list' : 'grid'; } catch (e) { return 'grid'; }
+}
+
+function applyCardsView() {
+  var view = cardsView();
+  document.querySelectorAll('.cards-grid').forEach(function(el) {
+    el.classList.toggle('view-list', view === 'list');
+    el.classList.toggle('view-grid', view !== 'list');
+  });
+  document.querySelectorAll('.view-toggle').forEach(function(btn) {
+    btn.textContent = view === 'list' ? '▤' : '▦';
+    btn.title = view === 'list' ? 'Показать карточками' : 'Показать списком';
+  });
+}
+
+function toggleCardsView() {
+  var next = cardsView() === 'list' ? 'grid' : 'list';
+  try { localStorage.setItem(CARDS_VIEW_KEY, next); } catch (e) {}
+  applyCardsView();
+}
+
 function toggleCardMenu(btn) {
   var card = btn.closest('.recipe-card');
   if (!card) return;
@@ -8638,8 +8777,23 @@ function openDetail(id, autoplayVideo) {
   var originTabEl = document.querySelector('.nav-tab[data-tab="' + originTab + '"]');
   if (originTabEl) originTabEl.classList.add('active');
 
-  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) {
+    c.classList.remove('active');
+    c.classList.remove('split-left');
+  });
   $('tab-detail').classList.add('active');
+
+  /* На широком экране список раздела остаётся слева, а рецепт
+     открывается рядом — как в макете. Панель раздела при этом не
+     «активная» вкладка, а помеченная split-left: так вся прежняя
+     механика переключения вкладок продолжает работать без изменений,
+     мы лишь дополнительно показываем соседнюю колонку. */
+  // Идентификатор панели раздела — 'tab-section:<id>', с двоеточием:
+  // именно так его создаёт ensureSectionContent.
+  var originPane = $('tab-' + originTab);
+  if (originPane) originPane.classList.add('split-left');
+  document.body.classList.add('has-detail');
+
   window.scrollTo(0, 0);
 
   var backBtn = document.querySelector('.detail-back');
@@ -8757,6 +8911,9 @@ function shareRecipeLink(id) {
 function closeDetail(originTab) {
   // Убираем #recipe=... из адреса при выходе из детального просмотра
   history.pushState(null, '', location.pathname + location.search);
+  // Двухколоночный режим выключаем: дальше раздел показывается один.
+  document.body.classList.remove('has-detail');
+  document.querySelectorAll('.split-left').forEach(function(c) { c.classList.remove('split-left'); });
   var floatingBackBtn = $('detail-back-floating');
   if (floatingBackBtn) floatingBackBtn.classList.remove('show'); // не ждём IntersectionObserver — прячем сразу
   switchTab(originTab);
@@ -9725,6 +9882,7 @@ async function initApp() {
   startAccessPoll(); // с этого момента доступ переспрашивается каждые 15 секунд
 
   applyAdminUI();
+  applyTheme(currentTheme()); // до отрисовки, иначе экран мигнёт другой темой
   loadRecipes();
   loadActivityLocal();
   loadCustomSitePhotos();

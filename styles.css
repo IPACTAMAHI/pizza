@@ -6,32 +6,37 @@
     /* Холодный нейтральный ряд вместо тёплого: тёплый серый на фото-фоне
        давал грязный коричневый отлив, особенно на телефонах с тёплой
        цветопередачей. */
-    --bg: #0b0c0e;
-    --surface-1: #101114;
-    --surface-2: #16181c;
-    --surface-3: #1d2025;
+    /* ===== СВЕТЛАЯ ТЕМА (по умолчанию) =====
+       Кремовая бумага и глубокая зелень — как в присланном макете.
+       Тёмная тема сохранена ниже, в [data-theme="dark"]: переключается
+       кнопкой в шапке, менять файлы для этого не нужно. */
+    --bg: #f6f4ee;
+    --surface-1: #fbfaf6;
+    --surface-2: #ffffff;
+    --surface-3: #f1efe7;
     --surface: var(--surface-2);
     --card: var(--surface-2);
 
-    --line: rgba(255,255,255,.07);
-    --line-strong: rgba(255,255,255,.13);
+    --line: rgba(45,58,42,.1);
+    --line-strong: rgba(45,58,42,.18);
 
-    --accent: #e2564b;
-    --accent-soft: rgba(226,86,75,.14);
-    --accent-2: #d9a54e;
-    /* Градиент оставлен только для главной кнопки — раньше он был на
-       каждом чипе, кнопке и вкладке сразу, и акцент терял смысл. */
-    --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 60%, #cc4438);
-    --text: #f2f2f4;
-    /* Вторичный текст: контраст к фону карточки около 7:1 — читается
-       и на кухне при ярком свете, и в полумраке зала. */
-    --text-muted: #a8adb6;
-    --text-faint: #7c828c;
+    /* Зелень вместо кораллового: акцент теперь спокойный, потому что на
+       светлом фоне яркий красный на каждой кнопке быстро утомляет. */
+    --accent: #3c5a3a;
+    --accent-soft: rgba(60,90,58,.1);
+    --accent-2: #8a6d3b;
+    --accent-grad: linear-gradient(135deg, #4a6d47, #3c5a3a 60%, #2f4a2e);
+    --text: #1e2a1d;
+    /* Вторичный текст: контраст к белой карточке около 6:1 — читается
+       и при ярком свете на кухне. */
+    --text-muted: #5c6b58;
+    --text-faint: #8b968a;
     /* Числа набираются моноширинным: вес, нормы и остатки должны
        выстраиваться по разрядам, иначе взгляд не поймает расхождение. */
     --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
-    --success: #3fb579;
-    --warning: #d9a54e;
+    --success: #2f7d4f;
+    --warning: #b07d2b;
+    --danger: #b6453a;
 
     --font-display: 'Fraunces', 'Georgia', serif;
     --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -51,8 +56,33 @@
     --radius-md: var(--r-md);
 
     /* Тени мягче и ниже: раньше карточки «висели» над фоном на 30px. */
+    /* На светлом фоне тень мягкая и еле заметная: тяжёлая тень делает
+       из карточек наклейки. */
+    --shadow-soft: 0 2px 10px rgba(45,58,42,.06);
+    --shadow-accent: none;
+  }
+
+  /* ===== ТЁМНАЯ ТЕМА =====
+     Прежнее оформление целиком. Включается кнопкой в шапке, выбор
+     сохраняется на устройстве. */
+  [data-theme="dark"] {
+    --bg: #0b0c0e;
+    --surface-1: #101114;
+    --surface-2: #16181c;
+    --surface-3: #1d2025;
+    --line: rgba(255,255,255,.07);
+    --line-strong: rgba(255,255,255,.13);
+    --accent: #e2564b;
+    --accent-soft: rgba(226,86,75,.14);
+    --accent-2: #d9a54e;
+    --accent-grad: linear-gradient(135deg, #ef6f5f, #e2564b 60%, #cc4438);
+    --text: #f2f2f4;
+    --text-muted: #a8adb6;
+    --text-faint: #7c828c;
+    --success: #3fb579;
+    --warning: #d9a54e;
+    --danger: #e2564b;
     --shadow-soft: 0 6px 20px rgba(0,0,0,.35);
-    --shadow-accent: 0 6px 18px rgba(226,86,75,.28);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -84,15 +114,20 @@
     position: fixed; inset: 0;
     pointer-events: none;
     z-index: -2;
+    /* На светлой теме фона-фотографии нет: кремовый лист должен
+       оставаться чистым, иначе текст ложится на грязное пятно. */
+    background: var(--bg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  /* В тёмной теме фото возвращается — там оно и задумывалось. */
+  [data-theme="dark"] body::after {
     background:
-      /* Фото оставлено, но приглушено почти до фактуры: под текстом оно
-         не должно спорить с содержимым. Заметно только по краям, где
-         карточек нет. */
       linear-gradient(rgba(9,9,11,.965), rgba(7,7,9,.985)),
       url(images/site-background.jpg);
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
   }
   body::before {
     content: '';
@@ -113,6 +148,24 @@
   h1, h2, h3, h4 { font-family: var(--font-body); font-weight: 700; letter-spacing: -.2px; }
   /* Засечный шрифт остаётся только у заголовка сайта — задан в блоке
      .header h1 ниже, вместе с его размером. */
+
+  /* Кнопка смены темы — в углу шапки, рядом со входом. */
+  .theme-toggle {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 66px;
+    width: 44px; height: 44px;
+    border-radius: var(--r-sm);
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(12,12,14,.45);
+    color: #fff;
+    font-size: 17px;
+    cursor: pointer;
+    z-index: 101;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .theme-toggle:hover { background: rgba(12,12,14,.65); }
 
   /* ===== HEADER ===== */
   .header {
@@ -473,6 +526,66 @@
   .admin-login-hint:active { opacity: .8; }
 
   /* ===== NAV TABS ===== */
+  /* ===== БОКОВОЕ МЕНЮ (только широкий экран) =====
+     На мониторе список разделов держится слева постоянно: прятать его
+     за кнопкой там незачем — место есть, а лишнее нажатие на каждый
+     переход раздражает. На телефоне всё остаётся как было: кнопка и
+     выпадающий список.
+
+     Важно: это те же элементы .nav-tab, что и в выпадающем списке.
+     Логика доступа, подсветки и переключения не меняется — меняется
+     только расположение. */
+  .sidebar-brand { display: none; }
+
+  @media (min-width: 1024px) {
+    body { padding-left: 236px; }
+
+    .nav-picker { display: none; }
+
+    .nav-tabs {
+      display: flex !important;
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: 236px;
+      flex-direction: column;
+      gap: 3px;
+      margin: 0;
+      padding: 18px 14px;
+      background: var(--surface-1);
+      border-right: 1px solid var(--line);
+      border-radius: 0;
+      box-shadow: none;
+      max-height: none;
+      overflow-y: auto;
+      animation: none;
+      z-index: 92;
+    }
+
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 11px;
+      padding: 4px 8px 18px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sidebar-brand-mark {
+      width: 38px; height: 38px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 12.5px; font-weight: 800; letter-spacing: -.3px;
+    }
+    .sidebar-brand-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+    .sidebar-brand-text strong { font-size: 14px; letter-spacing: -.1px; }
+    .sidebar-brand-text small { font-size: 11.5px; color: var(--text-faint); }
+
+    /* Пункт меню — во всю ширину колонки, чтобы попадать не целясь. */
+    .nav-tab { width: 100%; padding: 11px 12px; border-radius: var(--r-sm); }
+    .nav-tab .nav-label { white-space: normal; }
+
+    /* Шапка и содержимое живут в оставшейся части экрана. */
+    .header { max-width: none; }
+    .theme-toggle { right: 66px; }
+  }
+
   /* ===== ВЫБОР РАЗДЕЛА =====
      Кнопка с названием текущего раздела, под ней — выпадающий список.
      Лента с прокруткой не годилась: при шести разделах нужный уезжал за
@@ -568,12 +681,13 @@
      рецептов из сорока двух — остальное приходилось прокручивать. */
   @media (min-width: 900px) {
     .tab-content { max-width: 1180px; padding: 20px 24px; }
-    .cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
-    .cards-grid .recipe-card { margin-bottom: 0; }
+    /* Вид «строки»: на широком экране идут в две колонки, как раньше. */
+    .cards-grid.view-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; }
+    .cards-grid.view-list .recipe-card { margin-bottom: 0; }
   }
   @media (min-width: 1320px) {
     .tab-content { max-width: 1480px; }
-    .cards-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cards-grid.view-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -665,6 +779,76 @@
      подпись к названию, а не отдельная величина. */
   .chip-count { opacity: .6; margin-left: 5px; font-variant-numeric: tabular-nums; }
   .chip-count::before { content: '· '; }
+
+  /* Строка категорий и переключатель вида — в одну линию. */
+  .chips-line { display: flex; align-items: center; gap: 10px; }
+  .chips-line .chip-row { flex: 1; min-width: 0; }
+  .view-toggle {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-size: 15px;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .view-toggle:hover { background: var(--surface-3); color: var(--text); }
+
+  /* ===== ВИД «КАРТОЧКИ» =====
+     Фото сверху, под ним название и приметы блюда. Так список читается
+     как витрина — ради этого вид и делался. */
+  .cards-grid.view-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; align-items: start; }
+  .cards-grid.view-grid .recipe-card {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 0;
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-soft);
+  }
+  /* Полоска категории в карточке ни к чему: цвет уже несёт обложка. */
+  .cards-grid.view-grid .recipe-card::before { display: none; }
+  .cards-grid.view-grid .card-cover {
+    width: auto; height: 148px;
+    margin: 0;
+    border-radius: 0;
+    align-self: stretch;
+  }
+  .cards-grid.view-grid .card-cover-icon { font-size: 34px; }
+  .cards-grid.view-grid .card-info { padding: 11px 13px 13px; }
+  .cards-grid.view-grid .card-composition { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cards-grid.view-grid .card-video-btn { right: 8px; bottom: 8px; width: 30px; height: 30px; }
+  .cards-grid.view-grid .card-video-btn svg { width: 14px; height: 14px; }
+  /* В карточке место есть — возвращаем подпись статуса словом. */
+  .cards-grid.view-grid .badge-status { font-size: 12px; gap: 5px; }
+
+  /* Сердечко избранного. Пустое — тонким контуром, отмеченное —
+     залитое акцентом: состояние видно, не наводя курсор. */
+  .card-fav-btn svg { fill: none; stroke: currentColor; stroke-width: 1.8; }
+  .card-fav-btn.is-fav { color: var(--accent); }
+  .card-fav-btn.is-fav svg { fill: currentColor; }
+
+  /* Кнопка «только избранные» — та же форма, что у переключателя вида. */
+  .view-toggle.fav-filter.active { background: var(--accent); color: #fff; border-color: transparent; }
+
+  /* Счётчик рецептов у раздела в меню. */
+  .nav-count {
+    margin-left: auto;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(127,127,127,.16);
+    color: var(--text-faint);
+    font-size: 11.5px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-tab.active .nav-count { background: rgba(255,255,255,.22); color: #fff; }
+  /* В выпадающем списке на телефоне счётчик тоже полезен, а вот в
+     свёрнутой кнопке раздела он был бы лишним шумом. */
+  .nav-picker-btn .nav-count { display: none; }
+
+  .badge-time { background: rgba(127,127,127,.14); color: var(--text-muted); font-weight: 600; }
 
   /* ===== CARD LIST ===== */
   /* Строка списка: цветная метка категории, миниатюра, название с
@@ -1087,6 +1271,47 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700;
     margin-top: 4px;
+  }
+
+  /* ===== ДВЕ КОЛОНКИ: КАТАЛОГ И ОТКРЫТЫЙ РЕЦЕПТ =====
+     На мониторе рецепт открывается рядом со списком, а не вместо него:
+     видно, что рядом, и можно перебирать блюда, не возвращаясь назад.
+     На узком экране всё остаётся как было — рецепт занимает экран
+     целиком, потому что двум колонкам там просто нет места. */
+  .tab-content.split-left { display: none; }
+
+  @media (min-width: 1280px) {
+    body.has-detail .tab-content.split-left {
+      display: block;
+      position: fixed;
+      top: 0; bottom: 0;
+      left: 236px;              /* сразу за боковым меню */
+      width: 340px;
+      overflow-y: auto;
+      padding: 18px 16px;
+      margin: 0;
+      max-width: none;
+      background: var(--surface-1);
+      border-right: 1px solid var(--line);
+      z-index: 80;
+    }
+    /* В узкой колонке карточкам тесно — показываем их строками. */
+    body.has-detail .split-left .cards-grid,
+    body.has-detail .split-left .cards-grid.view-grid,
+    body.has-detail .split-left .cards-grid.view-list { display: block; }
+    body.has-detail .split-left .recipe-card { flex-direction: row; margin-bottom: 6px; }
+    body.has-detail .split-left .card-cover { width: 46px; height: 46px; margin: 6px 0 6px 8px; border-radius: 8px; }
+    body.has-detail .split-left .card-cover-icon { font-size: 18px; }
+    body.has-detail .split-left .card-composition { display: none; }
+    body.has-detail .split-left .section-controls,
+    body.has-detail .split-left .chips-line,
+    body.has-detail .split-left .card-actions,
+    body.has-detail .split-left .section-toolbar { display: none; }
+
+    /* Сам рецепт — в оставшейся части экрана. */
+    body.has-detail #tab-detail { margin-left: 356px; }
+    /* Шапка и меню при открытом рецепте не нужны — экран отдаётся делу. */
+    body.has-detail .header { display: none; }
   }
 
   /* ===== DETAIL VIEW ===== */

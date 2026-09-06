@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260904c">
+<link rel="stylesheet" href="styles.css?v=20260904h">
 </head>
 <body>
 
@@ -92,6 +92,9 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
        углу: углы уже заняты «Экспортом» и «Входом», и третья кнопка там
        не помещалась бы на телефоне. Показывается только тем, кому
        доступна больше чем одна точка — см. updateVenueSwitcher. -->
+  <!-- Переключатель темы. Светлая по умолчанию — в неё свёрстан новый
+       вид; тёмная остаётся для тех, кому так привычнее. -->
+  <button type="button" class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
   <button class="venue-switch" id="venue-switch-btn" onclick="openVenueSwitcher()" title="Переключить заведение" style="display:none">
     <span class="icon">🏠</span>
     <span class="label">Заведение</span>
@@ -112,6 +115,16 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 </div>
 
 <div class="nav-tabs" id="nav-tabs">
+  <!-- Шапка бокового меню. Видна только на широком экране, где список
+       разделов превращается в постоянную колонку слева; на телефоне
+       это по-прежнему выпадающий список и заголовок не нужен. -->
+  <div class="sidebar-brand">
+    <span class="sidebar-brand-mark">R20</span>
+    <span class="sidebar-brand-text">
+      <strong>Route 20</strong>
+      <small>Книга рецептов</small>
+    </span>
+  </div>
   <!-- Разделы («Пицца бар», «Горячий цех», «Кондитер» …) целиком
        собирает JS — renderSectionNavTabs в app.js. Раньше здесь стояли
        две жёстко зашитые вкладки: «Добавить рецепт» и «Категории».
@@ -734,7 +747,12 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js" defer></script>
 
-<script src="app.js?v=20260904c"></script>
+<script>
+  /* Тему ставим до загрузки app.js: иначе тем, кто выбрал тёмную, на
+     секунду покажется светлый экран. */
+  try { document.documentElement.setAttribute('data-theme', localStorage.getItem('r20_theme') || 'light'); } catch (e) {}
+</script>
+<script src="app.js?v=20260904h"></script>
 
 
 
