@@ -4695,6 +4695,7 @@ function currentTheme() {
 function applyTheme(name) {
   var theme = (name === 'dark') ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', theme);
+  if (typeof applyBackgroundForTheme === 'function') applyBackgroundForTheme();
   var btn = $('theme-toggle-btn');
   if (btn) {
     btn.textContent = theme === 'dark' ? '☀️' : '🌙';
@@ -5461,8 +5462,28 @@ function applySitePhoto(kind, dataUrl) {
         'linear-gradient(180deg, rgba(10,8,10,.35) 0%, rgba(10,8,10,.55) 55%, rgba(15,12,18,.88) 100%), url(' + dataUrl + ')';
     }
   } else if (kind === 'background') {
+    /* Фон страницы ставим ТОЛЬКО в тёмной теме.
+       Раньше он вешался на body всегда и поверх любой темы: на светлой
+       под кремовым интерфейсом оказывалась тёмная фотография, и текст
+       ингредиентов читался как серый по серому — ровно то, что видно на
+       присланном снимке. В светлой теме фон должен оставаться чистым,
+       поэтому запоминаем картинку и применяем её при переключении. */
+    sitePhotoBackground = dataUrl;
+    applyBackgroundForTheme();
+  }
+}
+
+/* Запомненная фоновая картинка сайта — нужна, чтобы вернуть её при
+   переключении обратно в тёмную тему, не перезагружая страницу. */
+var sitePhotoBackground = '';
+
+function applyBackgroundForTheme() {
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (dark && sitePhotoBackground) {
     document.body.style.backgroundImage =
-      'linear-gradient(rgba(15,12,18,.91), rgba(15,12,18,.95)), url(' + dataUrl + ')';
+      'linear-gradient(rgba(15,12,18,.91), rgba(15,12,18,.95)), url(' + sitePhotoBackground + ')';
+  } else {
+    document.body.style.backgroundImage = '';
   }
 }
 

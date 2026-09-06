@@ -545,7 +545,7 @@
     .nav-tabs {
       display: flex !important;
       position: fixed; left: 0; top: 0; bottom: 0;
-      width: 236px;
+      width: 236px; max-width: none;
       flex-direction: column;
       gap: 3px;
       margin: 0;
@@ -592,11 +592,16 @@
      край и найти его можно было только вслепую листая. */
   .nav-picker {
     position: sticky; top: 0; z-index: 91;
+    /* Точка отсчёта для выпадающего меню — оно позиционируется от
+       кнопки, а не от края экрана. */
     background: var(--surface-1);
     border-bottom: 1px solid var(--line);
     padding: 8px 12px;
   }
-  @media (min-width: 900px) { .nav-picker { padding: 8px 24px; } }
+  @media (min-width: 900px) {
+    .nav-picker { padding: 8px 24px; }
+    .nav-tabs { left: 24px; }
+  }
 
   .nav-picker-btn {
     display: inline-flex; align-items: center; gap: 9px;
@@ -622,15 +627,19 @@
      поверх содержимого, а не раздвигает его. */
   .nav-tabs {
     display: none;
-    position: sticky; top: 52px; z-index: 90;
+    /* Меню прижато к левому краю под кнопкой, а не растянуто по центру
+       колонки: по центру оно накрывало собой список рецептов, хотя
+       слева места достаточно. */
+    position: absolute; top: 52px; left: 12px; z-index: 95;
+    width: 260px; max-width: calc(100vw - 24px);
     flex-direction: column;
     gap: 2px;
     padding: 6px;
-    margin: 0 12px;
-    background: var(--surface-3);
+    margin: 0;
+    background: var(--surface-2);
     border: 1px solid var(--line-strong);
     border-radius: var(--r-md);
-    box-shadow: 0 18px 44px rgba(0,0,0,.55);
+    box-shadow: 0 18px 44px rgba(0,0,0,.28);
     max-height: 62vh;
     overflow-y: auto;
   }
