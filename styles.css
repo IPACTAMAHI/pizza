@@ -645,21 +645,23 @@
 
     .nav-tabs {
       display: flex !important;
-      /* Панель — самостоятельная карточка с отступом от краёв: так она
-         читается как отдельный блок, а не как обрезанная колонка,
-         приклеенная к краю экрана. */
-      position: fixed; left: 12px; top: 12px; bottom: 12px;
+      /* Панель — компактная карточка по высоте содержимого, а не
+         колонка во весь экран: разделов немного, и растянутый на всю
+         высоту блок с пустотой внизу выглядит тяжело. Остаётся
+         закреплённой — при прокрутке списка не уезжает. */
+      position: fixed; left: 12px; top: 12px; bottom: auto;
       width: 188px; max-width: none;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
       margin: 0;
-      padding: 14px 10px;
+      padding: 12px 10px;
       background: var(--surface-2);
       border: 1px solid var(--line);
-      border-right: 1px solid var(--line);
       border-radius: var(--r-lg);
       box-shadow: var(--shadow-soft);
-      max-height: none;
+      /* Если разделов станет много, панель начнёт прокручиваться внутри
+         себя, но не вырастет выше экрана. */
+      max-height: calc(100vh - 24px);
       overflow-y: auto;
       animation: none;
       z-index: 92;
@@ -685,7 +687,7 @@
     /* Пункт меню — во всю ширину колонки, чтобы попадать не целясь. */
     .nav-tab { width: 100%; padding: 10px 11px; border-radius: var(--r-sm); }
     .nav-tab .nav-label { white-space: normal; font-size: 13.5px; }
-    .sidebar-brand { padding: 4px 6px 14px; }
+    .sidebar-brand { padding: 2px 6px 12px; margin-bottom: 6px; }
     .sidebar-brand-mark { width: 32px; height: 32px; font-size: 11px; }
 
     /* Шапка и содержимое живут в оставшейся части экрана. */
