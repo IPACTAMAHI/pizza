@@ -2217,6 +2217,7 @@ function renderSectionNavTabs() {
    человек был до перехода в закупку или настройки, — а не в первый по
    списку: у повара горячего цеха первым идёт чужой пицца-бар. */
 var lastSectionTab = '';
+var lastTabBeforeDetail = ''; // откуда открыли рецепт: из раздела или из избранного
 
 function mobileGoSections() {
   if (lastSectionTab && hasSectionAccess(lastSectionTab.slice('section:'.length))) {
@@ -2282,6 +2283,9 @@ function updateMobileBar() {
   var active = (currentTab.indexOf('section:') === 0 || currentTab === 'detail' || currentTab === 'add')
     ? 'sections'
     : currentTab;
+  // С экрана избранного рецепт открывается в общем виде, поэтому,
+  // пока человек там, подсвечиваем именно «Избранное».
+  if (currentTab === 'detail' && lastTabBeforeDetail === 'favorites') active = 'favorites';
   bar.querySelectorAll('.mobile-bar-btn').forEach(function(b) {
     b.classList.toggle('active', b.dataset.mobile === active);
   });
@@ -4680,6 +4684,64 @@ function renderActivityLog() {
    устройстве: кто-то держит настройки GitHub открытыми постоянно, а
    кому-то они не нужны месяцами. */
 /* ================================================================
+   СВАЙП ВПРАВО = НАЗАД (только телефон)
+   ================================================================
+   Привычный жест: провёл пальцем вправо — вернулся на шаг назад. На
+   кухне телефон часто держат одной рукой, и дотягиваться до кнопки
+   «Назад» в углу неудобно.
+
+   Жест намеренно узкий: срабатывает только от левого края экрана и
+   только на явном горизонтальном движении. Иначе он мешал бы
+   прокрутке списков категорий вбок и выделению текста в полях.
+   С главного экрана раздела жест ничего не делает — уходить оттуда
+   некуда. */
+function goBackOneStep() {
+  // Открытое модальное окно закрываем в первую очередь — это самый
+  // верхний слой.
+  var sendOverlay = $('send-purchase-overlay');
+  if (sendOverlay && sendOverlay.classList.contains('show')) { cancelSendAllPurchase(); return true; }
+
+  if (currentTab === 'detail') {
+    // Возвращаемся туда, откуда пришли: в раздел или в избранное.
+    closeDetail(lastTabBeforeDetail || lastSectionTab || defaultSectionTab());
+    return true;
+  }
+  if (currentTab === 'add') { closeAddForm(); return true; }
+  // Внутри поставщика — назад к списку цехов и поставщиков.
+  if (currentTab === 'purchase' && !purchaseHomeView) { showPurchaseHome(); return true; }
+  if (currentTab === 'favorites' || currentTab === 'admin') { mobileGoSections(); return true; }
+  if (currentTab === 'purchase' && purchaseHomeView) { mobileGoSections(); return true; }
+  return false; // главный экран раздела — отсюда назад некуда
+}
+
+function initBackSwipe() {
+  var startX = 0, startY = 0, tracking = false;
+
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    var t = e.touches[0];
+    // Только от левого края: так жест не спорит с горизонтальной
+    // прокруткой чипов и таблиц в середине экрана.
+    if (t.clientX > 40) { tracking = false; return; }
+    // В полях ввода палец возит курсор — жест там не нужен.
+    if (e.target.closest && e.target.closest('input, textarea, select')) { tracking = false; return; }
+    startX = t.clientX; startY = t.clientY; tracking = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!tracking) return;
+    tracking = false;
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var dx = t.clientX - startX;
+    var dy = Math.abs(t.clientY - startY);
+    // Движение должно быть длинным и явно горизонтальным, иначе это
+    // обычная прокрутка страницы.
+    if (dx > 80 && dy < 60) goBackOneStep();
+  }, { passive: true });
+}
+
+/* ================================================================
    ТЕМА ОФОРМЛЕНИЯ
    ================================================================
    Светлая — по умолчанию: на кухне днём светлый экран читается лучше,
@@ -5687,6 +5749,7 @@ function switchTab(name) {
   // Запоминаем последний открытый раздел — по нему кнопка «Рецепты»
   // в нижней панели возвращает человека туда, где он работал.
   if (currentTab.indexOf('section:') === 0) lastSectionTab = currentTab;
+  if (name === 'detail') lastTabBeforeDetail = currentTab;
   // Создавать НОВЫЙ рецепт "с нуля" может только настоящий разработчик
   // (вход по GitHub-ключу). Обычный админ (права выданы через список
   // "Участники") может только редактировать уже существующие карточки —
@@ -5739,6 +5802,7 @@ function switchTab(name) {
   // установлен), иначе она стёрла бы то, что editFromDetail только что
   // выставил ДО вызова switchTab('add').
   if (name === 'add') { updateAddGate(); if (isAdmin() && !editingRecipe) resetForm(); }
+  if (name === 'favorites') renderFavoritesTab();
   if (name === 'purchase') {
     renderPurchaseTab();
     syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
@@ -6480,7 +6544,41 @@ function toggleFavorite(id) {
     : '☆ Убрано из избранного');
 
   refreshAllSectionLists();
+  if (currentTab === 'favorites') renderFavoritesTab();
   if (currentTab === 'detail') openDetail(id);
+}
+
+/* Экран избранного: отмеченные рецепты со всех разделов заведения.
+   Отдельная вкладка, а не фильтр внутри раздела, — избранное собирают
+   именно поперёк разделов: повар держит под рукой и тесто из «Пицца
+   бара», и соус из «Холодного цеха». */
+function renderFavoritesTab() {
+  var holder = $('favorites-list');
+  var countEl = $('favorites-count');
+  if (!holder) return;
+
+  var ids = favoriteIds();
+  var items = recipes.filter(function(r) {
+    if (ids.indexOf(r.id) === -1) return false;
+    if (!isRecipeVisibleForViewer(r)) return false;
+    // Только своё заведение: чужие рецепты человек всё равно не откроет.
+    var s = sectionById(recipeSectionId(r));
+    return s ? sectionVenueId(s) === currentVenueId() : true;
+  });
+
+  if (!countEl) {
+    // Счётчик рисуем рядом с заголовком, если его ещё нет.
+    var title = document.querySelector('.favorites-title');
+    if (title && !title.querySelector('.favorites-count')) {
+      title.insertAdjacentHTML('beforeend', ' <span class="favorites-count" id="favorites-count"></span>');
+      countEl = $('favorites-count');
+    }
+  }
+  if (countEl) countEl.textContent = items.length ? String(items.length) : '';
+
+  renderCards(holder, { textContent: '' }, items,
+    'Пока пусто. Нажмите сердечко на карточке рецепта, чтобы он появился здесь.');
+  applyCardsView();
 }
 
 /* Показывать ли сейчас только избранное. Хранится по разделам, как и
@@ -7031,7 +7129,9 @@ function purchaseRowsFor(cat) {
   // по умолчанию "кг", тоже подставляется на старых записях.
   purchaseData[cat].forEach(function(r) {
     if (r.reorder === undefined) r.reorder = '';
-    if (!r.reorderUnit) r.reorderUnit = 'кг';
+    // Единицу дозаказа наследуем от позиции: у штучного товара «кг» по
+    // умолчанию был просто неверен. Явно выбранная единица не трогается.
+    if (!r.reorderUnit) r.reorderUnit = r.unit || 'кг';
   });
   return purchaseData[cat];
 }
@@ -7717,7 +7817,11 @@ async function handlePurchaseImportFile(file) {
     if (!key || existingNames[key] || seenInFile[key]) { skipped++; return; }
     seenInFile[key] = true;
     existingNames[key] = true;
-    rows.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: p.name.trim(), unit: p.unit || 'кг', norm: '', residual: '', reorder: '', reorderUnit: 'кг' });
+    // Единица дозаказа берётся из самой позиции: если товар считают
+    // упаковками, то и дозаказывают упаковками. Прежнее «кг» по
+    // умолчанию приходилось править руками у каждой штучной позиции.
+    var unit = p.unit || 'кг';
+    rows.push({ id: 'p' + Date.now() + Math.random().toString(36).slice(2, 7), name: p.name.trim(), unit: unit, norm: '', residual: '', reorder: '', reorderUnit: unit });
     added++;
   });
 
@@ -8142,6 +8246,7 @@ async function handlePurchaseUnitChange(select, cat, id) {
   }
   if (select.value !== '__custom_unit__') {
     updatePurchaseField(cat, id, 'unit', select.value);
+    followUnitInReorder(cat, id, prevUnit, select.value);
     recomputePurchaseRow(id);
     return;
   }
@@ -8158,7 +8263,22 @@ async function handlePurchaseUnitChange(select, cat, id) {
   }
   registerCustomUnit(custom);
   updatePurchaseField(cat, id, 'unit', custom);
+  followUnitInReorder(cat, id, prevUnit, custom);
   renderPurchaseList(); // перерисовываем, чтобы select показал новую единицу как опцию
+}
+
+/* Единица дозаказа тянется за единицей позиции — но только пока её не
+   меняли вручную. Признак: она совпадала с прежней единицей позиции.
+   Если человек осознанно поставил другую (норма в килограммах, а
+   довозят упаковками), его выбор не трогаем. */
+function followUnitInReorder(cat, id, prevUnit, nextUnit) {
+  var row = purchaseRowsFor(cat).find(function(r) { return r.id === id; });
+  if (!row) return;
+  if (!row.reorderUnit || row.reorderUnit === prevUnit) {
+    updatePurchaseField(cat, id, 'reorderUnit', nextUnit);
+    var sel = document.querySelector('.purchase-row[data-id="' + id + '"] .purchase-reorder-unit');
+    if (sel) sel.value = nextUnit;
+  }
 }
 
 // Обработчик выбора в селекте единицы "🔁 Дозаказ" (reorderUnit) — полный
@@ -9783,6 +9903,7 @@ function initFloatingBackButton() {
 document.addEventListener('DOMContentLoaded', function() {
   initApp();
   initFloatingBackButton();
+  initBackSwipe();
   initStickySearchOffset();
   initSearchScrollJumpGuard();
 });
@@ -9796,6 +9917,18 @@ document.addEventListener('DOMContentLoaded', function() {
 function applyStickySearchOffset() {
   var nav = document.querySelector('.nav-tabs');
   if (!nav) return;
+
+  /* На широком экране меню разделов — колонка слева во всю высоту, а не
+     полоса сверху. Её высота равна высоте экрана, и, записанная в
+     --nav-h, она отодвигала строку поиска на пол-экрана вниз — именно
+     это и было видно на снимке. Сверху там ничего не перекрывает,
+     поэтому отступ нулевой. */
+  var side = window.matchMedia('(min-width: 760px)').matches;
+  if (side) {
+    document.documentElement.style.setProperty('--nav-h', '0px');
+    return;
+  }
+
   var h = nav.offsetHeight;
   // Пока стоит замок доступа, панель вкладок скрыта и её высота равна 0 —
   // такое значение записывать нельзя, иначе поисковая строка «прилипнет»
