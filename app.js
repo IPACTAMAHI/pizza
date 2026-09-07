@@ -2151,8 +2151,8 @@ function ensureSectionContent(s) {
       // Переключатель вида. Карточки с фото красивы, но у части рецептов
       // снимков нет, и тогда список строками полезнее: он плотнее и
       // ничего не обещает картинкой, которой нет.
-      '<button type="button" class="view-toggle fav-filter" id="fav-filter-' + sid + '" onclick="toggleFavoritesFilter(\'' + sid + '\')" title="Только избранные">★</button>' +
-      '<button type="button" class="view-toggle" id="view-toggle-' + sid + '" onclick="toggleCardsView()" title="Вид списка">▦</button>' +
+      '<button type="button" class="view-toggle fav-filter" id="fav-filter-' + sid + '" onclick="toggleFavoritesFilter(\'' + sid + '\')" title="Показать только избранные" aria-label="Только избранные"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.7 1.1-1.1a5.5 5.5 0 0 0 0-7.8z"></path></svg></button>' +
+      '<button type="button" class="view-toggle" id="view-toggle-' + sid + '" onclick="toggleCardsView()" title="Вид списка" aria-label="Вид списка"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></button>' +
     '</div>' +
     '<div class="section-cats" id="section-cats-' + sid + '" style="display:none"></div>' +
     '<div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 16px;flex-wrap:wrap;gap:8px">' +
@@ -6613,7 +6613,8 @@ function applyCardsView() {
     el.classList.toggle('view-grid', view !== 'list');
   });
   document.querySelectorAll('.view-toggle').forEach(function(btn) {
-    btn.textContent = view === 'list' ? '▤' : '▦';
+    if (btn.classList.contains('fav-filter')) return; // у избранного свой значок
+    btn.innerHTML = view === 'list' ? '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>' : '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>';
     btn.title = view === 'list' ? 'Показать карточками' : 'Показать списком';
   });
 }

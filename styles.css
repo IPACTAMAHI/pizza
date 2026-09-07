@@ -819,6 +819,7 @@
   .view-toggle {
     flex-shrink: 0;
     width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
     border-radius: var(--r-sm);
     border: 1px solid var(--line);
     background: var(--surface-2);
@@ -864,7 +865,11 @@
   .card-fav-btn.is-fav svg { fill: currentColor; }
 
   /* Кнопка «только избранные» — та же форма, что у переключателя вида. */
+  /* Значки рисуем контуром, а не символами из шрифта: типографские
+     «★» и «▦» на части устройств показывались пустыми квадратами. */
+  .view-toggle svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .view-toggle.fav-filter.active { background: var(--accent); color: #fff; border-color: transparent; }
+  .view-toggle.fav-filter.active svg { fill: currentColor; }
 
   /* Счётчик рецептов у раздела в меню. */
   .nav-count {
@@ -1042,7 +1047,10 @@
   .badge-cal { background: transparent; color: var(--text-muted); padding: 3px 4px; }
 
   /* Бейдж категории/стиля рецепта — единый нейтральный цвет на всех карточках */
-  .badge-style { background: rgba(217,165,78,.2); color: #ecd4a0; }
+  /* Плашка со стилем блюда. Светлый текст на светлом фоне не читался —
+     в светлой теме берём тёмно-коричневый, в тёмной остаётся песочный. */
+  .badge-style { background: rgba(176,125,43,.16); color: #7a5518; }
+  [data-theme="dark"] .badge-style { background: rgba(217,165,78,.2); color: #ecd4a0; }
 
   /* ===== FORMS ===== */
   .form-group { margin-bottom: 13px; }
