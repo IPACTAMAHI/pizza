@@ -95,5 +95,18 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "2196-1L4G",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1788896097737,
+    "blocked": false,
+    "claimed": false,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
