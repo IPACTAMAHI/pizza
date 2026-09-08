@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260904r">
+<link rel="stylesheet" href="styles.css?v=20260904t">
 </head>
 <body>
 
@@ -198,8 +198,8 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
       <input type="search" class="search-input" id="purchase-home-search" name="purchase-home-search-field" placeholder="Поиск по названию ингредиента..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="renderPurchaseHomeList(); toggleSearchClear('purchase-home-search')">
       <button type="button" class="search-clear" id="purchase-home-search-clear" onclick="clearSearchInput('purchase-home-search')" title="Очистить" style="display:none">✕</button>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      <button type="button" class="btn btn-ghost btn-sm purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки">🧹 Сбросить остатки</button>
+    <div class="tool-bar" style="margin-bottom:10px">
+      <button type="button" class="tool-btn purchase-access-only" id="purchase-reset-all-btn" onclick="resetAllPurchaseStock()" title="Полностью обнулить остаток и дозаказ у ВСЕХ позиций во всех цехах и у всех поставщиков — перед тем как вписывать новые остатки"><span class="tool-btn-icon">🧹</span><span class="tool-btn-label">Сбросить остатки</span></button>
     </div>
     <div id="purchase-home-list"></div>
   </div>
@@ -638,7 +638,6 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
   <div id="steps-list"></div>
   <button class="btn btn-ghost btn-sm" onclick="addStepRow()" style="margin-bottom:24px">+ Добавить шаг</button>
 
-  <input type="hidden" id="f-edit-id">
   <input type="hidden" id="f-photo-data">
 
   <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -765,7 +764,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
      секунду покажется светлый экран. */
   try { document.documentElement.setAttribute('data-theme', localStorage.getItem('r20_theme') || 'light'); } catch (e) {}
 </script>
-<script src="app.js?v=20260904r"></script>
+<script src="app.js?v=20260904t"></script>
 
 
 

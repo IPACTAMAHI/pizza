@@ -6625,12 +6625,51 @@ function toggleCardsView() {
   applyCardsView();
 }
 
-function toggleCardMenu(btn) {
-  var card = btn.closest('.recipe-card');
+/* Меню карточки. Раньше кнопка «⋮» только раскрывала блок с
+   переключателем актуальности — и если он и без того был виден,
+   нажатие внешне не делало ничего. Теперь это список действий: нажал,
+   выбрал, сработало. */
+async function toggleCardMenu(btn) {
+  var card = btn && btn.closest ? btn.closest('.recipe-card') : null;
   if (!card) return;
-  var open = card.classList.contains('menu-open');
-  document.querySelectorAll('.recipe-card.menu-open').forEach(function(el) { el.classList.remove('menu-open'); });
-  if (!open) card.classList.add('menu-open');
+  var handler = card.getAttribute('onclick') || '';
+  var m = handler.match(/openDetail\('([^']+)'/);
+  if (!m) return;
+  await openCardMenu(m[1]);
+}
+
+async function openCardMenu(id) {
+  var r = null;
+  for (var i = 0; i < recipes.length; i++) {
+    if (recipes[i].id === id) { r = recipes[i]; break; }
+  }
+  if (!r) { showToast('⚠️ Рецепт не найден'); return; }
+
+  var options = [];
+  options.push({ value: 'fav', label: isFavorite(id) ? '💔 Убрать из избранного' : '❤️ В избранное' });
+  options.push({ value: 'share', label: '🔗 Скопировать ссылку' });
+
+  /* Показываем только то, что человек реально может сделать: пункт,
+     который откажет при нажатии, хуже, чем его отсутствие. */
+  if (can('recipe.status')) {
+    RECIPE_STATUSES.forEach(function(st) {
+      if (st.id === recipeStatus(r)) return; // текущее состояние менять незачем
+      options.push({ value: 'status:' + st.id, label: st.icon + ' ' + st.label });
+    });
+  }
+  if (can('recipe.edit')) options.push({ value: 'edit', label: '✏️ Редактировать' });
+  if (can('recipe.copy') && getVenues().length > 1) options.push({ value: 'copy', label: '📋 В другое заведение' });
+  if (can('recipe.delete')) options.push({ value: 'delete', label: '🗑 Удалить' });
+
+  var choice = await customSelect('Что сделать с рецептом?', options, options[0].value, r.name);
+  if (!choice) return;
+
+  if (choice === 'fav') { toggleFavorite(id); return; }
+  if (choice === 'share') { shareRecipeLink(id); return; }
+  if (choice.indexOf('status:') === 0) { setRecipeStatus(id, choice.slice('status:'.length)); return; }
+  if (choice === 'edit') { editFromDetail(id); return; }
+  if (choice === 'copy') { copyRecipeToVenue(id); return; }
+  if (choice === 'delete') { deleteRecipe(id); return; }
 }
 
 
@@ -9780,10 +9819,12 @@ function sendAllPurchaseNext() {
   renderSendAllPurchaseStep();
 }
 
+/* «Пропустить» и «Отправил(а) → Далее» делают одно и то же — переходят
+   к следующему поставщику. Разными их держат только подписи на
+   кнопках, поэтому тело одно: правка в одном месте не разъедется со
+   вторым. */
 function sendAllPurchaseSkip() {
-  sendAllPurchaseIndex++;
-  saveSendAllPurchaseProgress();
-  renderSendAllPurchaseStep();
+  sendAllPurchaseNext();
 }
 
 // Явное завершение закупки (кнопка "✅ Завершить закупку" на финальном шаге
@@ -9924,7 +9965,11 @@ function applyStickySearchOffset() {
      --nav-h, она отодвигала строку поиска на пол-экрана вниз — именно
      это и было видно на снимке. Сверху там ничего не перекрывает,
      поэтому отступ нулевой. */
-  var side = window.matchMedia('(min-width: 760px)').matches;
+  // matchMedia есть во всех живых браузерах, но проверка дешевле, чем
+  // «белый экран» там, где его вдруг не окажется.
+  var side = window.matchMedia
+    ? window.matchMedia('(min-width: 760px)').matches
+    : (window.innerWidth || 0) >= 760;
   if (side) {
     document.documentElement.style.setProperty('--nav-h', '0px');
     return;

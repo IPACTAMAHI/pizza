@@ -1036,8 +1036,6 @@
   /* Переключатель актуальности спрятан в меню карточки (кнопка «⋮»):
      три кнопки на каждой из сорока карточек превращали список в стену. */
   .recipe-card .card-status-switch { display: none; }
-  .recipe-card.menu-open .card-status-switch { display: flex; }
-  .recipe-card.menu-open { border-color: var(--line-strong); }
   .badge {
     font-size: 11.5px; padding: 3px 9px;
     border-radius: 20px; background: rgba(255,255,255,.1);
@@ -1171,7 +1169,7 @@
   }
   /* Кнопка удаления строки — приглушённая: их в форме десяток, и
      красные плашки в столбик выглядели как список ошибок. */
-  .ingredient-row .btn-danger, .ingredient-row .ingr-remove {
+  .ingredient-row .btn-danger {
     flex-shrink: 0;
     width: 34px; height: 34px; padding: 0;
     display: flex; align-items: center; justify-content: center;
@@ -1384,9 +1382,6 @@
   /* Ингредиенты и шаги читают стоя у плиты, часто с метра — поэтому
      крупнее основного интерфейса и с большим межстрочным. */
   #detail-body .ingr-name, #detail-body .steps-list li { font-size: 15.5px; line-height: 1.55; }
-  #detail-body .ingr-amount, #detail-body .ingr-weight, #detail-body .ingr-qty {
-    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  }
 
   /* Стили самих шагов — ниже по файлу, в разделе steps-list. */
 
