@@ -109,5 +109,18 @@
     ],
     "role": "viewer",
     "claimedAt": 1788896260700
+  },
+  {
+    "id": "O87W-ABWW",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1788900564056,
+    "blocked": false,
+    "claimed": false,
+    "venue": "venue-main",
+    "roles": [
+      "purchase"
+    ],
+    "role": "purchase"
   }
 ]
