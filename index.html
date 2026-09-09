@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260904t">
+<link rel="stylesheet" href="styles.css?v=20260904x">
 </head>
 <body>
 
@@ -466,6 +466,21 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
   <!-- Журнал действий. Виден всем, у кого открыта админ-панель:
        вопрос «кто поменял норму» возникает у любого из них, а не
        только у владельца сайта. -->
+  <!-- Заявки на доступ. Человек заходит на сайт, вводит имя — и попадает
+       сюда. Администратор выдаёт роли одним нажатием, доступ появляется
+       у человека в течение нескольких секунд. Никому писать не нужно. -->
+  <div class="admin-panel-card admin-only" data-perm="participant.keys" id="access-requests-card">
+    <div class="admin-panel-row">
+      <span>🙋 Заявки на доступ</span>
+      <span class="admin-panel-toggle-count" id="access-requests-count"></span>
+    </div>
+    <p class="admin-panel-hint">
+      Сюда попадают все, кто открыл сайт и представился, но ещё не получил доступ.
+      Нажмите «Одобрить», отметьте роли — человек увидит книгу рецептов сразу, без перезагрузки.
+    </p>
+    <div id="access-requests-list" style="margin-top:12px"></div>
+  </div>
+
   <div class="admin-panel-card admin-only" id="activity-card">
     <!-- История свёрнута по умолчанию: заглядывают в неё редко, а места
          занимала больше всех карточек панели. -->
@@ -503,22 +518,36 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 
   <div class="admin-panel-card admin-only">
     <div class="admin-panel-row">
-      <span>👥 Участники (доступ по ключу)</span>
-      <button class="btn btn-primary btn-sm" data-perm="participant.keys" onclick="generateInviteKey()">🔑 Сгенерировать ключ</button>
+      <span>👥 Участники</span>
     </div>
-    <p class="admin-panel-hint" data-perm="participant.keys">
-      Нажмите «🔑 Сгенерировать ключ» и передайте его человеку любым способом (голосом, в Telegram и т.п.).
-      При первом заходе на сайт он введёт имя, затем этот ключ — и сразу попадёт в книгу рецептов, без
-      ожидания и без ручного одобрения: ключ и есть одобрение. Этот же ключ можно использовать в любом
-      количестве браузеров и устройств — доступ будет открыт всюду, где он введён. Заблокировать человека
-      можно кнопкой «🚫 Блок» ниже — это закроет доступ сразу во всех браузерах с этим ключом.
+    <p class="admin-panel-hint">
+      Основной способ выдать доступ — блок «🙋 Заявки на доступ» выше: человек открывает сайт, вводит имя,
+      вы нажимаете «Одобрить» и отмечаете роли. Ничего передавать не нужно, доступ появляется у него сразу.
+      Заблокировать можно кнопкой «🚫 Блок» ниже.
     </p>
-    <p class="admin-panel-hint" data-perm="participant.keys">
-      Старый способ (человек сам присылает код устройства в Telegram, а вы вставляете его кнопкой ниже)
-      по-прежнему работает как запасной вариант — но привязан к конкретному браузеру и не переносится
-      сам собой на другие.
-      <span onclick="addParticipantManually()" style="text-decoration:underline;cursor:pointer;color:var(--text-muted)">Добавить по коду устройства вручную</span>
-    </p>
+
+    <!-- Ключи оставлены запасным путём. Заявки идут через Firebase, и
+         если он окажется недоступен, ключ остаётся единственным способом
+         впустить человека: он проверяется по данным с GitHub, другим
+         каналом. Плюс ключ можно выдать заранее — до того, как человек
+         впервые откроет сайт. -->
+    <div class="admin-group" id="admin-group-keys" data-perm="participant.keys">
+      <button type="button" class="admin-group-head" onclick="toggleAdminGroup('admin-group-keys')" aria-expanded="false">
+        <span>🔑 Ключ доступа (запасной способ)</span><span class="admin-group-caret">▾</span>
+      </button>
+      <div class="admin-group-body">
+        <p class="admin-panel-hint">
+          Нужен, когда заявку оставить нельзя: нет связи с Firebase или человека надо впустить заранее,
+          до его первого захода. Ключ показывается один раз при создании — в данных сайта хранится
+          только его отпечаток, поэтому прочитать ключ из файла посторонний не может.
+        </p>
+        <div class="tool-bar" style="margin-top:10px">
+          <button class="tool-btn tool-btn-primary" onclick="generateInviteKey()"><span class="tool-btn-icon">🔑</span><span class="tool-btn-label">Создать ключ</span></button>
+          <button type="button" class="tool-btn" onclick="migrateKeysToHashes()" title="Убрать сами ключи из данных сайта, оставив только их отпечатки"><span class="tool-btn-icon">🔒</span><span class="tool-btn-label">Скрыть ключи</span></button>
+          <button type="button" class="tool-btn" onclick="addParticipantManually()" title="Добавить человека по коду его устройства"><span class="tool-btn-icon">➕</span><span class="tool-btn-label">По коду устройства</span></button>
+        </div>
+      </div>
+    </div>
     <div id="participants-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="participants-list" style="margin-top:10px"></div>
     <p class="admin-panel-hint" style="margin-top:10px">
@@ -764,7 +793,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
      секунду покажется светлый экран. */
   try { document.documentElement.setAttribute('data-theme', localStorage.getItem('r20_theme') || 'light'); } catch (e) {}
 </script>
-<script src="app.js?v=20260904t"></script>
+<script src="app.js?v=20260904x"></script>
 
 
 

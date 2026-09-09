@@ -926,7 +926,14 @@ async function requireAccessKey(name) {
     } else {
       await syncParticipantsFromGithub();
     }
-    var p = participants.filter(function(x) { return x.id === normalized; })[0];
+    /* Ищем запись двумя способами: по отпечатку (новый вид, где самого
+       ключа в файле нет) и по идентификатору (старые записи, ещё не
+       переведённые). Отпечаток считаем один раз на попытку. */
+    var enteredHash = await hashAccessKey(normalized);
+    var p = participants.filter(function(x) {
+      if (enteredHash && x.keyHash) return x.keyHash === enteredHash;
+      return x.id === normalized;
+    })[0];
 
     // Отозванный ключ отвергаем отдельно от «не найден»: этот отказ
     // работает даже по устаревшей копии, потому что написан в самих
@@ -950,7 +957,11 @@ async function requireAccessKey(name) {
     // человека, или уже заблокирован — дальше это как обычно проверит
     // checkParticipantStatus/showBlockedScreen).
     localStorage.setItem(MANUAL_CODE_KEY, normalized);
-    localStorage.setItem(DEVICE_ID_KEY, normalized);
+    // Идентификатором устройства становится идентификатор записи: у
+    // новых ключей он отличается от самого ключа, и по нему человека
+    // находят в списке участников и в разделе «Онлайн».
+    localStorage.setItem(DEVICE_ID_KEY, p.id || normalized);
+    myKeyHash = enteredHash || myKeyHash;
 
     if (!p.claimed) {
       // Первое использование этого ключа — окончательно привязываем
@@ -1145,7 +1156,16 @@ async function confirmAccessAgainstGithub() {
   if (!fresh) return 'unknown';
   participants = fresh;              // без keepRecentlyClaimedSelf: здесь нужна голая правда
   saveParticipantsLocal();
+
   var me = getMyParticipantRecord();
+  /* Если себя не нашли, а в списке есть записи с отпечатками — возможно,
+     ключи только что перевели на отпечатки, а наш ещё не посчитан
+     (расчёт асинхронный). Считаем и ищем ещё раз: иначе человек с
+     рабочим ключом получил бы «доступ закрыт» на ровном месте. */
+  if (!me && !myKeyHash && fresh.some(function(p) { return !!p.keyHash; })) {
+    await computeMyKeyHash();
+    me = getMyParticipantRecord();
+  }
   if (!me) return 'gone';
   return me.blocked ? 'blocked' : 'ok';
 }
@@ -1414,7 +1434,14 @@ function sendPresenceUpdate() {
     online: true,
     lastSeen: firebase.database.ServerValue.TIMESTAMP,
     name: name,
-    ua: (navigator.userAgent || '').slice(0, 140)
+    ua: (navigator.userAgent || '').slice(0, 140),
+    /* Признак «прошу доступ». Ставится, пока человек не одобрен: по
+       нему администратор видит в панели список заявок и выдаёт роли
+       одним нажатием. Отдельная ветка в базе не нужна — запись
+       присутствия уже есть у каждого посетителя, и писать в неё
+       разрешено без всякого входа. */
+    wantsAccess: !getMyParticipantRecord() && !isDeveloper(),
+    askedAt: firebase.database.ServerValue.TIMESTAMP
   }).catch(function(e) { console.warn('sendPresenceUpdate error:', e); });
 }
 
@@ -1427,6 +1454,7 @@ function subscribeOnlineUsers() {
     firebase.database().ref('presence').on('value', function(snap) {
       onlineUsers = snap.val() || {};
       renderOnlineUsersList();
+      renderAccessRequests(); // заявки берутся из тех же данных присутствия
       if (currentTab === 'admin' && participantsFilter !== 'keys') renderParticipantsList(); // подтягиваем статус онлайн/офлайн в основном списке участников
       reconcileClaimedKeysFromPresence();
     });
@@ -1532,7 +1560,139 @@ function hasSiteAccess(participant) {
   return !!(participant && !participant.blocked);
 }
 
+/* ================================================================
+   ЗАЯВКИ НА ДОСТУП
+   ================================================================
+   Человек открывает сайт, вводит имя — и его устройство помечает свою
+   запись присутствия признаком «прошу доступ». Администратор видит
+   заявку в панели и выдаёт роли одним нажатием: сайт создаёт запись
+   участника и публикует её. У человека доступ появляется в течение
+   нескольких секунд — фоновая проверка идёт каждые 15 секунд.
+
+   Ключи при этом не нужны вовсе: устройство опознаётся по своему
+   идентификатору, а не по секрету, который надо передавать из рук в
+   руки и который лежал в открытом файле.
+   ================================================================ */
+function accessRequests() {
+  var known = {};
+  participants.forEach(function(p) { known[p.id] = true; });
+  return Object.keys(onlineUsers)
+    .filter(function(id) {
+      var e = onlineUsers[id] || {};
+      if (known[id]) return false;          // уже участник — не заявка
+      return e.wantsAccess === true;
+    })
+    .map(function(id) { return Object.assign({ id: id }, onlineUsers[id]); })
+    .sort(function(a, b) { return (b.askedAt || b.lastSeen || 0) - (a.askedAt || a.lastSeen || 0); });
+}
+
+function renderAccessRequests() {
+  var holder = $('access-requests-list');
+  if (!holder) return;
+  var list = accessRequests();
+
+  var countEl = $('access-requests-count');
+  if (countEl) countEl.textContent = list.length ? String(list.length) : '';
+
+  if (!list.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">Новых заявок нет.</p>';
+    return;
+  }
+
+  holder.innerHTML = list.map(function(r) {
+    var when = r.askedAt || r.lastSeen;
+    return '<div class="participant-item">' +
+      '<div style="min-width:0">' +
+        '<strong>' + esc(r.name || 'Без имени') + '</strong>' +
+        '<br><span style="font-size:12px;color:var(--text-muted)">' +
+          (when ? esc(formatActivityTime(when)) : 'только что') +
+          (isOnlineLive(r) ? ' · сейчас на сайте' : '') +
+        '</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button class="btn btn-primary btn-sm" onclick="approveAccessRequest(\'' + escAttr(r.id) + '\')">✅ Одобрить</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="rejectAccessRequest(\'' + escAttr(r.id) + '\')" title="Скрыть заявку и закрыть доступ этому устройству">✕</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* Одобрение: спрашиваем роли и создаём запись участника. Идентификатор
+   берём тот, что у устройства уже есть, — по нему человек и опознается,
+   никакого ключа передавать не нужно. */
+async function approveAccessRequest(deviceId) {
+  if (!can('participant.keys')) { denyToast('participant.keys'); return; }
+  var entry = onlineUsers[deviceId] || {};
+  var name = entry.name || '';
+
+  var venueId = currentVenueId();
+  var venues = getVenues();
+  if (venues.length > 1) {
+    venueId = await customSelect(
+      'В каком заведении работает ' + (name || 'этот человек') + '?',
+      venues.map(function(v) { return { value: v.id, label: (v.icon ? v.icon + ' ' : '') + v.label }; }),
+      currentVenueId(), '🏠 Заведение');
+    if (!venueId) return;
+  }
+
+  var roles = await showModal({
+    title: '✅ Доступ для «' + (name || 'без имени') + '»',
+    message: 'Отметьте, что человек увидит. Роли можно поменять в любой момент.',
+    withChecklist: rolesForVenue(venueId).map(function(d) {
+      return { value: d.id, label: d.label, hint: d.hint, checked: false, disabled: false };
+    }),
+    okText: '✅ Выдать доступ'
+  });
+  if (roles === null) return;
+
+  var record = {
+    id: deviceId, fingerprint: '', name: name,
+    addedAt: Date.now(), blocked: false, claimed: true, claimedAt: Date.now(),
+    venue: venueId
+  };
+  setParticipantRoles(record, roles);
+  participants.push(record);
+
+  saveParticipantsLocal();
+  renderParticipantsList();
+  renderAccessRequests();
+  showToast('⏳ Сохраняю...');
+  var ok = await syncParticipantsToGithub();
+  if (!ok) { showToast('⚠️ Не удалось опубликовать — попробуйте ещё раз'); return; }
+  logActivity('одобрил заявку на доступ', 'Участники',
+    (name || deviceId) + (roles.length ? ' · ' + roles.map(roleLabel).join(', ') : ' · без ролей'));
+  showToast('✅ Доступ выдан — человек увидит книгу в течение минуты');
+}
+
+/* Отклонение: создаём запись, помеченную заблокированной. Так заявка
+   уходит из списка и не появляется снова, а человек видит понятный
+   экран «Доступ закрыт» вместо бесконечного ожидания. */
+async function rejectAccessRequest(deviceId) {
+  if (!can('participant.keys')) { denyToast('participant.keys'); return; }
+  var entry = onlineUsers[deviceId] || {};
+  var ok = await customConfirm(
+    'Отклонить заявку' + (entry.name ? ' от «' + entry.name + '»' : '') + '?\n\n' +
+    'Устройство увидит экран «Доступ закрыт». Позже можно разблокировать в списке участников.',
+    '✕ Отклонить заявку');
+  if (!ok) return;
+
+  participants.push({
+    id: deviceId, fingerprint: '', name: entry.name || '',
+    addedAt: Date.now(), blocked: true, claimed: true, venue: currentVenueId()
+  });
+  saveParticipantsLocal();
+  renderParticipantsList();
+  renderAccessRequests();
+  var saved = await syncParticipantsToGithub();
+  if (!saved) return;
+  logActivity('отклонил заявку на доступ', 'Участники', entry.name || deviceId);
+  showToast('✕ Заявка отклонена');
+}
+
 function renderOnlineUsersList() {
+  // Заявки строятся из тех же данных присутствия, поэтому обновляем их
+  // здесь же: один источник — одно место пересчёта.
+  renderAccessRequests();
   var holder = $('online-list');
   var filterRow = $('online-filter-row');
   var badge = $('online-count-badge');
@@ -3564,12 +3724,54 @@ function activeParticipants(list) {
   return (list || []).filter(function(p) { return !isRevokedRecord(p); });
 }
 
+/* ================================================================
+   ОТПЕЧАТКИ КЛЮЧЕЙ ДОСТУПА
+   ================================================================
+   Раньше ключ был идентификатором записи и лежал в participants.json
+   как есть. Файл раздаётся сайтом всем подряд, поэтому любой, кто знал
+   адрес, мог открыть его и войти по чужому ключу.
+
+   Теперь в файле хранится только необратимый отпечаток ключа
+   (SHA-256). При входе сайт считает отпечаток от введённого ключа и
+   сравнивает. Из отпечатка ключ не восстановить, а перебрать нельзя:
+   у ключа больше двух миллиардов комбинаций.
+
+   Совместимость: записи старого вида (где id и есть ключ) продолжают
+   работать, пока их не переведут — см. migrateKeysToHashes.
+   ================================================================ */
+
+/* Отпечаток ключа. Регистр и дефисы не важны: человек может ввести
+   ключ как угодно, а отпечаток должен получиться один и тот же. */
+async function hashAccessKey(key) {
+  var normalized = String(key || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!normalized) return '';
+  if (!(window.crypto && window.crypto.subtle)) return ''; // без шифрования браузера отпечаток не посчитать
+  var bytes = new TextEncoder().encode('r20:' + normalized);
+  var digest = await window.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest))
+    .map(function(b) { return b.toString(16).padStart(2, '0'); })
+    .join('');
+}
+
+/* Отпечаток ключа этого устройства. Считается один раз при запуске:
+   проверка «кто я» вызывается часто и должна быть мгновенной. */
+var myKeyHash = '';
+
+async function computeMyKeyHash() {
+  var key = '';
+  try { key = localStorage.getItem(MANUAL_CODE_KEY) || localStorage.getItem(DEVICE_ID_KEY) || ''; } catch (e) {}
+  myKeyHash = key ? await hashAccessKey(key) : '';
+  return myKeyHash;
+}
+
 function findMyRecordIn(list) {
   var myId = getDeviceId();
   var myFp = getDeviceFingerprint();
   return (list || []).filter(function(p) {
     if (isRevokedRecord(p)) return false; // ключ отозван — записи для нас нет
     if (p.id === myId) return true;
+    // Запись нового вида: сам ключ в ней не хранится, только отпечаток.
+    if (myKeyHash && p.keyHash && p.keyHash === myKeyHash) return true;
     if (myFp && p.fingerprint && p.fingerprint === myFp) return true;
     return false;
   })[0] || null;
@@ -3591,6 +3793,11 @@ async function checkParticipantStatus() {
   if (isAdmin()) return 'approved';
   await syncParticipantsFromGithub();
   var me = getMyParticipantRecord();
+  if (!me && !myKeyHash) {
+    // Тот же случай: отпечаток мог ещё не посчитаться.
+    await computeMyKeyHash();
+    me = getMyParticipantRecord();
+  }
   if (!me) return 'pending';
   return me.blocked ? 'blocked' : 'approved';
 }
@@ -3727,10 +3934,15 @@ function renderParticipantsList() {
       var rolesHtml = keyRoles.length
         ? '<br>' + keyRoles.map(function(r) { return '<span class="role-badge">' + esc(roleLabel(r)) + '</span>'; }).join('')
         : '<br><span class="role-badge" style="opacity:.6">без ролей — только «Категории»</span>';
+      /* У ключей нового вида сам ключ нигде не хранится — показываем
+         пометку вместо него. У старых записей ключ пока виден: их
+         переведёт кнопка «Скрыть ключи» в админ-панели. */
+      var hidden = !!p.keyHash;
       return '<div class="participant-item">' +
         '<div style="min-width:0">' +
-          '<strong>🔑 ' + esc(p.id) + '</strong>' +
-          '<br><span style="font-size:12px;color:var(--text-muted)">ещё не использован' + (dateStr ? ' · создан ' + dateStr : '') + '</span>' +
+          '<strong>🔑 ' + (hidden ? 'Ключ выдан' : esc(p.id)) + '</strong>' +
+          '<br><span style="font-size:12px;color:var(--text-muted)">ещё не использован' + (dateStr ? ' · создан ' + dateStr : '') +
+            (hidden ? ' · сам ключ не хранится' : '') + '</span>' +
           // Для какого заведения выдан ключ — у неиспользованного это
           // единственный способ понять, кому он предназначался: ролей
           // может не быть вовсе.
@@ -3741,7 +3953,9 @@ function renderParticipantsList() {
         '</div>' +
         '<div style="display:flex;gap:6px;min-width:0;flex-wrap:wrap">' +
           '<button class="btn btn-primary btn-sm" onclick="editParticipantRoles(\'' + escAttr(p.id) + '\')" title="Что откроется человеку сразу после входа по этому ключу">🎭 Роли</button>' +
-          '<button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard(\'' + escAttr(p.id) + '\', \'📋 Ключ скопирован\')" title="Скопировать ключ, чтобы отправить человеку">📋 Копировать</button>' +
+          (hidden
+            ? ''  // копировать нечего: ключ известен только тому, кто его создал
+            : '<button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard(\'' + escAttr(p.id) + '\', \'📋 Ключ скопирован\')" title="Скопировать ключ, чтобы отправить человеку">📋 Копировать</button>') +
           '<button class="btn btn-ghost btn-sm" onclick="removeParticipant(\'' + escAttr(p.id) + '\')" title="Удалить неиспользованный ключ">✕</button>' +
         '</div>' +
       '</div>';
@@ -4264,6 +4478,58 @@ async function prepareAdminHandoffMessage(p) {
    передаёт этот ключ человеку любым способом, а тот вводит его сам
    при первом заходе (см. requireAccessKey), после чего ключ
    привязывается к нему автоматически. */
+/* Перевод уже выданных ключей на отпечатки.
+   Действие необратимое: после него сами ключи из файла исчезают, и
+   прочитать их будет негде. Поэтому оно отдельное и с подтверждением,
+   а не выполняется само при загрузке.
+
+   Люди при этом ничего не заметят: на их устройствах ключ сохранён, и
+   вход продолжит работать — запись найдётся по отпечатку. */
+async function migrateKeysToHashes() {
+  if (!can('participant.keys')) { denyToast('participant.keys'); return; }
+  if (!(window.crypto && window.crypto.subtle)) {
+    showToast('⚠️ Браузер не умеет считать отпечатки — откройте сайт по https');
+    return;
+  }
+
+  var plain = participants.filter(function(p) { return !p.keyHash; });
+  if (!plain.length) { showToast('✅ Все ключи уже скрыты — открытых не осталось'); return; }
+
+  var ok = await customConfirm(
+    'Скрыть ' + plain.length + ' ключ(ей) в данных сайта?\n\n' +
+    'Сейчас они лежат в файле как есть: любой, кто знает адрес сайта, может их прочитать и войти. ' +
+    'После перевода в файле останется только отпечаток — войти по нему нельзя.\n\n' +
+    'Люди ничего не заметят: на их устройствах ключ сохранён, вход продолжит работать.\n\n' +
+    'Действие необратимое: прочитать сами ключи потом будет негде, только выпустить новые.',
+    '🔒 Скрыть ключи'
+  );
+  if (!ok) return;
+
+  showToast('⏳ Считаю отпечатки...');
+  for (var i = 0; i < plain.length; i++) {
+    var p = plain[i];
+    var hash = await hashAccessKey(p.id);
+    if (!hash) continue;
+    p.keyHash = hash;
+    // Идентификатор записи тоже меняем — иначе ключ так и остался бы в
+    // файле, просто в другом поле.
+    var oldId = p.id;
+    p.id = 'u' + hash.slice(0, 12);
+    // Своё устройство перепривязываем сразу, чтобы не потерять доступ.
+    try {
+      if (localStorage.getItem(DEVICE_ID_KEY) === oldId) localStorage.setItem(DEVICE_ID_KEY, p.id);
+    } catch (e) {}
+  }
+
+  await computeMyKeyHash();
+  saveParticipantsLocal();
+  renderParticipantsList();
+  var saved = await syncParticipantsToGithub();
+  if (!saved) { showToast('⚠️ Не удалось опубликовать — попробуйте ещё раз'); return; }
+  logActivity('скрыл ключи доступа', 'Участники', 'переведено на отпечатки: ' + plain.length);
+  showToast('🔒 Готово: ключей скрыто — ' + plain.length);
+}
+
 async function generateInviteKey() {
   if (!can('participant.keys')) { denyToast('participant.keys'); return; }
 
@@ -4313,7 +4579,18 @@ async function generateInviteKey() {
   });
   if (roles === null) return; // отменили — ключ не создаём
 
-  var record = { id: id, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, claimed: false, venue: venueId };
+  /* Ключ в файл не попадает: храним только его отпечаток, а
+     идентификатором записи служит отдельная случайная строка. По ней
+     человека находят в списке и в разделе «Онлайн», и по ней же
+     отзывают доступ. */
+  var keyHash = await hashAccessKey(id);
+  var recordId = keyHash ? ('u' + keyHash.slice(0, 12)) : id;
+  var record = { id: recordId, keyHash: keyHash, fingerprint: '', name: '', addedAt: Date.now(), blocked: false, claimed: false, venue: venueId };
+  if (!keyHash) {
+    // Браузер без шифрования — редкость, но молча сохранять ключ в
+    // открытом виде нельзя: человек должен знать, что защиты нет.
+    showToast('⚠️ Браузер не умеет считать отпечаток — ключ сохранён по-старому');
+  }
   setParticipantRoles(record, roles);
   participants.push(record);
   participantsFilter = 'keys';
@@ -4330,7 +4607,7 @@ async function generateInviteKey() {
 
   await showModal({
     title: '🔑 Ключ создан',
-    message: 'Ключ заведения «' + venueLabel(venueId) + '».\n\nПередайте его человеку любым способом (голосом, в Telegram и т.п.). При первом заходе на сайт он введёт его и сразу получит доступ — одобрять его вручную не нужно.\n\n' + rolesLine,
+    message: 'Ключ заведения «' + venueLabel(venueId) + '».\n\n⚠️ Ключ показывается ОДИН РАЗ. В списке участников его больше не будет: в файле хранится только отпечаток, чтобы посторонний не мог войти, прочитав данные сайта. Потеряется — выпустите новый.\n\nПередайте его человеку любым способом. При первом заходе он введёт ключ и сразу получит доступ.\n\n' + rolesLine,
     messageHtml: '<div style="display:flex;justify-content:center;margin:10px 0 4px">' + copyChipHtml('🔑', 'Ключ', id, '📋 Ключ скопирован') + '</div>',
     withInput: false,
     hideCancel: true,
@@ -6711,6 +6988,7 @@ document.addEventListener('click', function(e) {
 
 function renderAdminPanel() {
   restoreAdminGroups();
+  renderAccessRequests();
   renderActivityLog();
   syncActivityFromGithub(); // в фоне: у коллег могли появиться новые записи
   renderAdminPermsSummary();
@@ -10083,6 +10361,7 @@ async function initApp() {
 
   applyAdminUI();
   applyTheme(currentTheme()); // до отрисовки, иначе экран мигнёт другой темой
+  await computeMyKeyHash();    // до любых проверок доступа: без отпечатка себя не найти
   loadRecipes();
   loadActivityLocal();
   loadCustomSitePhotos();
