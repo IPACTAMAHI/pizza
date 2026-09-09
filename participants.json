@@ -137,5 +137,14 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "0D15-80FB",
+    "fingerprint": "",
+    "name": "N2R6-4GHG",
+    "addedAt": 1788994125329,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
