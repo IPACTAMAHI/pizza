@@ -124,6 +124,9 @@
     "roles": [
       "purchase"
     ],
-    "role": "purchase"
+    "role": "purchase",
+    "revoked": true,
+    "revokedAt": 1788986520048,
+    "revokedBy": "Разработчик"
   }
 ]
