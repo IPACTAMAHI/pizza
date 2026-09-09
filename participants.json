@@ -38,7 +38,7 @@
     "fingerprint": "",
     "name": "Александр Переверзев",
     "addedAt": 1787926923626,
-    "blocked": false,
+    "blocked": true,
     "claimed": true,
     "roles": [
       "superadmin"
