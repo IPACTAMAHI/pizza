@@ -94,7 +94,10 @@
     "addedAt": 1788468243516,
     "blocked": true,
     "role": "viewer",
-    "claimed": true
+    "claimed": true,
+    "revoked": true,
+    "revokedAt": 1788986507931,
+    "revokedBy": "Разработчик"
   },
   {
     "id": "2196-1L4G",
