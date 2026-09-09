@@ -128,5 +128,14 @@
     "revoked": true,
     "revokedAt": 1788986520048,
     "revokedBy": "Разработчик"
+  },
+  {
+    "id": "EB2E-B81A",
+    "fingerprint": "",
+    "name": "",
+    "addedAt": 1788994122281,
+    "blocked": true,
+    "role": "viewer",
+    "claimed": true
   }
 ]
