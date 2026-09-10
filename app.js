@@ -433,13 +433,32 @@ function showModal(opts) {
     // подтверждения неактивна. Раньше окно на пустой ввод просто
     // открывалось заново, и это выглядело как «кнопка не работает».
     var minLen = opts.requireInput ? (opts.minInputLength || 1) : 0;
+
+    /* Обязательные поля в наборе (withFields). Пока не заполнены — кнопка
+       подтверждения неактивна, как и у одиночного поля: молча
+       открывающееся заново окно выглядит как «кнопка не работает». */
+    var requiredFields = (opts.withFields || []).filter(function(f) { return f.required; });
+
     function syncRequired() {
-      if (!minLen) return;
-      var ok = inputEl.value.trim().length >= minLen;
+      var ok = true;
+      if (minLen) ok = inputEl.value.trim().length >= minLen;
+      if (ok && requiredFields.length && fieldsEl) {
+        ok = requiredFields.every(function(f) {
+          var el = fieldsEl.querySelector('input[data-field-key="' + f.key + '"]');
+          if (!el) return true;
+          var v = el.value.trim();
+          // Для телефона считаем цифры: скобки и пробелы не в счёт.
+          if (f.minDigits) return v.replace(/\D/g, '').length >= f.minDigits;
+          return v.length >= (f.minLength || 1);
+        });
+      }
       okBtn.disabled = !ok;
       okBtn.classList.toggle('is-disabled', !ok);
     }
     inputEl.oninput = syncRequired;
+    if (fieldsEl) {
+      fieldsEl.querySelectorAll('input[data-field-key]').forEach(function(el) { el.oninput = syncRequired; });
+    }
     syncRequired();
 
     overlay.classList.add('show');
@@ -553,6 +572,7 @@ var TELEGRAM_ICON_SVG = '<svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.8 19.8c-
 
 const DEVICE_ID_KEY = 'r20_device_id';
 const DEVICE_NAME_KEY = 'r20_device_name';
+const DEVICE_PHONE_KEY = 'r20_device_phone';
 const PARTICIPANTS_KEY = 'r20_participants_cache';
 const PARTICIPANTS_PATH = 'participants.json';
 const MANUAL_CODE_KEY = 'r20_manual_code';
@@ -730,22 +750,22 @@ async function ensureParticipantName() {
   var name = localStorage.getItem(DEVICE_NAME_KEY);
   if (name) return; // уже представлялись раньше в этом браузере
 
-  var warning = '';   // что сказать, если в прошлый раз ввели не то
-  var typed = '';     // уже набранное — чтобы не заставлять печатать заново
+  var warning = '';    // что сказать, если в прошлый раз ввели не то
+  var typed = '';      // уже набранное — чтобы не заставлять печатать заново
+  var typedPhone = ''; // телефон тоже сохраняем между попытками
 
   while (true) {
     var entered = await showModal({
       title: '👋 Добро пожаловать в Route 20',
       message: (warning ? warning + '\n\n' : '') +
-        'Как вас зовут? Это не пароль — просто чтобы администратор видел, кто пользуется книгой рецептов, и мог управлять доступом. Без имени продолжить нельзя.',
-      withInput: true,
-      inputValue: typed,
-      placeholder: 'Имя и фамилия',
-      // Имя обязательно: администратор раздаёт доступ по именам, и
-      // безымянная запись в списке участников бесполезна — непонятно,
-      // кому её блокировать или продлевать.
-      requireInput: true,
-      minInputLength: 2,
+        'Представьтесь, чтобы администратор понял, кому открывать доступ. Телефон нужен для связи по рабочим вопросам — его увидят администраторы книги рецептов.',
+      /* Имя и телефон спрашиваем вместе: два окна подряд ради двух строк
+         раздражают, а заявка без телефона теряет смысл — по одному имени
+         администратор не поймёт, кто это. */
+      withFields: [
+        { key: 'name', label: 'Имя и фамилия', value: typed, placeholder: 'Олег Петров', required: true, minLength: 2 },
+        { key: 'phone', label: 'Телефон', value: typedPhone, placeholder: '+380 67 123 45 67', inputType: 'tel', required: true, minDigits: 9 }
+      ],
       hideCancel: true,
       okText: 'Продолжить',
       devLogin: true
@@ -757,8 +777,10 @@ async function ensureParticipantName() {
       continue; // ключ не ввели/не подошёл — снова показываем экран знакомства
     }
 
-    var finalName = (entered || '').trim().replace(/\s+/g, ' ');
+    var finalName = String((entered && entered.name) || '').trim().replace(/\s+/g, ' ');
+    var finalPhone = String((entered && entered.phone) || '').trim();
     typed = finalName;
+    typedPhone = finalPhone;
 
     // Кнопка «Продолжить» и так неактивна при пустом поле, но проверку
     // дублируем: сюда можно попасть, например, нажав Enter.
@@ -772,8 +794,24 @@ async function ensureParticipantName() {
       continue;
     }
 
+    /* Телефон проверяем по количеству цифр, а не по строгому шаблону:
+       люди пишут номер как привыкли — со скобками, пробелами, через +38
+       или с восьмёрки. Всё это одинаково годится для звонка. */
+    var digits = finalPhone.replace(/\D/g, '');
+    if (digits.length < 9) {
+      warning = '⚠️ Укажите телефон для связи — по нему администратор поймёт, кто вы.';
+      continue;
+    }
+
     localStorage.setItem(DEVICE_NAME_KEY, finalName);
-    await requireAccessKey(finalName); // просит ключ, выданный администратором, и сама привязывает к нему устройство
+    try { localStorage.setItem(DEVICE_PHONE_KEY, finalPhone); } catch (e) {}
+
+    /* Ключ больше не спрашиваем. Имени достаточно: устройство отправляет
+       заявку, администратор одобряет её в панели, и доступ появляется
+       сам. Ключ остался запасным путём — ссылкой на экране ожидания,
+       для случая, когда заявка не доходит (нет связи с Firebase) или
+       ключ выдали заранее. */
+    sendPresenceUpdate(); // заявка уходит вместе с записью присутствия
     return;
   }
 }
@@ -1434,6 +1472,7 @@ function sendPresenceUpdate() {
     online: true,
     lastSeen: firebase.database.ServerValue.TIMESTAMP,
     name: name,
+    phone: (function() { try { return localStorage.getItem(DEVICE_PHONE_KEY) || ''; } catch (e) { return ''; } })(),
     ua: (navigator.userAgent || '').slice(0, 140),
     /* Признак «прошу доступ». Ставится, пока человек не одобрен: по
        нему администратор видит в панели список заявок и выдаёт роли
@@ -1604,6 +1643,11 @@ function renderAccessRequests() {
     return '<div class="participant-item">' +
       '<div style="min-width:0">' +
         '<strong>' + esc(r.name || 'Без имени') + '</strong>' +
+        // Телефон — главное, по чему администратор узнаёт человека:
+        // имён «Олег» может быть три, номер один.
+        (r.phone
+          ? '<br><a class="request-phone" href="tel:' + escAttr(String(r.phone).replace(/[^\d+]/g, '')) + '">📞 ' + esc(r.phone) + '</a>'
+          : '<br><span style="font-size:12px;color:var(--text-faint)">телефон не указан</span>') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' +
           (when ? esc(formatActivityTime(when)) : 'только что') +
           (isOnlineLive(r) ? ' · сейчас на сайте' : '') +
@@ -1647,6 +1691,7 @@ async function approveAccessRequest(deviceId) {
 
   var record = {
     id: deviceId, fingerprint: '', name: name,
+    phone: entry.phone || '',   // остаётся у администратора для связи
     addedAt: Date.now(), blocked: false, claimed: true, claimedAt: Date.now(),
     venue: venueId
   };
@@ -3853,26 +3898,31 @@ function showPendingScreen() {
   // (см. встроенный стиль в <head>) скрыло бы и его тоже.
   document.documentElement.classList.remove('gate-locked');
   var name = localStorage.getItem(DEVICE_NAME_KEY) || '';
-  var isGroupMode = !!siteConfig.adminTelegramGroup;
-  var actionsHtml = requestLinkHtml('first', name, isGroupMode ? '👥 Открыть группу' : '📤 Отправить снова', 'pending-resend-btn');
+  /* Экран ожидания после отправки заявки. Раньше здесь была инструкция
+     «напишите администратору в Telegram» — теперь писать никому не
+     нужно: заявка уже у него в панели, и доступ откроется сам. */
   document.body.innerHTML =
     '<div style="min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px">' +
-      '<div>' +
+      '<div style="max-width:360px">' +
         '<div style="font-size:56px;margin-bottom:16px">⏳</div>' +
-        '<h2 style="font-family:var(--font-display);margin-bottom:10px">Ожидайте подтверждения администратора</h2>' +
-        '<p style="color:var(--text-muted);max-width:340px;margin:0 auto 14px">' +
-          (name ? esc(name) + ', вашу заявку ещё не одобрили. ' : 'Вашу заявку ещё не одобрили. ') +
-          'Как только администратор добавит вас в список участников — эта страница сама откроет книгу рецептов, ничего обновлять не нужно.' +
+        '<h2 style="margin-bottom:10px">Заявка отправлена</h2>' +
+        '<p style="color:var(--text-muted);margin:0 auto 14px">' +
+          (name ? esc(name) + ', ваша заявка ушла администратору. ' : 'Заявка ушла администратору. ') +
+          'Как только её одобрят, страница сама откроет книгу рецептов — обновлять ничего не нужно и писать никому не надо.' +
         '</p>' +
-        (name ? buildNameCodeCopyHtml(name, getCombinedAccessCode()) : '<p style="color:var(--text-muted);font-size:13px">Код устройства: ' + esc(getCombinedAccessCode()) + '</p>') +
-        '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 16px" id="pending-status-line">Проверяю каждые 3 секунды…</p>' +
-        actionsHtml +
-        '<p style="color:var(--text-muted);font-size:11px;margin-top:10px;max-width:320px;margin-left:auto;margin-right:auto">Сообщение не дошло, закрыли Telegram раньше времени или администратор сменил ссылку? Эти кнопки доступны без входа — ссылка проверяется заново перед каждым нажатием.</p>' +
-        '<p style="margin-top:10px"><button type="button" class="btn btn-success btn-sm" onclick="promptEnterAccessCode()">🔗 Уже одобрили в другом браузере? Ввести код оттуда</button></p>' +
+        '<p style="color:var(--text-muted);font-size:12px;margin:10px 0 18px" id="pending-status-line">Проверяю каждые 3 секунды…</p>' +
+
+        // Запасной путь: ключ, выданный заранее, или одобрение, которое
+        // не доехало из-за отсутствия связи с базой заявок.
+        '<p style="margin-top:6px"><button type="button" class="btn btn-ghost btn-sm" onclick="requireAccessKey(' + JSON.stringify(name) + ')">🔑 У меня есть ключ доступа</button></p>' +
+
+        // Если человека уже одобрили в другом браузере — можно перенести
+        // доступ кодом, не дожидаясь новой заявки.
+        '<p style="margin-top:8px"><button type="button" class="btn btn-ghost btn-sm" onclick="promptEnterAccessCode()">🔗 Перенести доступ из другого браузера</button></p>' +
+
         ownerLoginLinkHtml() +
       '</div>' +
     '</div>';
-  refreshRequestLinkHref(); // адрес обновится в фоне, ссылка при этом остаётся рабочей
   schedulePendingPoll();
 }
 
@@ -4277,6 +4327,11 @@ function participantItemHtml(p, presenceAvailable) {
     var rolesHtml = myRoles.length
       ? '<br>' + myRoles.map(function(r) { return '<span class="role-badge">' + esc(roleLabel(r)) + '</span>'; }).join('')
       : '';
+    // Телефон для связи — сразу под именем, ссылкой для звонка.
+    if (p.phone) {
+      rolesHtml = '<br><a class="request-phone" href="tel:' + escAttr(String(p.phone).replace(/[^\d+]/g, '')) + '">📞 ' + esc(p.phone) + '</a>' + rolesHtml;
+    }
+
     // Для какого заведения выдан ключ. Важно именно у неиспользованных
     // ключей: ролей там может не быть вовсе, и иначе непонятно, кому
     // этот ключ вообще предназначался.
