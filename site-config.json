@@ -136,5 +136,8 @@
       "purchase": true
     }
   ],
-  "telegramBotToken": "8864395823:AAGdKeLYNzqy2_yA8lQXfGrUzKdIes-HgH4"
+  "telegramBotToken": "8864395823:AAGdKeLYNzqy2_yA8lQXfGrUzKdIes-HgH4",
+  "viewAlertCount": 10,
+  "viewAlertMinutes": 5,
+  "viewAlertChat": "-1003672469992"
 }
