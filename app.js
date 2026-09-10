@@ -5269,10 +5269,28 @@ function viewAlertChatId() {
   return (siteConfig && siteConfig.viewAlertChat) || '';
 }
 
+/* Телефон человека, если он есть в списке участников. Заявка на доступ
+   без телефона не проходит, поэтому у сотрудников он будет; пусто
+   останется только у тех, кто вошёл ключом разработчика. */
+function phoneForWho(whoId) {
+  if (!whoId) return '';
+  var p = (participants || []).filter(function(x) { return x.id === whoId; })[0];
+  var phone = (p && p.phone) ? String(p.phone).trim() : '';
+  if (phone) return phone;
+  // Своё устройство: телефон лежит локально ещё до одобрения заявки.
+  var me = getMyParticipantRecord();
+  if (me && me.id === whoId) {
+    try { return localStorage.getItem(DEVICE_PHONE_KEY) || ''; } catch (e) {}
+  }
+  return '';
+}
+
 function burstMessageText(b) {
   var mins = Math.max(1, Math.round((b.to - b.from) / 60000));
+  var phone = phoneForWho(b.whoId);
   return '👁 Всплеск просмотров\n' +
     b.who + ' открыл ' + b.count + ' записей за ' + mins + ' мин' +
+    (phone ? '\nТелефон: ' + phone : '') +
     (b.venue ? '\nЗаведение: ' + b.venue : '') +
     '\nВремя: ' + new Date(b.to).toLocaleString('ru-RU');
 }
@@ -5312,9 +5330,12 @@ function renderViewBurstWarning(bursts) {
   if (!bursts || !bursts.length) { holder.innerHTML = ''; return; }
   holder.innerHTML = bursts.map(function(b) {
     var mins = Math.max(1, Math.round((b.to - b.from) / 60000));
+    var phone = phoneForWho(b.whoId);
     return '<div class="views-burst">⚠️ <strong>' + esc(b.who) + '</strong> — ' +
       b.count + ' записей за ' + mins + ' мин' +
-      (b.venue ? ', ' + esc(b.venue) : '') + '</div>';
+      (b.venue ? ', ' + esc(b.venue) : '') +
+      (phone ? '<br><a class="request-phone" href="tel:' + escAttr(phone.replace(/[^\d+]/g, '')) + '">📞 ' + esc(phone) + '</a>' : '') +
+    '</div>';
   }).join('');
 }
 
