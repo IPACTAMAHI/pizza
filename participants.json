@@ -146,5 +146,20 @@
     "blocked": true,
     "role": "viewer",
     "claimed": true
+  },
+  {
+    "id": "040E-D80C",
+    "fingerprint": "",
+    "name": "павапвап",
+    "phone": "+380990406154",
+    "addedAt": 1789002757768,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1789002757768,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
