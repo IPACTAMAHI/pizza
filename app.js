@@ -4938,6 +4938,233 @@ function mergeActivity(a, b) {
   return out.slice(0, ACTIVITY_LIMIT);
 }
 
+/* ================================================================
+   ЖУРНАЛ ПРОСМОТРОВ
+   ================================================================
+   Отвечает на вопрос «что именно унесли и кто», а не «как помешать».
+   Запрета тут нет и быть не может: снимок экрана делает система мимо
+   браузера. Смысл в следе — всплеск из десятка открытых карточек
+   подряд у одного человека отличается от обычной работы, когда
+   открывают одну-две и подолгу читают.
+
+   Пишем в ДВА канала, и вот почему. Публикация в activity.json идёт
+   через GitHub API и требует токена — он есть только у владельца и
+   администраторов. У сотрудника токена нет, и его просмотры в
+   репозиторий не попали бы никогда, то есть журнал вёл бы учёт всех,
+   кроме тех, ради кого затевался. Единственный канал, доступный
+   обычному участнику, — Firebase: через него уже идут присутствие и
+   заявки на доступ. Поэтому просмотры идут туда всегда, а в
+   activity.json — дополнительно, когда токен есть.
+
+   Чего журнал не даёт. Это след постфактум, а не запрет. Человек с
+   ноутбуком видит код страницы и может заглушить запись. Против
+   сотрудника с телефоном работает, против подготовленного — нет.
+   ================================================================ */
+
+const VIEW_DEDUPE_MS = 10 * 60 * 1000; // повтор того же за 10 минут не пишем
+const VIEWS_LIMIT = 400;               // столько записей держим и показываем
+
+var viewsLog = [];
+var viewsFilterWho = '';
+var recentViewMarks = {};  // ключ «кто+что» → когда записали в последний раз
+/* Имя открытого сейчас рецепта. Нужно, чтобы просмотр фотографии
+   писался осмысленно («Пепперони»), а не голой ссылкой на файл. */
+var openRecipeName = '';
+
+function loadViewsLocal() {
+  try {
+    var parsed = JSON.parse(localStorage.getItem('r20_views') || '[]');
+    viewsLog = Array.isArray(parsed) ? parsed : [];
+  } catch (e) { viewsLog = []; }
+}
+
+function saveViewsLocal() {
+  try { localStorage.setItem('r20_views', JSON.stringify(viewsLog.slice(0, VIEWS_LIMIT))); } catch (e) {}
+}
+
+function mergeViews(a, b) {
+  var seen = {};
+  var out = [];
+  (a || []).concat(b || []).forEach(function(r) {
+    if (!r || !r.id || seen[r.id]) return;
+    seen[r.id] = true;
+    out.push(r);
+  });
+  out.sort(function(x, y) { return (y.at || 0) - (x.at || 0); });
+  return out.slice(0, VIEWS_LIMIT);
+}
+
+/* Человеческое название того, что открыли. */
+const VIEW_KIND_LABELS = {
+  recipe: '📄 Рецепт',
+  photo: '🖼 Фотография',
+  section: '📁 Раздел',
+  purchase: '🛒 Закупка',
+};
+
+function viewKindLabel(kind) {
+  return VIEW_KIND_LABELS[kind] || '👁 Просмотр';
+}
+
+/* Главная функция: записать просмотр.
+   kind — recipe | photo | section | purchase
+   what — что именно открыли, словами («Пепперони»)
+   id   — устойчивый признак для подавления повторов */
+function logView(kind, what, id) {
+  var me = getMyParticipantRecord();
+  var whoId = (me && me.id) || (isDeveloper() ? 'developer' : getDeviceId());
+  var key = whoId + '|' + kind + '|' + (id || what || '');
+  var now = Date.now();
+  // Возвраты назад-вперёд по одному рецепту — это не десять просмотров,
+  // а один. Без подавления список забился бы ими и всплеск утонул.
+  if (recentViewMarks[key] && (now - recentViewMarks[key]) < VIEW_DEDUPE_MS) return null;
+  recentViewMarks[key] = now;
+
+  var entry = {
+    id: uid(),
+    at: now,
+    who: currentActorLabel(),
+    whoId: whoId,
+    venue: venueLabel(currentVenueId()),
+    kind: kind,
+    what: what || ''
+  };
+  viewsLog = mergeViews([entry], viewsLog);
+  saveViewsLocal();
+  pushViewToFirebase(entry);
+  scheduleViewsSync();
+  if (currentTab === 'admin') renderViewsLog();
+  return entry;
+}
+
+/* Канал сотрудника: Firebase. Токена не требует, поэтому доезжает от
+   любого участника. Отсутствие Firebase не должно ломать просмотр
+   рецепта — поэтому всё внутри try. */
+function pushViewToFirebase(entry) {
+  if (typeof firebase === 'undefined') return;
+  try {
+    firebase.database().ref('views/' + entry.id).set(entry).catch(function() {});
+  } catch (e) {}
+}
+
+/* Чтение чужих просмотров: только тот, кто видит админ-панель. */
+function subscribeViews() {
+  if (typeof firebase === 'undefined') return;
+  if (!isDeveloper() && !isAdmin()) return;
+  try {
+    firebase.database().ref('views').limitToLast(VIEWS_LIMIT).on('value', function(snap) {
+      var val = snap.val() || {};
+      var arr = Object.keys(val).map(function(k) { return val[k]; });
+      viewsLog = mergeViews(viewsLog, arr);
+      saveViewsLocal();
+      if (currentTab === 'admin') renderViewsLog();
+    });
+  } catch (e) {}
+}
+
+/* Второй канал: тот же файл журнала, что и у изменений, отдельным
+   полем kind. Работает только с токеном. */
+function syncViewsToGithub() {
+  return queueGithubWrite('views', async function() {
+    var cfg = getGithubConfig();
+    if (!cfg || !cfg.token) return false;
+    try {
+      var res = await fetch('./' + VIEWS_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        var remote = await res.json();
+        if (Array.isArray(remote)) viewsLog = mergeViews(viewsLog, remote);
+      }
+    } catch (e) {}
+    var put = await putJsonToGithub(VIEWS_PATH, viewsLog, 'Журнал просмотров (' + new Date().toLocaleString('ru-RU') + ')');
+    if (!put.ok) console.warn('syncViewsToGithub:', put.error);
+    return put.ok;
+  });
+}
+
+const VIEWS_PATH = 'views.json';
+
+var viewsSyncTimer = null;
+function scheduleViewsSync() {
+  clearTimeout(viewsSyncTimer);
+  // Пауза больше, чем у изменений: просмотров много, и десяток подряд
+  // лучше отправить одной записью файла.
+  viewsSyncTimer = setTimeout(function() { syncViewsToGithub(); }, 8000);
+}
+
+async function loadViewsFromRepo() {
+  try {
+    var res = await fetch('./' + VIEWS_PATH + '?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    var data = await res.json();
+    if (Array.isArray(data)) {
+      viewsLog = mergeViews(data, viewsLog);
+      saveViewsLocal();
+    }
+  } catch (e) {}
+}
+
+function setViewsFilter(who) {
+  viewsFilterWho = who || '';
+  renderViewsLog();
+}
+
+function toggleViewsLog() {
+  var card = $('views-card');
+  if (!card) return;
+  var open = !card.classList.contains('open');
+  card.classList.toggle('open', open);
+  var btn = card.querySelector('.admin-panel-toggle');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  try { localStorage.setItem('r20_views_open', open ? '1' : '0'); } catch (e) {}
+  if (open) renderViewsLog();
+}
+
+function renderViewsLog() {
+  var countEl = $('views-count');
+  if (countEl) countEl.textContent = viewsLog.length ? String(viewsLog.length) : '';
+
+  var card = $('views-card');
+  if (card && !card.classList.contains('open')) {
+    var wasOpen = false;
+    try { wasOpen = localStorage.getItem('r20_views_open') === '1'; } catch (e) {}
+    if (wasOpen) card.classList.add('open');
+  }
+
+  var holder = $('views-log-list');
+  if (!holder) return;
+
+  var list = viewsLog.slice();
+  if (viewsFilterWho) list = list.filter(function(r) { return r.who === viewsFilterWho; });
+
+  var filterRow = $('views-filter-row');
+  if (filterRow) {
+    var people = [];
+    viewsLog.forEach(function(r) { if (r.who && people.indexOf(r.who) === -1) people.push(r.who); });
+    filterRow.innerHTML = ['<span class="chip' + (viewsFilterWho ? '' : ' active') + '" onclick="setViewsFilter(\'\')">Все</span>']
+      .concat(people.map(function(w) {
+        return '<span class="chip' + (viewsFilterWho === w ? ' active' : '') + '" onclick="setViewsFilter(\'' + escAttr(w) + '\')">' + esc(w) + '</span>';
+      })).join('');
+  }
+
+  if (!list.length) {
+    holder.innerHTML = '<p class="admin-panel-hint">' +
+      (viewsFilterWho ? 'У этого человека пока нет просмотров.' : 'Пока никто ничего не открывал.') +
+      '</p>';
+    return;
+  }
+
+  holder.innerHTML = list.slice(0, 80).map(function(r) {
+    return '<div class="activity-item">' +
+      '<div class="activity-head">' +
+        '<strong>' + esc(r.who || 'Неизвестно') + '</strong>' +
+        '<span class="activity-time">' + esc(formatActivityTime(r.at)) + '</span>' +
+      '</div>' +
+      '<div class="activity-what">' + esc(viewKindLabel(r.kind)) + ': ' + esc(r.what || '') + '</div>' +
+      (r.venue ? '<div class="activity-where">' + esc(r.venue) + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
 function syncActivityToGithub() {
   return queueGithubWrite('activity', async function() {
     var cfg = getGithubConfig();
@@ -5863,6 +6090,7 @@ function openPhotoLightbox(src) {
   if (!box || !img) return;
   img.src = src;
   box.classList.add('show');
+  logView('photo', openRecipeName || 'фотография', String(src).slice(0, 80));
 }
 
 function closePhotoLightbox() {
@@ -6179,6 +6407,9 @@ function switchTab(name) {
     syncParticipantsFromGithub().then(function() { renderParticipantsList(); renderOnlineUsersList(); });
     subscribeOnlineUsers();
     renderOnlineUsersList();
+    subscribeViews();          // чужие просмотры приходят через Firebase
+    loadViewsFromRepo().then(function() { if (currentTab === 'admin') renderViewsLog(); });
+    renderViewsLog();
   }
   // resetForm() очищает форму И editingRecipe — вызываем её только когда
   // НЕ идёт редактирование существующего рецепта (editingRecipe ещё не
@@ -6189,6 +6420,15 @@ function switchTab(name) {
   if (name === 'purchase') {
     renderPurchaseTab();
     syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });
+  }
+  /* Раздел и закупка — тоже просмотр: по ним видно, что человек
+     методично обходил всё подряд, а не искал один рецепт. */
+  if (name.indexOf('section:') === 0) {
+    var sid = name.slice(8);
+    var sec = sectionById(sid);
+    logView('section', (sec && sec.label) || sid, sid);
+  } else if (name === 'purchase') {
+    logView('purchase', 'вкладка закупки', 'purchase:' + currentVenueId());
   }
   updateMobileBar();
   updateNavPicker();
@@ -9347,6 +9587,8 @@ function openDetail(id, autoplayVideo) {
     c.classList.remove('split-left');
   });
   $('tab-detail').classList.add('active');
+  openRecipeName = r.name || '';
+  logView('recipe', r.name || 'без названия', r.id);
 
   /* На широком экране список раздела остаётся слева, а рецепт
      открывается рядом — как в макете. Панель раздела при этом не
@@ -10470,6 +10712,7 @@ async function initApp() {
   await computeMyKeyHash();    // до любых проверок доступа: без отпечатка себя не найти
   loadRecipes();
   loadActivityLocal();
+  loadViewsLocal();
   loadCustomSitePhotos();
   loadPurchaseData();
   syncPurchaseFromGithub().then(function() { if (currentTab === 'purchase') renderPurchaseTab(); });

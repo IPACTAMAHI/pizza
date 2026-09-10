@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260910g">
+<link rel="stylesheet" href="styles.css?v=20260910h">
 </head>
 <body>
 
@@ -500,6 +500,25 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
     </div>
   </div>
 
+  <div class="admin-panel-card admin-only" id="views-card">
+    <!-- Просмотры отделены от истории изменений намеренно: записей тут
+         на порядок больше, и вперемешку они утопили бы правки. -->
+    <button type="button" class="admin-panel-row admin-panel-toggle" onclick="toggleViewsLog()" aria-expanded="false">
+      <span>👁 Просмотры</span>
+      <span class="admin-panel-toggle-count" id="views-count"></span>
+      <span class="admin-panel-toggle-caret">▾</span>
+    </button>
+    <div class="admin-panel-collapsible" id="views-body">
+    <p class="admin-panel-hint">
+      Кто и когда открывал рецепты, разделы, закупку и фотографии. Повторное открытие того же
+      за десять минут не пишется — иначе список забивался бы возвратами назад-вперёд.
+      Всплеск подряд у одного человека виден сразу: это и есть признак выноса.
+    </p>
+    <div id="views-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
+    <div id="views-log-list" style="margin-top:10px"></div>
+    </div>
+  </div>
+
   <!-- Права роли «Администратор». Настраивает только разработчик:
        именно этой карточкой раздаются все остальные возможности, и
        передавать её кому-то ещё небезопасно. -->
@@ -793,7 +812,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
      секунду покажется светлый экран. */
   try { document.documentElement.setAttribute('data-theme', localStorage.getItem('r20_theme') || 'light'); } catch (e) {}
 </script>
-<script src="app.js?v=20260910g"></script>
+<script src="app.js?v=20260910h"></script>
 
 
 
