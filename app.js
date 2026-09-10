@@ -2108,10 +2108,21 @@ function purchaseRoleId(venueId) {
 
 /* Какие заведения показывать этому человеку. Админ и разработчик видят
    все; сотрудник — только те, где ему что-то открыто ролями. */
+/* Заведения, где я управляющий. Главный администратор и владелец
+   сайта управляют всеми. */
+function venuesIManage() {
+  return getVenues().filter(function(v) { return isAdminOfVenue(v.id); });
+}
+
 function venuesAvailableToMe() {
   var all = getVenues();
-  if (isAdmin()) return all;
+  if (isDeveloper() || isSuperAdmin()) return all;
   return all.filter(function(v) {
+    // Управляющий видит СВОЁ заведение целиком. Раньше здесь стояла
+    // общая проверка isAdmin(), истинная для любой административной
+    // роли, и управляющий одной точки получал в переключателе всю
+    // сеть — включая чужие разделы и чужую закупку.
+    if (isAdminOfVenue(v.id)) return true;
     var hasSection = sectionsForVenue(v.id).some(function(s) { return hasSectionAccess(s.id); });
     return hasSection || hasPurchaseAccess(v.id);
   });
@@ -2320,7 +2331,12 @@ var sectionCatsOpen = {};     // sectionId -> открыт ли блок упр�
 var sectionStatusFilters = {};
 
 function hasSectionAccess(sectionId) {
-  if (isAdmin()) return true;
+  if (isDeveloper() || isSuperAdmin()) return true;
+  var s = sectionById(sectionId);
+  // Управляющий открывает все разделы своего заведения, но только
+  // своего. Раньше здесь стояла общая проверка isAdmin(), и любая
+  // административная роль открывала разделы всей сети.
+  if (s && isAdminOfVenue(sectionVenueId(s))) return true;
   var me = getMyParticipantRecord();
   return !!(me && !me.blocked && participantHasRole(me, 'tab:' + sectionId));
 }
@@ -2648,7 +2664,17 @@ function renderVenuesAdminList() {
   var holder = $('venues-admin-list');
   if (!holder) return;
   var cur = currentVenueId();
-  holder.innerHTML = getVenues().map(function(v) {
+  /* Показываем только те заведения, которыми человек управляет.
+     Раньше список строился по getVenues() целиком, и управляющий одной
+     точки видел всю сеть — с кнопками «переименовать» и «удалить» на
+     чужих заведениях. */
+  var mine = venuesIManage();
+  var whole = isDeveloper() || isSuperAdmin(); // распоряжаться составом сети может только он
+  if (!mine.length) {
+    holder.innerHTML = '<div class="empty-hint">Заведений в вашем управлении нет.</div>';
+    return;
+  }
+  holder.innerHTML = mine.map(function(v) {
     var sectionCount = sectionsForVenue(v.id).length;
     var recipeCount = 0;
     sectionsForVenue(v.id).forEach(function(s) { recipeCount += recipesForSection(s.id).length; });
@@ -2662,9 +2688,9 @@ function renderVenuesAdminList() {
       '</div>' +
       '<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">' +
         (isCur ? '' : '<button type="button" class="purchase-home-icon-btn" title="Открыть это заведение" onclick="setCurrentVenue(\'' + escAttr(v.id) + '\')">👁</button>') +
-        '<button type="button" class="purchase-home-icon-btn" title="' + (v.purchase ? 'Убрать вкладку «Закупка»' : 'Добавить вкладку «Закупка»') + '" onclick="toggleVenuePurchase(\'' + escAttr(v.id) + '\')">🛒</button>' +
+        (whole ? '<button type="button" class="purchase-home-icon-btn" title="' + (v.purchase ? 'Убрать вкладку «Закупка»' : 'Добавить вкладку «Закупка»') + '" onclick="toggleVenuePurchase(\'' + escAttr(v.id) + '\')">🛒</button>' : '') +
         '<button type="button" class="purchase-home-icon-btn" title="Переименовать" onclick="renameVenue(\'' + escAttr(v.id) + '\')">✏️</button>' +
-        '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить заведение" onclick="removeVenue(\'' + escAttr(v.id) + '\')">🗑️</button>' +
+        (whole ? '<button type="button" class="purchase-home-icon-btn purchase-home-icon-btn-danger" title="Удалить заведение" onclick="removeVenue(\'' + escAttr(v.id) + '\')">🗑️</button>' : '') +
       '</div>' +
     '</div>';
   }).join('');
@@ -3020,7 +3046,7 @@ function setParticipantRoles(p, roles) {
 /* Полный список ролей сайта: две встроенные плюс по одной на раздел. */
 function allRoleDefs() {
   var defs = [
-    { id: SUPERADMIN_ROLE, label: '⭐ Главный администратор', hint: 'Полный доступ во всех заведениях сети, кроме настроек GitHub' }
+    { id: SUPERADMIN_ROLE, label: '⭐ Главный администратор', hint: 'Все заведения сети целиком, кроме настроек GitHub' }
   ];
   // Роли перечисляем по заведениям и подписываем названием точки: без
   // этого «🍕 Пицца бар» одного заведения не отличить от такого же
@@ -3031,8 +3057,8 @@ function allRoleDefs() {
     // заведений «просто админ» непонятно чего означал бы доступ ко всему.
     defs.push({
       id: adminRoleId(v.id),
-      label: vName + ' · 👑 Администратор',
-      hint: 'Управление рецептами, категориями и закупкой заведения «' + v.label + '»'
+      label: vName + ' · 👑 Управляющий',
+      hint: 'Полный доступ к заведению «' + v.label + '» и только к нему: рецепты, разделы, категории, закупка'
     });
     if (v.purchase) {
       defs.push({
@@ -3095,7 +3121,7 @@ function roleLabel(roleId) {
   if (def) return def.label;
   if (roleId.indexOf('tab:') === 0) return '📁 (удалённый раздел)';
   if (roleId.indexOf('purchase:') === 0) return '🛒 (закупка удалённого заведения)';
-  if (roleId.indexOf('admin:') === 0) return '👑 (админ удалённого заведения)';
+  if (roleId.indexOf('admin:') === 0) return '👑 (управляющий удалённого заведения)';
   return roleId;
 }
 
@@ -5405,7 +5431,10 @@ function isDeveloper() {
 function hasPurchaseAccess(venueId) {
   var v = venueId || currentVenueId();
   if (!venueHasPurchase(v)) return false; // у этой точки закупки просто нет
-  if (isAdmin()) return true;
+  if (isDeveloper() || isSuperAdmin()) return true;
+  // Управляющий — закупка своей точки. Прежняя общая проверка isAdmin()
+  // отдавала ему закупку любого заведения сети.
+  if (isAdminOfVenue(v)) return true;
   var me = getMyParticipantRecord();
   return !!(me && !me.blocked && participantHasRole(me, purchaseRoleId(v)));
 }
