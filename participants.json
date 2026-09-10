@@ -160,6 +160,9 @@
     "roles": [
       "tab:main"
     ],
-    "role": "viewer"
+    "role": "viewer",
+    "revoked": true,
+    "revokedAt": 1789002837514,
+    "revokedBy": "Разработчик"
   }
 ]
