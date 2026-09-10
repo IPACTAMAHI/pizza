@@ -1,5 +1,14 @@
 [
   {
+    "id": "pmtvu5vk52q7nu",
+    "at": 1789063411973,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
     "id": "pmtvu12aanspe2",
     "at": 1789063187410,
     "who": "Разработчик",
