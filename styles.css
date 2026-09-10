@@ -551,7 +551,10 @@
   }
   @media (min-width: 900px) {
     .nav-picker { padding: 8px 24px; }
-    .nav-tabs { left: 24px; }
+    /* Здесь было `.nav-tabs { left: 24px; }` — правило стояло ВЫШЕ
+       базового объявления .nav-tabs и перекрывалось им при равной
+       силе, то есть не работало никогда. Ширины от 760px и так
+       обслуживает блок боковой панели ниже по файлу. */
   }
 
   .nav-picker-btn {
@@ -582,7 +585,14 @@
        от блока с кнопкой, и стоило пролистать список — уезжало вверх
        вместе со страницей: первых разделов было не видно, а нижние
        наезжали на содержимое. */
-    position: fixed; top: 58px; left: 12px; z-index: 95;
+    /* Отступ сверху считает JS при открытии (toggleNavPicker) и кладёт
+       в --nav-menu-top. Жёсткие 58px были верны только для прокрученной
+       страницы, где кнопка уже прилипла к верхнему краю; на непрокрученной
+       кнопка стоит ниже шапки, а меню всё равно рисовалось на 58px и
+       пряталось под неё — первых двух разделов не было видно.
+       Слой выше шапки (100) и переключателя темы (101) по той же
+       причине: меню всплывает НАД ними, а не под. */
+    position: fixed; top: var(--nav-menu-top, 58px); left: 12px; z-index: 102;
     width: 260px; max-width: calc(100vw - 24px);
     flex-direction: column;
     gap: 2px;
@@ -600,9 +610,10 @@
   }
   .nav-tabs.open { display: flex; animation: pickerIn .16s ease; }
   @keyframes pickerIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-  @media (min-width: 900px) {
-    .nav-tabs { margin: 0 24px; max-width: 340px; }
-  }
+  /* Здесь было `@media (min-width: 900px) { .nav-tabs { margin: 0 24px;
+     max-width: 340px; } }` — полностью перекрыто блоком боковой панели
+     @media (min-width: 760px) ниже по файлу, который задаёт margin: 0
+     и max-width: none. Остаток прежней раскладки. */
   .nav-tab {
     flex: 0 0 auto;
     display: flex; flex-direction: row; align-items: center; justify-content: flex-start;

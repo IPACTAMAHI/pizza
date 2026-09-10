@@ -2448,6 +2448,28 @@ function toggleNavPicker(force) {
   var btn = $('nav-picker-btn');
   if (!tabs) return;
   var open = (typeof force === 'boolean') ? force : !tabs.classList.contains('open');
+
+  /* Меню всплывает над содержимым и позиционируется от экрана
+     (position: fixed), поэтому отступ сверху надо знать в момент
+     открытия. Раньше он был зашит в CSS числом 58px — верным только
+     для прокрученной страницы, где кнопка уже прилипла к верхнему
+     краю. На непрокрученной кнопка стоит ниже шапки, и меню пряталось
+     под неё: первых разделов не было ни видно, ни нажать.
+     Считаем от настоящей нижней границы кнопки.
+     На мониторе .nav-picker скрыт (@media min-width: 760px), а
+     .nav-tabs там постоянная боковая панель со своим top — переменную
+     в этом случае не трогаем вовсе. */
+  if (open) {
+    var picker = document.querySelector('.nav-picker');
+    var visible = picker && window.getComputedStyle(picker).display !== 'none';
+    if (visible) {
+      var rect = picker.getBoundingClientRect();
+      tabs.style.setProperty('--nav-menu-top', Math.max(0, Math.round(rect.bottom + 6)) + 'px');
+    }
+  } else {
+    tabs.style.removeProperty('--nav-menu-top');
+  }
+
   tabs.classList.toggle('open', open);
   if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
