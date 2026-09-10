@@ -45,7 +45,15 @@
     ],
     "role": "admin",
     "claimedAt": 1787927074252,
-    "blockedAt": null
+    "blockedAt": null,
+    "perms": {
+      "allow": [
+        "section.manage"
+      ],
+      "deny": [
+        "recipe.copy"
+      ]
+    }
   },
   {
     "id": "WFRI-R2DF",
