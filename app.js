@@ -5863,11 +5863,13 @@ function openPhotoLightbox(src) {
   if (!box || !img) return;
   img.src = src;
   box.classList.add('show');
+  updateWatermarkVisibility();
 }
 
 function closePhotoLightbox() {
   var box = $('photo-lightbox');
   if (box) box.classList.remove('show');
+  updateWatermarkVisibility();
 }
 
 /* ================================================================
@@ -6192,6 +6194,7 @@ function switchTab(name) {
   }
   updateMobileBar();
   updateNavPicker();
+  updateWatermarkVisibility(); // подпись живёт только на раскрытом рецепте
 }
 
 /* ================================================================
@@ -9347,6 +9350,7 @@ function openDetail(id, autoplayVideo) {
     c.classList.remove('split-left');
   });
   $('tab-detail').classList.add('active');
+  updateWatermarkVisibility(); // рецепт раскрыт — подпись нужна здесь
 
   /* На широком экране список раздела остаётся слева, а рецепт
      открывается рядом — как в макете. Панель раздела при этом не
@@ -10377,11 +10381,131 @@ function initStickySearchOffset() {
    gate-locked с <html> (см. встроенный стиль в <head> index.html),
    после чего содержимое сайта впервые становится видимым. Вызывать
    только тогда, когда все проверки доступа реально пройдены. */
+/* ================================================================
+   ВОДЯНЫЕ ЗНАКИ
+   ================================================================
+   Поверх содержимого лежит полупрозрачная подпись: имя, отпечаток
+   ключа, дата и время. Смысл — сдерживание: если человек снимет экран
+   телефоном, на снимке будет видно, чей это экран и когда сделан.
+
+   Чем это НЕ является. Это не защита данных. Слой лежит в разметке
+   страницы, и с ноутбука его убирают инструментами разработчика за
+   несколько секунд. Запретить снимок экрана веб-страница не может ни
+   на iOS, ни на Android — такого доступа у браузера нет. Данные
+   закрывает закрытый вход, а не эта картинка.
+
+   Отпечаток берём тот же, что и для ключей (SHA-256), и показываем
+   только первые знаки: этого хватает, чтобы отличить одного человека
+   от другого, и по ним нельзя восстановить сам ключ. IP-адреса тут
+   нет намеренно: на статическом сайте его нечем получить, а тянуть
+   ради этого сторонний сервис — отдавать ему чужие данные.
+   ================================================================ */
+
+const WATERMARK_CELLS = 90; // с запасом на поворот и смещение слоя
+
+/* Подпись одной ячейки. Имя — как человек представился при входе;
+   если записи нет, показываем устройство, чтобы подпись не была
+   безымянной. */
+function watermarkText() {
+  var me = getMyParticipantRecord();
+  var who = (me && me.name) ? me.name : '';
+  if (!who) {
+    var dev = '';
+    try { dev = getDeviceId() || ''; } catch (e) {}
+    who = dev ? 'устройство ' + dev.slice(0, 6) : 'гость';
+  }
+  var mark = (myKeyHash || '').slice(0, 6);
+  var d = new Date();
+  var two = function(n) { return n < 10 ? '0' + n : '' + n; };
+  var when = two(d.getDate()) + '.' + two(d.getMonth() + 1) + '.' + d.getFullYear() +
+             ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
+  return who + (mark ? ' · ' + mark : '') + ' · ' + when;
+}
+
+/* Собрать слой, если его ещё нет, и обновить подписи. Вызывается при
+   снятии замка и раз в минуту — чтобы время на снимке было близко к
+   настоящему. */
+function renderWatermark() {
+  var layer = $('watermark-layer');
+  // Отключается полем watermark: false в site-config.json — на случай,
+  // если подпись где-то мешает работать.
+  if (siteConfig && siteConfig.watermark === false) {
+    if (layer) layer.classList.remove('is-on');
+    return;
+  }
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'watermark-layer';
+    layer.className = 'wm-layer';
+    layer.setAttribute('aria-hidden', 'true'); // для чтения с экрана это мусор
+    layer.innerHTML = '<div class="wm-inner"></div>';
+    document.body.appendChild(layer);
+  }
+  var inner = layer.querySelector('.wm-inner');
+  if (!inner) return;
+  var text = watermarkText();
+  var cells = [];
+  for (var i = 0; i < WATERMARK_CELLS; i++) {
+    cells.push('<span class="wm-cell">' + esc(text) + '</span>');
+  }
+  inner.innerHTML = cells.join('');
+  // Показывать или нет — решает updateWatermarkVisibility по текущему
+  // экрану. Здесь только собираем содержимое.
+}
+
+var watermarkTimer = null;
+
+/* Где подпись показывается. Только раскрытый рецепт и фотография во
+   весь экран: именно их и уносят — там граммовки, техника и снимок
+   блюда. Список карточек подписывать незачем, а поверх закупки,
+   админ-панели и формы ввода подпись только мешала бы работать.
+
+   Оговорка, которую важно помнить: это НЕ реакция на снимок экрана.
+   Веб-страница о снимке не узнаёт — ни в iOS, ни в Android, ни на
+   настольном браузере: снимок делает система мимо браузера. Подпись
+   просто постоянно лежит на тех экранах, которые стоит подписывать. */
+function watermarkShouldShow() {
+  var box = $('photo-lightbox');
+  if (box && box.classList.contains('show')) return true;
+  var detail = $('tab-detail');
+  return !!(detail && detail.classList.contains('active'));
+}
+
+/* Включить или погасить подпись под текущий экран. Вызывается при
+   смене вкладки и при открытии/закрытии фотографии. */
+function updateWatermarkVisibility() {
+  var layer = $('watermark-layer');
+  if (siteConfig && siteConfig.watermark === false) {
+    if (layer) layer.classList.remove('is-on');
+    return;
+  }
+  if (!watermarkShouldShow()) {
+    if (layer) layer.classList.remove('is-on');
+    return;
+  }
+  /* Сборку зовём ДО поиска слоя: при выключенной настройке слой вообще
+     не создаётся, и если включить её обратно, показывать было бы
+     нечего — подпись не возвращалась. Заодно обновляется время. */
+  renderWatermark();
+  layer = $('watermark-layer');
+  if (layer) layer.classList.add('is-on');
+}
+
+function startWatermark() {
+  renderWatermark();
+  updateWatermarkVisibility();
+  if (watermarkTimer) clearInterval(watermarkTimer);
+  watermarkTimer = setInterval(function() {
+    if (watermarkShouldShow()) renderWatermark();
+  }, 60000);
+}
+
 function unlockGate() {
   var gateOverlay = $('access-gate-overlay');
   if (gateOverlay) gateOverlay.remove();
   document.documentElement.classList.remove('gate-locked');
   applyStickySearchOffset(); // теперь панель вкладок видна — её высоту можно измерить
+  startWatermark();          // подпись появляется вместе с содержимым, не раньше
 }
 
 /* Защита от "прыжка" страницы в начало при вводе текста в поле поиска
@@ -10525,4 +10649,5 @@ function showDetailLoading() {
     '<div class="skeleton skeleton-line"></div>' +
     '<div class="skeleton skeleton-line" style="width:70%"></div>';
   currentTab = 'detail';
+  updateWatermarkVisibility();
 }

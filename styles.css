@@ -2353,3 +2353,62 @@
   @media (min-width: 901px) {
     .header { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
   }
+
+  /* ===== ВОДЯНЫЕ ЗНАКИ =====
+     Полупрозрачная подпись поверх содержимого: имя, отпечаток ключа,
+     дата и время. Слой не ловит нажатия (pointer-events: none) и
+     медленно смещается, поэтому не закрывает надолго одно и то же
+     место.
+
+     Честно о границах: это сдерживание против фотографии экрана
+     телефоном, а не защита. Слой живёт в разметке, и с ноутбука его
+     снимают инструментами разработчика за десять секунд. Данные
+     защищает закрытый вход, а не эта картинка.
+
+     Слой 2200 — выше содержимого, шапки (100), меню разделов (102) и
+     просмотра фотографии во весь экран (2100): именно фотографию
+     рецепта и снимают. Ниже диалоговых окон (100000), чтобы не мешать
+     вводить имя и ключ. */
+  .wm-layer {
+    position: fixed; inset: 0;
+    z-index: 2200;
+    pointer-events: none;
+    overflow: hidden;
+    display: none;
+  }
+  /* Пока замок доступа не снят, показывать нечего и подписывать нечего. */
+  html:not(.gate-locked) .wm-layer.is-on { display: block; }
+
+  .wm-inner {
+    position: absolute;
+    top: -60%; left: -60%;
+    width: 220%; height: 220%;
+    display: flex; flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 26px 44px;
+    transform: rotate(-24deg);
+    animation: wmDrift 120s linear infinite alternate;
+  }
+  .wm-cell {
+    font-family: var(--font-ui, inherit);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    color: var(--text);
+    opacity: .13;
+    user-select: none;
+  }
+  @keyframes wmDrift {
+    from { transform: rotate(-24deg) translate(0, 0); }
+    to   { transform: rotate(-24deg) translate(60px, 90px); }
+  }
+  /* Движение выключаем тем, кому оно мешает: подпись остаётся. */
+  @media (prefers-reduced-motion: reduce) {
+    .wm-inner { animation: none; }
+  }
+  /* На печати и в PDF подпись обязана остаться. */
+  @media print {
+    .wm-layer.is-on { display: block !important; }
+    .wm-cell { opacity: .22; }
+  }
