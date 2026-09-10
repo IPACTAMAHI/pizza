@@ -38,13 +38,14 @@
     "fingerprint": "",
     "name": "Александр Переверзев",
     "addedAt": 1787926923626,
-    "blocked": true,
+    "blocked": false,
     "claimed": true,
     "roles": [
       "admin"
     ],
     "role": "admin",
-    "claimedAt": 1787927074252
+    "claimedAt": 1787927074252,
+    "blockedAt": null
   },
   {
     "id": "WFRI-R2DF",
