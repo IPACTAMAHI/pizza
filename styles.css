@@ -2355,3 +2355,16 @@
     .header { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
   }
 
+
+  /* Полоса всплеска просмотров в админ-панели. Видна даже если
+     сообщение в Телеграм не дошло — сеть подводит, панель нет. */
+  .views-burst {
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-radius: var(--r-sm);
+    background: var(--warn-soft, rgba(200, 120, 0, .12));
+    border: 1px solid var(--warn, rgba(200, 120, 0, .35));
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .views-burst + .views-burst { margin-top: 6px; }

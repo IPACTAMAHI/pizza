@@ -5058,6 +5058,7 @@ function subscribeViews() {
       viewsLog = mergeViews(viewsLog, arr);
       saveViewsLocal();
       if (currentTab === 'admin') renderViewsLog();
+      checkViewBursts(); // чужие просмотры пришли — самое время проверить
     });
   } catch (e) {}
 }
@@ -5130,6 +5131,17 @@ function renderViewsLog() {
     if (wasOpen) card.classList.add('open');
   }
 
+  // Поля настроек заполняем текущими значениями, иначе при сохранении
+  // пустые поля затёрли бы то, что уже настроено.
+  var cntEl = $('view-alert-count');
+  if (cntEl && !cntEl.value) cntEl.value = viewBurstCount();
+  var minEl = $('view-alert-minutes');
+  if (minEl && !minEl.value) minEl.value = Math.round(viewBurstWindowMs() / 60000);
+  var chatEl = $('view-alert-chat');
+  if (chatEl && !chatEl.value) chatEl.value = viewAlertChatId();
+
+  renderViewBurstWarning(detectViewBursts(viewsLog, Date.now()));
+
   var holder = $('views-log-list');
   if (!holder) return;
 
@@ -5163,6 +5175,160 @@ function renderViewsLog() {
       (r.venue ? '<div class="activity-where">' + esc(r.venue) + '</div>' : '') +
     '</div>';
   }).join('');
+}
+
+/* ================================================================
+   ОПОВЕЩЕНИЕ О ВСПЛЕСКЕ ПРОСМОТРОВ
+   ================================================================
+   Снимок экрана поймать нельзя — страница о нём не узнаёт. Но чтобы
+   унести двадцать рецептов, их надо открыть, и это двадцать записей
+   подряд за пару минут. Обычная работа выглядит иначе: одну карточку
+   открывают и подолгу читают. Ловим не снимок, а вынос.
+
+   Кто шлёт. Оповещение отправляет устройство администратора, а не
+   сотрудника. Причина простая: для отправки нужен токен бота, и если
+   слать со стороны сотрудника, токен пришлось бы положить в общие
+   настройки — то есть отдать всем, у кого есть доступ к сайту.
+   Админ-панель и так подписана на чужие просмотры через Firebase,
+   значит всплеск она увидит сама.
+
+   Отсюда ограничение, которое надо принять: оповещение приходит,
+   когда админ-панель открыта хотя бы на одном устройстве. Если ты
+   закрыл сайт, всплеск не потеряется — он лежит в журнале и придёт
+   при следующем открытии панели. Но не в ту же секунду.
+   ================================================================ */
+
+const VIEW_BURST_DEFAULT_COUNT = 10;   // столько просмотров подряд
+const VIEW_BURST_DEFAULT_MIN = 5;      // за столько минут
+const VIEW_ALERTS_KEY = 'r20_view_alerts';
+
+function viewBurstCount() {
+  var n = parseInt((siteConfig && siteConfig.viewAlertCount) || VIEW_BURST_DEFAULT_COUNT, 10);
+  return (isFinite(n) && n > 1) ? n : VIEW_BURST_DEFAULT_COUNT;
+}
+
+function viewBurstWindowMs() {
+  var m = parseInt((siteConfig && siteConfig.viewAlertMinutes) || VIEW_BURST_DEFAULT_MIN, 10);
+  return ((isFinite(m) && m > 0) ? m : VIEW_BURST_DEFAULT_MIN) * 60000;
+}
+
+/* Найти всплески: у одного человека набралось порогового числа
+   просмотров внутри скользящего окна. Возвращаем по одному всплеску
+   на человека — самый свежий, иначе на один вынос пришло бы двадцать
+   сообщений. */
+function detectViewBursts(list, now) {
+  var rows = (list || viewsLog).slice().sort(function(a, b) { return (a.at || 0) - (b.at || 0); });
+  var need = viewBurstCount();
+  var win = viewBurstWindowMs();
+  var byWho = {};
+  rows.forEach(function(r) {
+    if (!r || !r.whoId) return;
+    (byWho[r.whoId] = byWho[r.whoId] || []).push(r);
+  });
+  var out = [];
+  Object.keys(byWho).forEach(function(whoId) {
+    var arr = byWho[whoId];
+    for (var i = need - 1; i < arr.length; i++) {
+      var first = arr[i - need + 1];
+      var last = arr[i];
+      if ((last.at - first.at) <= win) {
+        out.push({
+          whoId: whoId,
+          who: last.who || 'Неизвестно',
+          count: need,
+          from: first.at,
+          to: last.at,
+          venue: last.venue || '',
+          // Ключ всплеска — человек и минута последнего просмотра.
+          // По нему отсеиваем повторную отправку того же события.
+          key: whoId + '|' + Math.floor(last.at / 60000)
+        });
+      }
+    }
+  });
+  // По одному, самому свежему, на человека.
+  var best = {};
+  out.forEach(function(b) { if (!best[b.whoId] || b.to > best[b.whoId].to) best[b.whoId] = b; });
+  return Object.keys(best).map(function(k) { return best[k]; });
+}
+
+function loadSentAlerts() {
+  try { return JSON.parse(localStorage.getItem(VIEW_ALERTS_KEY) || '{}') || {}; } catch (e) { return {}; }
+}
+
+function markAlertSent(key) {
+  var sent = loadSentAlerts();
+  sent[key] = Date.now();
+  // Держим только сутки — иначе список рос бы без предела.
+  var cut = Date.now() - 24 * 3600 * 1000;
+  Object.keys(sent).forEach(function(k) { if (sent[k] < cut) delete sent[k]; });
+  try { localStorage.setItem(VIEW_ALERTS_KEY, JSON.stringify(sent)); } catch (e) {}
+}
+
+function viewAlertChatId() {
+  return (siteConfig && siteConfig.viewAlertChat) || '';
+}
+
+function burstMessageText(b) {
+  var mins = Math.max(1, Math.round((b.to - b.from) / 60000));
+  return '👁 Всплеск просмотров\n' +
+    b.who + ' открыл ' + b.count + ' записей за ' + mins + ' мин' +
+    (b.venue ? '\nЗаведение: ' + b.venue : '') +
+    '\nВремя: ' + new Date(b.to).toLocaleString('ru-RU');
+}
+
+/* Проверить журнал и отправить то, чего ещё не отправляли. */
+async function checkViewBursts() {
+  // Смотрит и шлёт только тот, у кого есть панель и токен.
+  if (!isDeveloper() && !isAdmin()) return [];
+  var token = getTelegramBotToken();
+  var chat = viewAlertChatId();
+  var bursts = detectViewBursts(viewsLog, Date.now());
+  if (!bursts.length) return [];
+  var sent = loadSentAlerts();
+  var fresh = bursts.filter(function(b) { return !sent[b.key]; });
+  renderViewBurstWarning(bursts);
+  if (!token || !chat) return fresh; // некуда слать — но в панели всплеск уже виден
+  for (var i = 0; i < fresh.length; i++) {
+    var b = fresh[i];
+    try {
+      var res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chat, text: burstMessageText(b) })
+      });
+      var data = await res.json();
+      if (data && data.ok) markAlertSent(b.key);
+    } catch (e) { /* сеть подвела — отправим в следующий раз */ }
+  }
+  return fresh;
+}
+
+/* Всплеск виден в панели и без Телеграм: сообщение может не дойти,
+   а полоса наверху карточки — дойдёт. */
+function renderViewBurstWarning(bursts) {
+  var holder = $('views-burst-warning');
+  if (!holder) return;
+  if (!bursts || !bursts.length) { holder.innerHTML = ''; return; }
+  holder.innerHTML = bursts.map(function(b) {
+    var mins = Math.max(1, Math.round((b.to - b.from) / 60000));
+    return '<div class="views-burst">⚠️ <strong>' + esc(b.who) + '</strong> — ' +
+      b.count + ' записей за ' + mins + ' мин' +
+      (b.venue ? ', ' + esc(b.venue) : '') + '</div>';
+  }).join('');
+}
+
+async function saveViewAlertSettings() {
+  var cnt = $('view-alert-count');
+  var mins = $('view-alert-minutes');
+  var chat = $('view-alert-chat');
+  if (cnt) siteConfig.viewAlertCount = parseInt(cnt.value, 10) || VIEW_BURST_DEFAULT_COUNT;
+  if (mins) siteConfig.viewAlertMinutes = parseInt(mins.value, 10) || VIEW_BURST_DEFAULT_MIN;
+  if (chat) siteConfig.viewAlertChat = (chat.value || '').trim();
+  saveSiteConfigLocal();
+  var ok = await syncSiteConfigToGithub();
+  showToast(ok ? '✅ Оповещения сохранены' : '⚠️ Сохранено только на этом устройстве');
+  renderViewsLog();
 }
 
 function syncActivityToGithub() {
@@ -6408,7 +6574,10 @@ function switchTab(name) {
     subscribeOnlineUsers();
     renderOnlineUsersList();
     subscribeViews();          // чужие просмотры приходят через Firebase
-    loadViewsFromRepo().then(function() { if (currentTab === 'admin') renderViewsLog(); });
+    loadViewsFromRepo().then(function() {
+      if (currentTab === 'admin') renderViewsLog();
+      checkViewBursts(); // пропущенный всплеск догоняет при открытии панели
+    });
     renderViewsLog();
   }
   // resetForm() очищает форму И editingRecipe — вызываем её только когда
