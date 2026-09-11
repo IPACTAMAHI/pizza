@@ -5365,17 +5365,33 @@ function burstMessageText(b) {
     '\nВремя: ' + new Date(b.to).toLocaleString('ru-RU');
 }
 
+/* Насколько давним может быть всплеск, чтобы о нём ещё имело смысл
+   сообщать. Без этого предела проверка брала журнал целиком и слала
+   позавчерашние всплески как новость — а на другом устройстве, где
+   меток об отправке нет, заново рассылалась вся история. */
+const VIEW_ALERT_MAX_AGE_MS = 30 * 60 * 1000;
+
 /* Проверить журнал и отправить то, чего ещё не отправляли. */
 async function checkViewBursts() {
   // Смотрит и шлёт только тот, у кого есть панель и токен.
   if (!isDeveloper() && !isAdmin()) return [];
   var token = getTelegramBotToken();
   var chat = viewAlertChatId();
-  var bursts = detectViewBursts(viewsLog, Date.now());
+  var now = Date.now();
+  var bursts = detectViewBursts(viewsLog, now);
+  renderViewBurstWarning(bursts); // в панели показываем всё, включая давнее
   if (!bursts.length) return [];
   var sent = loadSentAlerts();
-  var fresh = bursts.filter(function(b) { return !sent[b.key]; });
-  renderViewBurstWarning(bursts);
+  var fresh = bursts.filter(function(b) {
+    if (sent[b.key]) return false;
+    if ((now - b.to) > VIEW_ALERT_MAX_AGE_MS) {
+      // Давний всплеск не шлём, но помечаем: иначе он всплывал бы при
+      // каждом открытии панели и однажды всё-таки ушёл бы в Телеграм.
+      markAlertSent(b.key);
+      return false;
+    }
+    return true;
+  });
   if (!token || !chat) return fresh; // некуда слать — но в панели всплеск уже виден
   for (var i = 0; i < fresh.length; i++) {
     var b = fresh[i];
