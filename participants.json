@@ -145,7 +145,10 @@
     "addedAt": 1788994122281,
     "blocked": true,
     "role": "viewer",
-    "claimed": true
+    "claimed": true,
+    "revoked": true,
+    "revokedAt": 1789159420434,
+    "revokedBy": "Разработчик"
   },
   {
     "id": "0D15-80FB",
