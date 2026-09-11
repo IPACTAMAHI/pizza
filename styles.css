@@ -2368,3 +2368,46 @@
     line-height: 1.4;
   }
   .views-burst + .views-burst { margin-top: 6px; }
+
+  /* ===== ФОТОГРАФИИ ШАГОВ ПРИГОТОВЛЕНИЯ ===== */
+  /* В редакторе: полоса миниатюр под строкой шага. Строка шага —
+     сетка, поэтому полоса занимает всю ширину новой строкой. */
+  .step-photos {
+    grid-column: 1 / -1;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px;
+  }
+  .step-photos:empty { display: none; margin: 0; }
+  .step-photo-chip {
+    position: relative;
+    width: 58px; height: 58px;
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .step-photo-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .step-photo-chip button {
+    position: absolute; top: 2px; right: 2px;
+    width: 18px; height: 18px; padding: 0;
+    border: none; border-radius: 50%;
+    background: rgba(0,0,0,.62); color: #fff;
+    font-size: 11px; line-height: 18px; cursor: pointer;
+  }
+  .step-photo-btn { padding: 5px 9px; }
+
+  /* В карточке рецепта: снимки под текстом шага. Нажатие открывает во
+     весь экран, поэтому курсор — лупа. */
+  .steps-list .step-shots {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 8px 0 2px;
+  }
+  .steps-list .step-shots img {
+    width: 104px; height: 104px;
+    object-fit: cover;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--line);
+    cursor: zoom-in;
+  }
+  /* Вычеркнутый шаг гасит и свои снимки — иначе непонятно, сделан он
+     или нет. */
+  .steps-list li.step-done .step-shots { opacity: .4; }

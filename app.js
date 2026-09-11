@@ -1263,7 +1263,7 @@ async function pollAccessStatus() {
    Поэтому приложение сверяет себя с сервером: тянет index.html мимо
    кэша и смотрит, какую версию app.js тот подключает. Не совпало —
    перезагружаемся один раз. */
-const APP_VERSION = '20260910n';
+const APP_VERSION = '20260910o';
 const FRESH_BUILD_MARK = 'r20_reloaded_for';
 
 function reloadPage() { location.reload(); }
@@ -7096,22 +7096,107 @@ function adjustVideoAspect(videoEl) {
   }
 }
 
+/* ================================================================
+   ШАГИ ПРИГОТОВЛЕНИЯ С ФОТОГРАФИЯМИ
+   ================================================================
+   Раньше шаг был просто строкой. Теперь он может быть объектом
+   { text: '…', photos: ['images/…'] }. Старый формат читается
+   по-прежнему и никуда не девается: в recipes.json лежат тысячи
+   строк, и переписывать их ради новой возможности — напрашиваться
+   на потерю данных. Поэтому везде, где шаг используется, он проходит
+   через stepText() и stepPhotos().
+
+   Сами фотографии, как и фото рецепта, лежат отдельными файлами в
+   images/ — в рецепте хранится только путь. Класть картинки прямо в
+   recipes.json нельзя: файл раздуется до неподъёмного и будет
+   выкачиваться целиком при каждом открытии сайта.
+   ================================================================ */
+
+function stepText(step) {
+  if (step === null || step === undefined) return '';
+  if (typeof step === 'string') return step;
+  return String(step.text || '');
+}
+
+function stepPhotos(step) {
+  if (!step || typeof step === 'string') return [];
+  return Array.isArray(step.photos) ? step.photos.filter(Boolean) : [];
+}
+
+/* Собрать шаг обратно. Если фотографий нет — оставляем строкой, чтобы
+   не плодить объекты на ровном месте и не раздувать файл. */
+function makeStep(text, photos) {
+  var t = String(text || '').trim();
+  var list = (photos || []).filter(Boolean);
+  return list.length ? { text: t, photos: list } : t;
+}
+
 function addStepRow(value) {
   if (!value) value = '';
   var list = $('steps-list');
   var row = document.createElement('div');
   row.className = 'step-row';
   var num = list.children.length + 1;
+  var inputId = 'step-photo-input-' + Date.now() + '-' + num;
   row.innerHTML = '<span class="step-num">' + num + '</span>' +
     '<input type="text" placeholder="Шаг ' + num + ': ...">\n'
     + '<div class="row-move-btns">'
     +   '<button type="button" title="Переместить вверх" onclick="moveRow(this,\'up\')"><svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"></path></svg></button>'
     +   '<button type="button" title="Переместить вниз" onclick="moveRow(this,\'down\')"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg></button>'
     + '</div>'
-    + '<button class="btn btn-danger btn-sm" onclick="removeStep(this)">✕</button>';
+    /* Скрытый выбор файла с multiple: можно отметить сразу несколько
+       снимков одного шага, а не добавлять их по одному. */
+    + '<input type="file" accept="image/*" multiple id="' + inputId + '" style="display:none" onchange="addStepPhotos(this)">'
+    + '<button type="button" class="btn btn-sm step-photo-btn" title="Добавить фото к шагу" onclick="document.getElementById(\'' + inputId + '\').click()">📷</button>'
+    + '<button class="btn btn-danger btn-sm" onclick="removeStep(this)">✕</button>'
+    + '<div class="step-photos"></div>';
   list.appendChild(row);
-  if (value) row.querySelector('input').value = value;
+  row.querySelector('input[type="text"]').value = stepText(value);
+  stepPhotos(value).forEach(function(p) { appendStepPhotoChip(row, p); });
   renumberSteps();
+}
+
+/* Одна миниатюра в редакторе. Значение хранится в data-атрибуте: это
+   либо уже существующий путь images/…, либо свежий data:-снимок,
+   который загрузится при сохранении рецепта. */
+function appendStepPhotoChip(row, value) {
+  var holder = row.querySelector('.step-photos');
+  if (!holder) return;
+  var chip = document.createElement('div');
+  chip.className = 'step-photo-chip';
+  chip.setAttribute('data-photo', value);
+  chip.innerHTML = '<img src="' + escAttr(resolvePhotoSrc(value)) + '" alt="">' +
+    '<button type="button" title="Убрать это фото" onclick="removeStepPhoto(this)">✕</button>';
+  holder.appendChild(chip);
+}
+
+function removeStepPhoto(btn) {
+  var chip = btn.closest('.step-photo-chip');
+  if (chip && chip.parentNode) chip.parentNode.removeChild(chip);
+}
+
+/* Выбранные файлы читаем в data:-вид и показываем сразу. В репозиторий
+   они уедут при сохранении рецепта — раньше нельзя, до сохранения у
+   шага ещё нет ни номера, ни гарантии, что его вообще оставят. */
+function addStepPhotos(input) {
+  var row = input.closest('.step-row');
+  var files = Array.prototype.slice.call(input.files || []);
+  files.forEach(function(file) {
+    if (!/^image\//.test(file.type)) return;
+    var reader = new FileReader();
+    reader.onload = function(e) { appendStepPhotoChip(row, e.target.result); };
+    reader.readAsDataURL(file);
+  });
+  input.value = ''; // иначе повторный выбор того же файла не сработает
+}
+
+/* Что сейчас набрано в строке шага. */
+function readStepRow(row) {
+  var input = row.querySelector('input[type="text"]');
+  var photos = Array.prototype.slice.call(row.querySelectorAll('.step-photo-chip'))
+    .map(function(c) { return c.getAttribute('data-photo'); })
+    .filter(Boolean);
+  return makeStep(input ? input.value : '', photos);
 }
 
 function removeStep(btn) {
@@ -7250,9 +7335,11 @@ async function saveRecipe() {
   if (!ingredients.length) { showToast('⚠️ Добавьте хотя бы один ингредиент'); return; }
 
   var steps = [];
-  document.querySelectorAll('#steps-list .step-row input').forEach(function(inp) {
-    var v = inp.value.trim();
-    if (v) steps.push(v);
+  document.querySelectorAll('#steps-list .step-row').forEach(function(row) {
+    var step = readStepRow(row);
+    // Шаг без текста не сохраняем, даже если к нему прицепили фото:
+    // список из голых картинок читать невозможно.
+    if (stepText(step)) steps.push(step);
   });
   if (!steps.length) { showToast('⚠️ Добавьте хотя бы один шаг приготовления'); return; }
 
@@ -7286,6 +7373,35 @@ async function saveRecipe() {
       photoValue = uploadedPath;
     } else {
       showToast('⚠️ Не удалось загрузить фото отдельно — сохранено внутри рецепта, как раньше');
+    }
+  }
+
+  /* Фотографии шагов. Уже загруженные (images/…) оставляем как есть,
+     свежие снимки выгружаем отдельными файлами. Имя файла завязано на
+     номер шага и порядковый номер снимка, поэтому повторное сохранение
+     перезаписывает свой же файл, а не плодит мусор. */
+  if (cfg && cfg.token) {
+    var pending = 0;
+    steps.forEach(function(st) {
+      stepPhotos(st).forEach(function(p) { if (String(p).indexOf('data:image') === 0) pending++; });
+    });
+    if (pending) showToast('📤 Загружаю фото шагов (' + pending + ')...');
+    for (var si = 0; si < steps.length; si++) {
+      var photos = stepPhotos(steps[si]);
+      if (!photos.length) continue;
+      var resolved = [];
+      for (var pi = 0; pi < photos.length; pi++) {
+        var p = photos[pi];
+        if (String(p).indexOf('data:image') !== 0) { resolved.push(p); continue; }
+        var m = String(p).match(/^data:image\/(\w+);base64,/);
+        var ext = m ? (m[1] === 'jpeg' ? 'jpg' : m[1]) : 'jpg';
+        var stepPath = 'images/' + recipeId + '-step' + (si + 1) + '-' + (pi + 1) + '.' + ext;
+        var up = await uploadImageAtPath(p, stepPath, 'Фото шага ' + (si + 1) + ' (' + new Date().toLocaleString('ru-RU') + ')');
+        // Не загрузилось — оставляем снимок внутри рецепта, чтобы не
+        // потерять его молча. Раздует файл, но данные целы.
+        resolved.push(up || p);
+      }
+      steps[si] = makeStep(stepText(steps[si]), resolved);
     }
   }
 
@@ -9979,7 +10095,21 @@ function openDetail(id, autoplayVideo) {
 
     '<div class="section-title">Шаги приготовления:</div>\n'
     + '<ol class="steps-list">' +
-      (r.steps.map ? r.steps.map(function(s) { return '<li onclick="this.classList.toggle(\'step-done\')">' + esc(s) + '</li>'; }).join('') : '') +
+      (r.steps.map ? r.steps.map(function(s) {
+        var photos = stepPhotos(s);
+        /* Нажатие по тексту вычёркивает шаг, нажатие по фото открывает
+           его во весь экран — поэтому у картинок своя остановка
+           всплытия, иначе просмотр фото заодно вычёркивал бы шаг. */
+        return '<li onclick="this.classList.toggle(\'step-done\')">' +
+          '<span class="step-text">' + esc(stepText(s)) + '</span>' +
+          (photos.length
+            ? '<div class="step-shots">' + photos.map(function(p) {
+                return '<img src="' + escAttr(resolvePhotoSrc(p)) + '" alt="" loading="lazy" ' +
+                  'onclick="event.stopPropagation(); openPhotoLightbox(this.src)">';
+              }).join('') + '</div>'
+            : '') +
+        '</li>';
+      }).join('') : '') +
     '</ol>' +
 
     (getRecipeVideos(r).length ?
