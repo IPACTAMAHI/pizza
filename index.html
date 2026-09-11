@@ -52,7 +52,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20260910j">
+<link rel="stylesheet" href="styles.css?v=20260910k">
 </head>
 <body>
 
@@ -514,7 +514,12 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
       за десять минут не пишется — иначе список забивался бы возвратами назад-вперёд.
       Всплеск подряд у одного человека виден сразу: это и есть признак выноса.
     </p>
+    <div id="views-sync-error"></div>
     <div id="views-burst-warning"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button type="button" class="tool-btn" onclick="testViewsConnection()">🔌 Проверить связь с базой</button>
+      <span id="views-connection-result" style="font-size:12px;color:var(--text-muted)"></span>
+    </div>
     <div id="views-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px"></div>
     <div id="views-log-list" style="margin-top:10px"></div>
 
@@ -835,7 +840,7 @@ html.gate-locked body > *:not(#access-gate-overlay):not(.modal-overlay):not(#toa
      секунду покажется светлый экран. */
   try { document.documentElement.setAttribute('data-theme', localStorage.getItem('r20_theme') || 'light'); } catch (e) {}
 </script>
-<script src="app.js?v=20260910j"></script>
+<script src="app.js?v=20260910k"></script>
 
 
 

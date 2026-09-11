@@ -5040,27 +5040,89 @@ function logView(kind, what, id) {
 /* Канал сотрудника: Firebase. Токена не требует, поэтому доезжает от
    любого участника. Отсутствие Firebase не должно ломать просмотр
    рецепта — поэтому всё внутри try. */
-function pushViewToFirebase(entry) {
-  if (typeof firebase === 'undefined') return;
+/* Последняя ошибка записи в Firebase. Раньше ошибка глоталась молча:
+   если правила базы не разрешают ветку views, просмотры сотрудников
+   просто не доезжали, и снаружи это выглядело как «ничего не
+   работает» без единой подсказки. */
+var lastViewWriteError = '';
+
+function ensureFirebaseReady() {
+  if (typeof firebase === 'undefined') return null;
   try {
-    firebase.database().ref('views/' + entry.id).set(entry).catch(function() {});
-  } catch (e) {}
+    if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    return firebase.database();
+  } catch (e) {
+    lastViewWriteError = 'подключение: ' + (e && e.message ? e.message : e);
+    return null;
+  }
+}
+
+function pushViewToFirebase(entry) {
+  var db = ensureFirebaseReady();
+  if (!db) return;
+  try {
+    db.ref('views/' + entry.id).set(entry)
+      .then(function() { lastViewWriteError = ''; })
+      .catch(function(e) {
+        // PERMISSION_DENIED здесь означает ровно одно: правила базы не
+        // разрешают писать в ветку views.
+        lastViewWriteError = (e && e.message) ? e.message : String(e);
+      });
+  } catch (e) {
+    lastViewWriteError = (e && e.message) ? e.message : String(e);
+  }
+}
+
+/* Проверка связи: пишем пробную запись, читаем обратно, удаляем.
+   Показывает точную причину, а не «не работает». */
+async function testViewsConnection() {
+  var out = $('views-connection-result');
+  var say = function(text) { if (out) out.textContent = text; showToast(text); };
+  if (typeof firebase === 'undefined') {
+    say('⚠️ Firebase не загрузился — проверьте сеть или блокировщик');
+    return false;
+  }
+  var db = ensureFirebaseReady();
+  if (!db) { say('⚠️ Не удалось подключиться: ' + lastViewWriteError); return false; }
+  var probeId = 'probe-' + Date.now();
+  try {
+    await db.ref('views/' + probeId).set({ id: probeId, at: Date.now(), kind: 'probe', what: 'проверка связи' });
+  } catch (e) {
+    say('⛔ Запись запрещена: ' + ((e && e.message) || e) + ' — разрешите ветку views в правилах базы');
+    return false;
+  }
+  try {
+    var snap = await db.ref('views/' + probeId).once('value');
+    if (!snap.val()) { say('⚠️ Записалось, но не читается — проверьте правила на чтение views'); return false; }
+  } catch (e) {
+    say('⚠️ Чтение запрещено: ' + ((e && e.message) || e));
+    return false;
+  }
+  try { await db.ref('views/' + probeId).remove(); } catch (e) {}
+  say('✅ Связь есть, ветка views пишется и читается');
+  return true;
 }
 
 /* Чтение чужих просмотров: только тот, кто видит админ-панель. */
 function subscribeViews() {
-  if (typeof firebase === 'undefined') return;
   if (!isDeveloper() && !isAdmin()) return;
+  var db = ensureFirebaseReady();
+  if (!db) return;
   try {
-    firebase.database().ref('views').limitToLast(VIEWS_LIMIT).on('value', function(snap) {
+    db.ref('views').limitToLast(VIEWS_LIMIT).on('value', function(snap) {
       var val = snap.val() || {};
       var arr = Object.keys(val).map(function(k) { return val[k]; });
       viewsLog = mergeViews(viewsLog, arr);
       saveViewsLocal();
       if (currentTab === 'admin') renderViewsLog();
       checkViewBursts(); // чужие просмотры пришли — самое время проверить
+    }, function(err) {
+      lastViewWriteError = 'чтение: ' + ((err && err.message) || err);
+      renderViewsLog();
     });
-  } catch (e) {}
+  } catch (e) {
+    lastViewWriteError = (e && e.message) ? e.message : String(e);
+  }
 }
 
 /* Второй канал: тот же файл журнала, что и у изменений, отдельным
@@ -5141,6 +5203,14 @@ function renderViewsLog() {
   if (chatEl && !chatEl.value) chatEl.value = viewAlertChatId();
 
   renderViewBurstWarning(detectViewBursts(viewsLog, Date.now()));
+
+  var errEl = $('views-sync-error');
+  if (errEl) {
+    errEl.innerHTML = lastViewWriteError
+      ? '<div class="views-burst">⛔ Просмотры не уходят в базу: ' + esc(lastViewWriteError) +
+        '<br>Чаще всего это правила базы: ветка <code>views</code> закрыта на запись.</div>'
+      : '';
+  }
 
   var holder = $('views-log-list');
   if (!holder) return;
