@@ -2411,3 +2411,16 @@
   /* Вычеркнутый шаг гасит и свои снимки — иначе непонятно, сделан он
      или нет. */
   .steps-list li.step-done .step-shots { opacity: .4; }
+
+  /* Заведение в карточке заявки: по нему управляющий сразу видит,
+     что кандидат указал свою точку, а не чужую. */
+  .request-venue {
+    display: inline-block;
+    margin-top: 3px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+  }

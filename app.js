@@ -389,6 +389,23 @@ function showModal(opts) {
       if (opts.withFields && opts.withFields.length) {
         fieldsEl.style.display = '';
         fieldsEl.innerHTML = opts.withFields.map(function(f) {
+          /* Поле-выбор: f.options = [{ value, label }]. Понадобилось для
+             заведения в заявке на доступ — вписывать его текстом нельзя,
+             иначе человек напишет что угодно и заявка не найдёт хозяина. */
+          if (f.options && f.options.length) {
+            return '<label class="modal-field">' +
+              '<span class="modal-field-label">' + esc(f.label) + '</span>' +
+              '<select data-field-key="' + escAttr(f.key) + '">' +
+                (f.placeholder ? '<option value="">' + esc(f.placeholder) + '</option>' : '') +
+                f.options.map(function(o) {
+                  return '<option value="' + escAttr(o.value) + '"' +
+                    (String(f.value) === String(o.value) ? ' selected' : '') + '>' +
+                    esc(o.label) + '</option>';
+                }).join('') +
+              '</select>' +
+              (f.hint ? '<span class="modal-field-hint">' + esc(f.hint) + '</span>' : '') +
+            '</label>';
+          }
           return '<label class="modal-field">' +
             '<span class="modal-field-label">' + esc(f.label) + '</span>' +
             '<input type="' + escAttr(f.inputType || 'text') + '" data-field-key="' + escAttr(f.key) + '"' +
@@ -444,7 +461,7 @@ function showModal(opts) {
       if (minLen) ok = inputEl.value.trim().length >= minLen;
       if (ok && requiredFields.length && fieldsEl) {
         ok = requiredFields.every(function(f) {
-          var el = fieldsEl.querySelector('input[data-field-key="' + f.key + '"]');
+          var el = fieldsEl.querySelector('[data-field-key="' + f.key + '"]');
           if (!el) return true;
           var v = el.value.trim();
           // Для телефона считаем цифры: скобки и пробелы не в счёт.
@@ -458,6 +475,9 @@ function showModal(opts) {
     inputEl.oninput = syncRequired;
     if (fieldsEl) {
       fieldsEl.querySelectorAll('input[data-field-key]').forEach(function(el) { el.oninput = syncRequired; });
+      // У списка событие другое: без этого кнопка оставалась неактивной
+      // даже после выбора заведения.
+      fieldsEl.querySelectorAll('select[data-field-key]').forEach(function(el) { el.onchange = syncRequired; });
     }
     syncRequired();
 
@@ -495,7 +515,7 @@ function showModal(opts) {
       }
       else if (opts.withFields) {
         var values = {};
-        fieldsEl.querySelectorAll('input[data-field-key]').forEach(function(inp) {
+        fieldsEl.querySelectorAll('[data-field-key]').forEach(function(inp) {
           values[inp.dataset.fieldKey] = inp.value.trim();
         });
         cleanup(values);
@@ -573,6 +593,10 @@ var TELEGRAM_ICON_SVG = '<svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.8 19.8c-
 const DEVICE_ID_KEY = 'r20_device_id';
 const DEVICE_NAME_KEY = 'r20_device_name';
 const DEVICE_PHONE_KEY = 'r20_device_phone';
+/* Заведение, которое кандидат указал в заявке. Без него заявка не
+   находит хозяина: управляющий видит только своих, а «ничьи» заявки
+   не показываются никому. */
+const DEVICE_VENUE_KEY = 'r20_device_venue';
 const PARTICIPANTS_KEY = 'r20_participants_cache';
 const PARTICIPANTS_PATH = 'participants.json';
 const MANUAL_CODE_KEY = 'r20_manual_code';
@@ -748,11 +772,18 @@ async function ensureParticipantName() {
   // Как только вход по ключу пройдёт успешно, isAdmin() станет true и
   // весь экран знакомства с сайтом (включая заявку в Telegram) пропускается.
   var name = localStorage.getItem(DEVICE_NAME_KEY);
-  if (name) return; // уже представлялись раньше в этом браузере
+  var storedVenue = '';
+  try { storedVenue = localStorage.getItem(DEVICE_VENUE_KEY) || ''; } catch (e) {}
+  /* Устройства, представлявшиеся до появления выбора заведения, надо
+     спросить ещё раз: их заявка иначе не дойдёт ни до кого. Тех, кто
+     уже стал участником, не трогаем — им заявка не нужна. */
+  var needsVenue = getVenues().length > 1 && !storedVenue && !getMyParticipantRecord();
+  if (name && !needsVenue) return; // уже представлялись раньше в этом браузере
 
   var warning = '';    // что сказать, если в прошлый раз ввели не то
-  var typed = '';      // уже набранное — чтобы не заставлять печатать заново
-  var typedPhone = ''; // телефон тоже сохраняем между попытками
+  var typed = name || ''; // уже набранное — чтобы не заставлять печатать заново
+  var typedPhone = (function() { try { return localStorage.getItem(DEVICE_PHONE_KEY) || ''; } catch (e) { return ''; } })(); // телефон тоже сохраняем между попытками
+  var typedVenue = ''; // и выбранное заведение
 
   while (true) {
     var entered = await showModal({
@@ -762,10 +793,27 @@ async function ensureParticipantName() {
       /* Имя и телефон спрашиваем вместе: два окна подряд ради двух строк
          раздражают, а заявка без телефона теряет смысл — по одному имени
          администратор не поймёт, кто это. */
-      withFields: [
-        { key: 'name', label: 'Имя и фамилия', value: typed, placeholder: 'Олег Петров', required: true, minLength: 2 },
-        { key: 'phone', label: 'Телефон', value: typedPhone, placeholder: '+380 67 123 45 67', inputType: 'tel', required: true, minDigits: 9 }
-      ],
+      withFields: (function() {
+        var fields = [
+          { key: 'name', label: 'Имя и фамилия', value: typed, placeholder: 'Олег Петров', required: true, minLength: 2 },
+          { key: 'phone', label: 'Телефон', value: typedPhone, placeholder: '+380 67 123 45 67', inputType: 'tel', required: true, minDigits: 9 }
+        ];
+        /* Заведение спрашиваем, только когда их несколько. При одной
+           точке выбирать не из чего, и лишний шаг только раздражал бы —
+           она подставляется сама. */
+        var venues = getVenues();
+        if (venues.length > 1) {
+          fields.push({
+            key: 'venue', label: 'Где вы работаете', value: typedVenue,
+            placeholder: 'Выберите заведение', required: true,
+            options: venues.map(function(v) {
+              return { value: v.id, label: (v.icon || '🏠') + ' ' + v.label };
+            }),
+            hint: 'Заявку увидит управляющий этого заведения'
+          });
+        }
+        return fields;
+      })(),
       hideCancel: true,
       okText: 'Продолжить',
       devLogin: true
@@ -784,27 +832,36 @@ async function ensureParticipantName() {
 
     // Кнопка «Продолжить» и так неактивна при пустом поле, но проверку
     // дублируем: сюда можно попасть, например, нажав Enter.
-    if (finalName.length < 2) {
-      warning = '⚠️ Пожалуйста, укажите имя — хотя бы два символа.';
-      continue;
-    }
-    // Имя из одних цифр или знаков администратору ничего не скажет.
-    if (!/[\p{L}]/u.test(finalName)) {
-      warning = '⚠️ Похоже, это не имя. Напишите, как вас зовут, буквами.';
-      continue;
-    }
+    var nameCheck = validateParticipantName(finalName);
+    if (!nameCheck.ok) { warning = nameCheck.reason; continue; }
+    finalName = nameCheck.value;
+    typed = finalName;
 
     /* Телефон проверяем по количеству цифр, а не по строгому шаблону:
        люди пишут номер как привыкли — со скобками, пробелами, через +38
        или с восьмёрки. Всё это одинаково годится для звонка. */
-    var digits = finalPhone.replace(/\D/g, '');
-    if (digits.length < 9) {
-      warning = '⚠️ Укажите телефон для связи — по нему администратор поймёт, кто вы.';
+    /* Заведение. При одной точке подставляем её молча — спрашивать
+       нечего. При нескольких без выбора дальше не пускаем: заявка без
+       заведения не дойдёт ни до кого. */
+    var venues = getVenues();
+    var finalVenue = String((entered && entered.venue) || '').trim();
+    if (venues.length <= 1) finalVenue = fallbackVenueId();
+    typedVenue = finalVenue;
+    if (!finalVenue || !venueById(finalVenue)) {
+      warning = '⚠️ Выберите заведение, в котором вы работаете — иначе заявку некому одобрить.';
       continue;
     }
 
+    var phoneCheck = validateParticipantPhone(finalPhone);
+    if (!phoneCheck.ok) { warning = phoneCheck.reason; continue; }
+    // Храним в едином виде: иначе один и тот же человек с записями
+    // «067…» и «+38067…» выглядит как двое разных.
+    finalPhone = phoneCheck.value;
+    typedPhone = finalPhone;
+
     localStorage.setItem(DEVICE_NAME_KEY, finalName);
     try { localStorage.setItem(DEVICE_PHONE_KEY, finalPhone); } catch (e) {}
+    try { localStorage.setItem(DEVICE_VENUE_KEY, finalVenue); } catch (e) {}
 
     /* Ключ больше не спрашиваем. Имени достаточно: устройство отправляет
        заявку, администратор одобряет её в панели, и доступ появляется
@@ -814,6 +871,154 @@ async function ensureParticipantName() {
     sendPresenceUpdate(); // заявка уходит вместе с записью присутствия
     return;
   }
+}
+
+/* ================================================================
+   ПРОВЕРКА ИМЕНИ И ТЕЛЕФОНА В ЗАЯВКЕ
+   ================================================================
+   Что здесь можно и чего нельзя. Убедиться, что номер настоящий и
+   принадлежит этому человеку, со статического сайта нечем: для этого
+   нужна проверка кодом из SMS, то есть сервер и оплата за сообщения.
+   Поэтому задача скромнее — отсечь то, что человек набрал, лишь бы
+   проскочить: «ааааа», «фывфыв», «1234567890», «0000000000».
+
+   Врущего это не остановит: кто хочет, впишет чужое правдоподобное
+   имя и рабочий на вид номер. Единственная настоящая проверка —
+   администратор звонит перед тем, как одобрить заявку.
+   ================================================================ */
+
+/* Ряды клавиатуры: набранное подряд по ряду — почти наверняка мусор. */
+const KEYBOARD_RUNS = [
+  'йцукен', 'фыва', 'ячсми', 'qwerty', 'asdf', 'zxcv', 'qwer', 'wasd',
+  'ўскен', 'абвгд', '12345', 'asdfg', 'фыв'
+];
+
+const VOWELS = 'аеёиоуыэюяіїєaeiouy';
+
+function looksLikeMashing(word) {
+  var w = word.toLowerCase();
+  // Одна буква подряд четыре раза и больше: «аааа», «ыыыы».
+  if (/(.)\1{3,}/.test(w)) return true;
+  /* Короткий кусок, повторённый подряд: «фывфыв», «абвабвабв». Так
+     выглядит рука, елозящая по одному месту клавиатуры. Кусок берём от
+     трёх букв, иначе под правило попали бы настоящие имена вроде
+     «Лала» или «Зизи». */
+  if (w.length >= 6) {
+    for (var blockLen = 3; blockLen <= w.length / 2; blockLen++) {
+      if (w.length % blockLen !== 0) continue;
+      var block = w.slice(0, blockLen);
+      var repeated = true;
+      for (var k = blockLen; k < w.length; k += blockLen) {
+        if (w.slice(k, k + blockLen) !== block) { repeated = false; break; }
+      }
+      if (repeated) return true;
+    }
+  }
+  // Ряд клавиатуры целиком.
+  for (var i = 0; i < KEYBOARD_RUNS.length; i++) {
+    if (w.indexOf(KEYBOARD_RUNS[i]) !== -1) return true;
+  }
+  // Ни одной гласной при длине от трёх букв: «джкшгр», «пркмн».
+  if (w.length >= 3) {
+    var hasVowel = false;
+    for (var j = 0; j < w.length; j++) {
+      if (VOWELS.indexOf(w[j]) !== -1) { hasVowel = true; break; }
+    }
+    if (!hasVowel) return true;
+  }
+  return false;
+}
+
+/* Возвращает { ok: true, value } либо { ok: false, reason }. */
+function validateParticipantName(raw) {
+  var name = String(raw || '').trim().replace(/\s+/g, ' ');
+  if (name.length < 2) {
+    return { ok: false, reason: '⚠️ Укажите имя — хотя бы два символа.' };
+  }
+  // Цифры и знаки в имени администратору ничего не скажут.
+  if (!/^[\p{L}\s'’-]+$/u.test(name)) {
+    return { ok: false, reason: '⚠️ В имени лишние знаки. Напишите только буквами, например: Олег Петров.' };
+  }
+  var words = name.split(' ').filter(function(w) { return w.length > 0; });
+  /* Поле называется «Имя и фамилия», и администратору нужно понять,
+     кто это. Одного слова для этого мало: в списке из десятка «Олегов»
+     не разобраться, кому открывать доступ. */
+  if (words.length < 2) {
+    return { ok: false, reason: '⚠️ Нужны имя и фамилия — два слова, например: Олег Петров.' };
+  }
+  for (var i = 0; i < words.length; i++) {
+    if (words[i].replace(/['’-]/g, '').length < 2) {
+      return { ok: false, reason: '⚠️ Слишком коротко. Напишите имя и фамилию полностью, без сокращений.' };
+    }
+    if (looksLikeMashing(words[i])) {
+      return { ok: false, reason: '⚠️ Похоже, это случайный набор букв. Напишите, как вас зовут.' };
+    }
+  }
+  return { ok: true, value: name };
+}
+
+/* Коды украинских мобильных операторов — первые три цифры
+   национального номера. Номер не из этого списка почти наверняка
+   выдуман: стационарные для связи с сотрудником не годятся. */
+const UA_MOBILE_CODES = [
+  '039', '050', '063', '066', '067', '068', '073',
+  '091', '092', '093', '094', '095', '096', '097', '098', '099'
+];
+
+/* Весь ли набор цифр — сплошная лесенка вверх или вниз: 1234567890,
+   9876543210. Именно весь, а не кусок: куски встречаются в настоящих
+   номерах сплошь и рядом. */
+function isConsecutiveRun(digits) {
+  if (digits.length < 7) return false;
+  var up = true, down = true;
+  for (var i = 1; i < digits.length; i++) {
+    var diff = Number(digits[i]) - Number(digits[i - 1]);
+    if (diff !== 1 && diff !== -9) up = false;   // -9 это переход 9→0
+    if (diff !== -1 && diff !== 9) down = false;
+  }
+  return up || down;
+}
+
+function validateParticipantPhone(raw) {
+  var input = String(raw || '').trim();
+  var digits = input.replace(/\D/g, '');
+  if (!digits) {
+    return { ok: false, reason: '⚠️ Укажите телефон для связи — по нему администратор поймёт, кто вы.' };
+  }
+  // Одна цифра на весь номер — это не телефон.
+  if (/^(\d)\1+$/.test(digits)) {
+    return { ok: false, reason: '⚠️ Такого номера не бывает. Укажите свой настоящий телефон.' };
+  }
+  /* Лесенка вида 1234567890. Проверяем весь номер целиком, а не
+     подстроку: в настоящем +380671234567 подстрока «1234567» есть, и
+     раньше такой номер отвергался как выдуманный. */
+  if (isConsecutiveRun(digits)) {
+    return { ok: false, reason: '⚠️ Похоже, номер набран наугад. Укажите свой настоящий телефон.' };
+  }
+
+  /* Приводим к национальным девяти цифрам: принимаем +380XXXXXXXXX,
+     380XXXXXXXXX, 0XXXXXXXXX и просто XXXXXXXXX — люди пишут как
+     привыкли, и все эти виды одинаково годятся для звонка. */
+  var national = null;
+  if (digits.length === 12 && digits.indexOf('380') === 0) national = digits.slice(3);
+  else if (digits.length === 11 && digits.indexOf('80') === 0) national = digits.slice(2);
+  else if (digits.length === 10 && digits[0] === '0') national = digits.slice(1);
+  else if (digits.length === 9) national = digits;
+
+  if (national) {
+    if (UA_MOBILE_CODES.indexOf('0' + national.slice(0, 2)) === -1) {
+      return { ok: false, reason: '⚠️ Не похоже на мобильный номер. Проверьте код оператора, например 067 или 095.' };
+    }
+    return { ok: true, value: '+380' + national };
+  }
+
+  /* Не украинский номер — принимаем, если он записан с плюсом и по
+     длине похож на международный. Проверять коды всех стран мы не
+     возьмёмся, но явный мусор отсечём. */
+  if (input.indexOf('+') === 0 && digits.length >= 10 && digits.length <= 15) {
+    return { ok: true, value: '+' + digits };
+  }
+  return { ok: false, reason: '⚠️ Проверьте номер. Украинский пишется как 067 123 45 67, зарубежный — с плюсом и кодом страны.' };
 }
 
 /* ================================================================
@@ -1263,7 +1468,7 @@ async function pollAccessStatus() {
    Поэтому приложение сверяет себя с сервером: тянет index.html мимо
    кэша и смотрит, какую версию app.js тот подключает. Не совпало —
    перезагружаемся один раз. */
-const APP_VERSION = '20260910o';
+const APP_VERSION = '20260910q';
 const FRESH_BUILD_MARK = 'r20_reloaded_for';
 
 function reloadPage() { location.reload(); }
@@ -1536,6 +1741,7 @@ function sendPresenceUpdate() {
        присутствия уже есть у каждого посетителя, и писать в неё
        разрешено без всякого входа. */
     wantsAccess: !getMyParticipantRecord() && !isDeveloper(),
+    venue: (function() { try { return localStorage.getItem(DEVICE_VENUE_KEY) || ''; } catch (e) { return ''; } })(),
     askedAt: firebase.database.ServerValue.TIMESTAMP
   }).catch(function(e) { console.warn('sendPresenceUpdate error:', e); });
 }
@@ -1671,11 +1877,24 @@ function hasSiteAccess(participant) {
 function accessRequests() {
   var known = {};
   participants.forEach(function(p) { known[p.id] = true; });
+  /* Заведения, которыми человек управляет. Главный администратор и
+     владелец сайта управляют всеми, поэтому видят все заявки. */
+  var mine = {};
+  venuesIManage().forEach(function(v) { mine[v.id] = true; });
+
   return Object.keys(onlineUsers)
     .filter(function(id) {
       var e = onlineUsers[id] || {};
       if (known[id]) return false;          // уже участник — не заявка
-      return e.wantsAccess === true;
+      if (e.wantsAccess !== true) return false;
+      /* Заявка без заведения не показывается никому. Так решено
+         намеренно: показать её всем управляющим значило бы пускать
+         случайного человека с улицы в чужую точку, а показать одному —
+         выбрать наугад, кому именно. Кандидат обязан указать заведение
+         в форме, поэтому «ничьи» заявки остаются только от старых
+         устройств — они переспросят заведение при следующем заходе. */
+      if (!e.venue) return false;
+      return mine[e.venue] === true;
     })
     .map(function(id) { return Object.assign({ id: id }, onlineUsers[id]); })
     .sort(function(a, b) { return (b.askedAt || b.lastSeen || 0) - (a.askedAt || a.lastSeen || 0); });
@@ -1704,6 +1923,7 @@ function renderAccessRequests() {
         (r.phone
           ? '<br><a class="request-phone" href="tel:' + escAttr(String(r.phone).replace(/[^\d+]/g, '')) + '">📞 ' + esc(r.phone) + '</a>'
           : '<br><span style="font-size:12px;color:var(--text-faint)">телефон не указан</span>') +
+        (r.venue ? '<br><span class="request-venue">' + esc(venueLabel(r.venue)) + '</span>' : '') +
         '<br><span style="font-size:12px;color:var(--text-muted)">' +
           (when ? esc(formatActivityTime(when)) : 'только что') +
           (isOnlineLive(r) ? ' · сейчас на сайте' : '') +
@@ -2167,6 +2387,10 @@ function purchaseRoleId(venueId) {
 /* Заведения, где я управляющий. Главный администратор и владелец
    сайта управляют всеми. */
 function venuesIManage() {
+  // Владелец сайта входит по GitHub-ключу, и записи участника у него
+  // нет вовсе — проверка по ролям для него всегда ложна. Без этой
+  // ветки он не видел бы ни заведений в админке, ни заявок.
+  if (isDeveloper() || isSuperAdmin()) return getVenues();
   return getVenues().filter(function(v) { return isAdminOfVenue(v.id); });
 }
 
