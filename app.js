@@ -1246,14 +1246,70 @@ async function pollAccessStatus() {
 
 /* Запись удалили — уводим человека на экран входа ровно так же, как это
    делает кнопка «Выйти» (см. слушатель kicks/ в initFirebasePresence). */
-function forceReLogin() {
+/* ================================================================
+   САМОПРОВЕРКА ВЕРСИИ
+   ================================================================
+   Файлы подключаются с номером версии (app.js?v=…), поэтому новый код
+   кэш не держит. Но сам index.html подключается без номера — и если
+   браузер отдаёт его старую копию, человек продолжает работать на
+   прежнем app.js, каким бы новым ни был файл на сервере. Особенно
+   упрямо это в iOS, когда сайт добавлен на экран «Домой»: там своё
+   хранилище, и оно может держать старую страницу неделями.
+
+   Снаружи это выглядит ровно так: у человека «старый интерфейс» и
+   старый вход, хотя на сервере всё давно другое. Ни отзыв доступа, ни
+   новые проверки до него не доезжают — их просто нет в его коде.
+
+   Поэтому приложение сверяет себя с сервером: тянет index.html мимо
+   кэша и смотрит, какую версию app.js тот подключает. Не совпало —
+   перезагружаемся один раз. */
+const APP_VERSION = '20260910n';
+const FRESH_BUILD_MARK = 'r20_reloaded_for';
+
+function reloadPage() { location.reload(); }
+
+async function ensureFreshBuild() {
   try {
-    localStorage.removeItem(DEVICE_NAME_KEY);
-    localStorage.removeItem(MANUAL_CODE_KEY);
-    localStorage.removeItem(DEVICE_ID_KEY);
-    localStorage.removeItem(ADMIN_KEY);
+    var res = await fetch('./index.html?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return false;
+    var html = await res.text();
+    var m = html.match(/app\.js\?v=([A-Za-z0-9._-]+)/);
+    if (!m) return false;
+    var serverVersion = m[1];
+    if (serverVersion === APP_VERSION) {
+      try { sessionStorage.removeItem(FRESH_BUILD_MARK); } catch (e) {}
+      return false;
+    }
+    /* Защита от вечной перезагрузки: если после обновления версия всё
+       равно не сошлась (сервер отдаёт страницу из своего кэша, стоит
+       посредник и т.п.), второй раз не перезагружаемся. Лучше работать
+       на старом коде, чем мигать страницей без конца. */
+    var already = '';
+    try { already = sessionStorage.getItem(FRESH_BUILD_MARK) || ''; } catch (e) {}
+    if (already === serverVersion) return false;
+    try { sessionStorage.setItem(FRESH_BUILD_MARK, serverVersion); } catch (e) {}
+    reloadPage();
+    return true;
+  } catch (e) {
+    // Нет сети — не наше дело, работаем тем, что есть.
+    return false;
+  }
+}
+
+function forceReLogin() {
+  /* Чистим всё, что делает человека «узнанным». Раньше оставались
+     телефон, кэш участников и кэш настроек — и после перезагрузки
+     устройство частично помнило прежнюю жизнь: подставляло старые
+     данные и показывало интерфейс, на который прав уже нет. */
+  try {
+    [DEVICE_NAME_KEY, DEVICE_PHONE_KEY, MANUAL_CODE_KEY, DEVICE_ID_KEY,
+     ADMIN_KEY, PARTICIPANTS_KEY, SITE_CONFIG_KEY, KEY_FAIL_STATE_KEY,
+     GH_CONFIG_KEY, GH_STATUS_KEY, VIEW_ALERTS_KEY, CURRENT_VENUE_KEY,
+     PARTICIPANT_GROUPS_KEY, STORAGE_KEY].forEach(function(k) {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
   } catch (e) {}
-  location.reload();
+  reloadPage();
 }
 
 /* Читает копию списка с GitHub Pages КАК ЕСТЬ, без подстановки своей
@@ -10994,6 +11050,9 @@ async function initApp() {
 
   applyAdminUI();
   applyTheme(currentTheme()); // до отрисовки, иначе экран мигнёт другой темой
+  // Если код устарел, перезагружаемся ДО всего остального: смысла
+  // поднимать приложение на старом коде нет.
+  if (await ensureFreshBuild()) return;
   await computeMyKeyHash();    // до любых проверок доступа: без отпечатка себя не найти
   loadRecipes();
   loadActivityLocal();
