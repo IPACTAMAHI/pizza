@@ -1,5 +1,20 @@
 [
   {
+    "at": 1789154385406,
+    "id": "probe-1789154385406",
+    "kind": "probe",
+    "what": "проверка связи"
+  },
+  {
+    "id": "pmtxcbl8z2v2lc",
+    "at": 1789154377811,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmtxc7eykio7cj",
     "at": 1789154183036,
     "who": "Разработчик",
