@@ -191,5 +191,20 @@
     "revoked": true,
     "revokedAt": 1789157250141,
     "revokedBy": "Разработчик"
+  },
+  {
+    "id": "D33B-CA0C",
+    "fingerprint": "",
+    "name": "123",
+    "phone": "",
+    "addedAt": 1789157381822,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1789157381822,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
