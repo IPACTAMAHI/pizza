@@ -173,5 +173,20 @@
     "revoked": true,
     "revokedAt": 1789002837514,
     "revokedBy": "Разработчик"
+  },
+  {
+    "id": "3A8A-DAAE",
+    "fingerprint": "",
+    "name": "богдан",
+    "phone": "0661324230",
+    "addedAt": 1789139875116,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1789139875116,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
