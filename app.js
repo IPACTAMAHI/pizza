@@ -5302,13 +5302,22 @@ function detectViewBursts(list, now) {
       var first = arr[i - need + 1];
       var last = arr[i];
       if ((last.at - first.at) <= win) {
+        /* Заведения собираем все, что попали в окно. Человек может
+           обойти две точки подряд — раньше в сообщение шло только
+           последнее, и выглядело так, будто он сидел в одной. */
+        var venues = [];
+        for (var j = i - need + 1; j <= i; j++) {
+          var v = arr[j].venue;
+          if (v && venues.indexOf(v) === -1) venues.push(v);
+        }
         out.push({
           whoId: whoId,
           who: last.who || 'Неизвестно',
           count: need,
           from: first.at,
           to: last.at,
-          venue: last.venue || '',
+          venue: venues.join(', '),
+          venues: venues,
           // Ключ всплеска — человек и минута последнего просмотра.
           // По нему отсеиваем повторную отправку того же события.
           key: whoId + '|' + Math.floor(last.at / 60000)
@@ -5361,7 +5370,7 @@ function burstMessageText(b) {
   return '👁 Всплеск просмотров\n' +
     b.who + ' открыл ' + b.count + ' записей за ' + mins + ' мин' +
     (phone ? '\nТелефон: ' + phone : '') +
-    (b.venue ? '\nЗаведение: ' + b.venue : '') +
+    (b.venue ? '\n' + ((b.venues && b.venues.length > 1) ? 'Заведения: ' : 'Заведение: ') + b.venue : '') +
     '\nВремя: ' + new Date(b.to).toLocaleString('ru-RU');
 }
 
