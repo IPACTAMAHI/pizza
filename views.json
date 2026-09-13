@@ -1,5 +1,32 @@
 [
   {
+    "id": "pmtzqhne82ijd6",
+    "at": 1789299107504,
+    "who": "Админ Александр Переверзев",
+    "whoId": "D32A-99B4",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
+    "id": "pmtzqhli3m5qk2",
+    "at": 1789299105051,
+    "who": "Админ Александр Переверзев",
+    "whoId": "D32A-99B4",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
+    "id": "pmtznpnvljofdj",
+    "at": 1789294442529,
+    "who": "Админ Александр Переверзев",
+    "whoId": "D32A-99B4",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
     "id": "pmtznpf1emqku6",
     "at": 1789294431073,
     "who": "Админ Александр Переверзев",
