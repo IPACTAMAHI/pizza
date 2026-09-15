@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmu37us7ycp58m",
+    "at": 1789509672286,
+    "who": "Админ Александр Переверзев",
+    "whoId": "D32A-99B4",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
+    "id": "pmu37uqeujlr2a",
+    "at": 1789509669942,
+    "who": "Админ Александр Переверзев",
+    "whoId": "D32A-99B4",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmu2xjezwh44bq",
     "at": 1789492345772,
     "who": "Разработчик",
@@ -171,13 +189,13 @@
     "what": "Пицца бар"
   },
   {
-    "at": 1789208743125,
     "id": "pmty8otsllk3ih",
-    "kind": "section",
-    "venue": "🏠 Route 20",
-    "what": "Пицца бар",
+    "at": 1789208743125,
     "who": "Разработчик N2R6-4GHG",
-    "whoId": "N2R6-4GHG"
+    "whoId": "N2R6-4GHG",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
   },
   {
     "id": "pmty80kj4zuc83",
