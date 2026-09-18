@@ -245,5 +245,20 @@
       "admin"
     ],
     "role": "admin"
+  },
+  {
+    "id": "3D3F-B959",
+    "fingerprint": "",
+    "name": "Александр Переверзев",
+    "phone": "+380953053080",
+    "addedAt": 1789724756291,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1789724756291,
+    "venue": "venue-main",
+    "roles": [
+      "admin"
+    ],
+    "role": "admin"
   }
 ]
