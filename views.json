@@ -1,5 +1,32 @@
 [
   {
+    "id": "pmu6rw9801nmj5",
+    "at": 1789724731824,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
+    "at": 1789671596956,
+    "id": "pmu5w9e3g9tfyw",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789671595184,
+    "id": "pmu5w9cq8coy6r",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
     "id": "pmu3zr7mr2mmmw",
     "at": 1789556534883,
     "who": "Разработчик",
@@ -99,6 +126,24 @@
     "what": "Пицца бар"
   },
   {
+    "at": 1789491391234,
+    "id": "pmu2wyygyxig85",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789491389225,
+    "id": "pmu2wywx5uac5s",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
     "id": "pmu2ezk1lh2c40",
     "at": 1789461186105,
     "who": "Разработчик",
@@ -142,6 +187,60 @@
     "venue": "🏠 Route 20",
     "kind": "section",
     "what": "Пицца бар"
+  },
+  {
+    "at": 1789323796357,
+    "id": "pmu056tfpjleqm",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789323793651,
+    "id": "pmu056rcjyskhu",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789323443044,
+    "id": "pmu04z8tg0z4dc",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789323440962,
+    "id": "pmu04z77mb66jn",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789323121309,
+    "id": "pmu04sckdbcw7z",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789323107375,
+    "id": "pmu04s1tbrxtzg",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
   },
   {
     "id": "pmu03kt3cm5jef",
