@@ -1,5 +1,14 @@
 [
   {
+    "id": "pmun79r9r0kof5",
+    "at": 1790718014799,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmumbbow50wo09",
     "at": 1790664357317,
     "who": "Разработчик",
@@ -171,6 +180,24 @@
     "what": "Пицца бар"
   },
   {
+    "at": 1789927080770,
+    "id": "pmua4dao25d4q5",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789927078190,
+    "id": "pmua4d8oef6r7l",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
     "id": "pmua3wcv7ecl8l",
     "at": 1789926290467,
     "who": "Разработчик",
@@ -196,6 +223,24 @@
     "venue": "🏠 Route 20",
     "kind": "section",
     "what": "Пицца бар"
+  },
+  {
+    "at": 1789925165367,
+    "id": "pmua388qf3tz1f",
+    "kind": "purchase",
+    "venue": "🏠 Route 20",
+    "what": "вкладка закупки",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
+  },
+  {
+    "at": 1789925160257,
+    "id": "pmua384shqfsqi",
+    "kind": "section",
+    "venue": "🏠 Route 20",
+    "what": "Горячий цех",
+    "who": "Натали",
+    "whoId": "K918-S0EF"
   },
   {
     "id": "pmu9p6dgs34bj2",
