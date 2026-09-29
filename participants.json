@@ -60,7 +60,7 @@
     "fingerprint": "",
     "name": "Гарі",
     "addedAt": 1787940792491,
-    "blocked": false,
+    "blocked": true,
     "claimed": true,
     "roles": [
       "tab:main"
