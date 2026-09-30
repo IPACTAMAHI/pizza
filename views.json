@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmunq2peqcp4bp",
+    "at": 1790749598498,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Замес на 40шт"
+  },
+  {
+    "id": "pmunq2n2141ceh",
+    "at": 1790749595449,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
     "id": "pmunpw9yn5wdsz",
     "at": 1790749298543,
     "who": "Разработчик",
