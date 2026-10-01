@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmup5wsxl6ozdr",
+    "at": 1790836663161,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Замес на 80шт"
+  },
+  {
+    "id": "pmup5wqob8zj68",
+    "at": 1790836660235,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmup5g9rbxw7iz",
     "at": 1790835891815,
     "who": "Разработчик",
