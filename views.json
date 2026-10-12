@@ -1,12 +1,21 @@
 [
   {
-    "id": "pmv51fl6abyppa",
-    "at": 1791796600306,
-    "who": "Разработчик",
-    "whoId": "developer",
+    "id": "pmv51gwp71mq71",
+    "at": 1791796661899,
+    "who": "Админ Александр Переверзев",
+    "whoId": "N2R6-4GHG",
     "venue": "🏠 Route 20",
-    "kind": "recipe",
-    "what": "Котлета бургер"
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
+    "id": "pmv51gt197hotu",
+    "at": 1791796657148,
+    "who": "Админ Александр Переверзев",
+    "whoId": "N2R6-4GHG",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
   },
   {
     "id": "pmv4zgtfgpr9c3",
@@ -1287,13 +1296,13 @@
     "what": "Пицца бар"
   },
   {
-    "at": 1789208743125,
     "id": "pmty8otsllk3ih",
-    "kind": "section",
-    "venue": "🏠 Route 20",
-    "what": "Пицца бар",
+    "at": 1789208743125,
     "who": "Разработчик N2R6-4GHG",
-    "whoId": "N2R6-4GHG"
+    "whoId": "N2R6-4GHG",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
   },
   {
     "id": "pmty80kj4zuc83",
