@@ -260,5 +260,20 @@
       "admin"
     ],
     "role": "admin"
+  },
+  {
+    "id": "DC7B-BA43",
+    "fingerprint": "",
+    "name": "Ровенко Данило",
+    "phone": "+380969070424",
+    "addedAt": 1792333481454,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1792333481454,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
