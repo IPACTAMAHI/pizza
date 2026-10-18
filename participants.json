@@ -275,5 +275,20 @@
       "tab:main"
     ],
     "role": "viewer"
+  },
+  {
+    "id": "AD52-D405",
+    "fingerprint": "",
+    "name": "Ровенко Данило",
+    "phone": "+380969070424",
+    "addedAt": 1792334515166,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1792334515166,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
