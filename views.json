@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmvo65jgfmkp9p",
+    "at": 1792953386943,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
+    "id": "pmvo65gwwqgxz6",
+    "at": 1792953383648,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmvnilnk75khwx",
     "at": 1792913827975,
     "who": "Разработчик",
