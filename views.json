@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmwjkl70icjetp",
+    "at": 1794852083394,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "purchase",
+    "what": "вкладка закупки"
+  },
+  {
+    "id": "pmwjkl676sl4qi",
+    "at": 1794852082338,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmwj721zju6xqv",
     "at": 1794829355407,
     "who": "Разработчик",
@@ -3559,14 +3577,5 @@
     "venue": "🏠 Route 20",
     "kind": "recipe",
     "what": "Ронда"
-  },
-  {
-    "id": "pmtvmkhf7mh6v7",
-    "at": 1789050656563,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "section",
-    "what": "Пицца бар"
   }
 ]
