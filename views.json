@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmwkeep2c4qc7d",
+    "at": 1794902168676,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Замес на 60шт"
+  },
+  {
+    "id": "pmwkeen7e1jqtf",
+    "at": 1794902166266,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmwkdz2arbx4id",
     "at": 1794901439331,
     "who": "Разработчик",
@@ -3559,23 +3577,5 @@
     "venue": "🏠 Route 20",
     "kind": "section",
     "what": "Горячий цех"
-  },
-  {
-    "id": "pmtvmkubh0i0bz",
-    "at": 1789050673277,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "section",
-    "what": "Холодный цех"
-  },
-  {
-    "id": "pmtvmkta9um7vc",
-    "at": 1789050671937,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "section",
-    "what": "Кондитер"
   }
 ]
