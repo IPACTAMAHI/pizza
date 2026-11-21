@@ -1,5 +1,14 @@
 [
   {
+    "id": "pmwq32413d5u0g",
+    "at": 1795245902823,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Пинца маленький замес"
+  },
+  {
     "id": "pmwq31tzzzbdid",
     "at": 1795245889823,
     "who": "Разработчик",
@@ -3568,14 +3577,5 @@
     "venue": "🏠 Route 20",
     "kind": "section",
     "what": "Пицца бар"
-  },
-  {
-    "id": "pmtvmkwi5k5fih",
-    "at": 1789050676109,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "purchase",
-    "what": "вкладка закупки"
   }
 ]
