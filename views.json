@@ -1,5 +1,14 @@
 [
   {
+    "id": "pmwq31tzzzbdid",
+    "at": 1795245889823,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmwkeep2c4qc7d",
     "at": 1794902168676,
     "who": "Разработчик",
@@ -3568,14 +3577,5 @@
     "venue": "🏠 Route 20",
     "kind": "purchase",
     "what": "вкладка закупки"
-  },
-  {
-    "id": "pmtvmkv1h5o8zw",
-    "at": 1789050674213,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "section",
-    "what": "Горячий цех"
   }
 ]
