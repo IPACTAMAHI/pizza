@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmwrjdm18oadbt",
+    "at": 1795333779404,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Замес на 80шт"
+  },
+  {
+    "id": "pmwrjdk5pi8s62",
+    "at": 1795333776973,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmwrixrbzqyc2t",
     "at": 1795333039775,
     "who": "Разработчик",
@@ -3559,23 +3577,5 @@
     "venue": "🏠 Route 20",
     "kind": "recipe",
     "what": "Мясная рикотта"
-  },
-  {
-    "id": "pmtvu5vk52q7nu",
-    "at": 1789063411973,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "purchase",
-    "what": "вкладка закупки"
-  },
-  {
-    "id": "pmtvu12aanspe2",
-    "at": 1789063187410,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "section",
-    "what": "Пицца бар"
   }
 ]
