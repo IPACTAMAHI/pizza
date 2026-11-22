@@ -1,5 +1,23 @@
 [
   {
+    "id": "pmwrk3oe8semzd",
+    "at": 1795334995520,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Замес на 60шт"
+  },
+  {
+    "id": "pmwrk3mp95ttiz",
+    "at": 1795334993324,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "section",
+    "what": "Пицца бар"
+  },
+  {
     "id": "pmwrjdm18oadbt",
     "at": 1795333779404,
     "who": "Разработчик",
@@ -3559,23 +3577,5 @@
     "venue": "🏠 Route 20",
     "kind": "recipe",
     "what": "Замес на 80шт"
-  },
-  {
-    "id": "pmtvu7bmgbuctq",
-    "at": 1789063479448,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "recipe",
-    "what": "Пинца Курица-Грибы"
-  },
-  {
-    "id": "pmtvu7a3dwtps0",
-    "at": 1789063477465,
-    "who": "Разработчик",
-    "whoId": "developer",
-    "venue": "🏠 Route 20",
-    "kind": "recipe",
-    "what": "Мясная рикотта"
   }
 ]
