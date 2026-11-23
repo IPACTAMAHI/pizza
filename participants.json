@@ -290,5 +290,20 @@
       "tab:main"
     ],
     "role": "viewer"
+  },
+  {
+    "id": "F0B0-1C6E",
+    "fingerprint": "",
+    "name": "наталья наталья",
+    "phone": "+380509584281",
+    "addedAt": 1795446046045,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1795446046045,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
