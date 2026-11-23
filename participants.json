@@ -305,5 +305,20 @@
       "tab:main"
     ],
     "role": "viewer"
+  },
+  {
+    "id": "B8AD-82DD",
+    "fingerprint": "",
+    "name": "Вова данилов",
+    "phone": "+380967731513",
+    "addedAt": 1795446111842,
+    "blocked": false,
+    "claimed": true,
+    "claimedAt": 1795446111842,
+    "venue": "venue-main",
+    "roles": [
+      "tab:main"
+    ],
+    "role": "viewer"
   }
 ]
