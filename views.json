@@ -1,5 +1,14 @@
 [
   {
+    "id": "pmx08uhyyvsmbp",
+    "at": 1795860287098,
+    "who": "Разработчик",
+    "whoId": "developer",
+    "venue": "🏠 Route 20",
+    "kind": "recipe",
+    "what": "Соус винегрет"
+  },
+  {
     "id": "pmx08u9260oinp",
     "at": 1795860275550,
     "who": "Разработчик",
@@ -3589,14 +3598,5 @@
     "venue": "🏠 Route 20",
     "kind": "purchase",
     "what": "вкладка закупки"
-  },
-  {
-    "id": "pmtznpf1emqku6",
-    "at": 1789294431073,
-    "who": "Админ Александр Переверзев",
-    "whoId": "D32A-99B4",
-    "venue": "🏠 Route 20",
-    "kind": "section",
-    "what": "Пицца бар"
   }
 ]
